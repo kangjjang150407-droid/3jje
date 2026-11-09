@@ -1,0 +1,28 @@
+{
+  "name": "monster-card-battle",
+  "version": "1.0.0",
+  "description": "학급용 팀전 몬스터 카드 보드게임 (최대 20명)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/sim.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kangjjang150407-droid/3jje.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kangjjang150407-droid/3jje/issues"
+  },
+  "homepage": "https://github.com/kangjjang150407-droid/3jje#readme",
+  "dependencies": {
+    "express": "^4.22.3",
+    "socket.io": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

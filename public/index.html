@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>몬스터 카드 배틀</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast"></div>
+
+  <div id="rules" class="modal hidden">
+    <div class="modal-box">
+      <button class="close" data-close>✕</button>
+      <h2>📖 게임 규칙</h2>
+      <ol>
+        <li><b>목표</b> : 상대 팀 <b>기지 체력</b>을 0으로 만들면 이겨요. 마지막 라운드까지 버티면 기지 체력이 가장 많은 팀이 승리!</li>
+        <li><b>라운드</b> : 모든 학생이 <b>동시에</b> 카드 1장을 냅니다. 시간 안에 내지 않으면 자동으로 넘어가요.</li>
+        <li><b>마나 💎</b> : 라운드마다 마나가 늘어나요 (1라운드 2개 → 최대 7개). 카드 왼쪽 위 숫자만큼 마나가 필요해요.</li>
+        <li><b>몬스터</b> : 내 몬스터는 우리 팀 전장에 1마리만 있을 수 있어요. 새로 소환하면 교체돼요.</li>
+        <li><b>전투</b> : 전장의 몬스터들이 무작위 순서로 적 팀을 공격해요. 공격받은 몬스터는 <b>반격</b>해요. 적 전장이 비어 있으면 <b>기지</b>를 공격해요. 몬스터를 쓰러뜨리고 남은 피해는 기지로 <b>관통</b>!</li>
+        <li><b>속성</b> : 🔥불 → 🌿풀 → 💧물 → 🔥불, ✨빛 ↔ 🌙어둠. 유리한 속성이면 피해 <b>1.5배</b>!</li>
+        <li><b>패스</b> : 카드를 내지 않으면 카드를 1장 더 받아요.</li>
+      </ol>
+      <h3>특수 능력</h3>
+      <ul id="abil-list"></ul>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
