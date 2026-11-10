@@ -122,7 +122,7 @@ var IMG_USAGI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALwAAAEACAYAAAAJN
       <b>흐헣흐</b> 가호 보유 시 60% · 단일 20<br>
       <b>앙</b> 40% · 광역 30 · 2초 행동불가 (해제 시 체력 10 미만이면 +100)<br>
       <b>느금</b> 체력 10% 미만일 때 앙 대신 사용 · 대상 체력 50% 미만이면 대상 사망, 아니면 자신 사망<br>
-      <b>뿡 뿌직뿌직 꺼억</b> 흐헣흐를 제외한 모든 스킬(우나나 야하야하·앙·느금)을 각각 최소 12번 사용하면 즉시 사용 (사용 후 횟수 초기화) · 10 + 대상 최대 체력만큼 고정 피해 + 확정 사망
+      <b>뿡 뿌직뿌직 꺼억</b> 느금을 제외한 모든 스킬(우나나 야하야하·앙·흐헣흐)을 각각 최소 12번 사용하면 즉시 사용 (사용 후 횟수 초기화) · 10 + 대상 최대 체력만큼 고정 피해 + 확정 사망
     </div>
   </aside>
 
@@ -295,7 +295,7 @@ class Fighter {
     this.vy = this.static ? 0 : Math.sin(a) * d.speed;
     this.alive = true; this.cd = rand(1.0, 2.2); this.cast = null;
     this.stun = 0; this.stunBonus = null; this.usagi = false; this.doomed = false;
-    this.uses = { unana: 0, ang: 0, neugeum: 0 }; this.hitFlash = 0; this.trail = []; this.trailT = 0; this.wob = Math.random() * TAU;
+    this.uses = { unana: 0, ang: 0, heuheoheu: 0 }; this.hitFlash = 0; this.trail = []; this.trailT = 0; this.wob = Math.random() * TAU;
   }
 }
 
@@ -412,9 +412,9 @@ function progressCast(f, dt) {
 }
 
 const PPUNG_REQ = 12;
-const PPUNG_SKILLS = ['unana', 'ang', 'neugeum'];
+const PPUNG_SKILLS = ['unana', 'ang', 'heuheoheu'];
 const ppungReady = f => PPUNG_SKILLS.every(k => f.uses[k] >= PPUNG_REQ);
-// 뿡 사용 조건 카운트 (흐헣흐, 뿡 제외한 모든 스킬 각각)
+// 뿡 사용 조건 카운트 (느금, 뿡 제외한 모든 스킬 각각)
 function countUse(f, skill) {
   const was = ppungReady(f);
   f.uses[skill]++;
@@ -426,12 +426,12 @@ function countUse(f, skill) {
 }
 
 function songAI(f, dt) {
-  // 뿡 뿌직뿌직 꺼억 : 흐헣흐를 제외한 모든 스킬을 각각 12번 이상 사용하면 즉시 사용 (시전 중 스킬 취소)
+  // 뿡 뿌직뿌직 꺼억 : 느금을 제외한 모든 스킬을 각각 12번 이상 사용하면 즉시 사용 (시전 중 스킬 취소)
   if (!(f.cast && f.cast.skill === 'ppung') && ppungReady(f)) {
     const t = chooseTarget(f, 'ppung');
     if (t) {
       if (f.cast) log(`${nm(f)}의 ${sk(f.cast.skill)} 취소!`);
-      f.uses = { unana: 0, ang: 0, neugeum: 0 };
+      f.uses = { unana: 0, ang: 0, heuheoheu: 0 };
       startCast(f, 'ppung', t);
       return;
     }
@@ -491,6 +491,7 @@ function executeCast(f) {
     case 'heuheoheu': {
       if (!valid(t, f)) t = chooseTarget(f, 'heuheoheu');
       if (!t) return;
+      countUse(f, 'heuheoheu');
       shoot(f, t, { kind: 'spiral', color: s.color, speed: 700, size: 14, onHit: () => {
         dealDamage(f, t, 20, 'magic', s.name);
         burst(t.x, t.y, s.color, 50, 420, 13, 0.7, { kind: 'spark', drag: 0.93 });
@@ -525,7 +526,6 @@ function executeCast(f) {
     case 'neugeum': {
       if (!valid(t, f)) t = chooseTarget(f, 'neugeum');
       if (!t) return;
-      countUse(f, 'neugeum');
       const success = t.hp < t.maxHp * 0.5;
       const victim = success ? t : f;
       showBig('느금', '#ff2b2b', 1.6);
@@ -883,7 +883,7 @@ function drawFighter(f) {
   if (CHAR[f.type].ai) {
     const ready = ppungReady(f);
     ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
-    const ty = y + r + (f.cast ? 44 : 24), txt = `💩 우${Math.min(f.uses.unana, PPUNG_REQ)} 앙${Math.min(f.uses.ang, PPUNG_REQ)} 느${Math.min(f.uses.neugeum, PPUNG_REQ)} /${PPUNG_REQ}`;
+    const ty = y + r + (f.cast ? 44 : 24), txt = `💩 우${Math.min(f.uses.unana, PPUNG_REQ)} 앙${Math.min(f.uses.ang, PPUNG_REQ)} 흐${Math.min(f.uses.heuheoheu, PPUNG_REQ)} /${PPUNG_REQ}`;
     ctx.strokeText(txt, x, ty); ctx.fillStyle = ready ? '#c8f04a' : '#a8b878'; ctx.fillText(txt, x, ty);
   }
   if (f.cast) {
