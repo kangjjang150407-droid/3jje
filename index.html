@@ -122,7 +122,7 @@ var IMG_USAGI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALwAAAEACAYAAAAJN
       <b>흐헣흐</b> 가호 보유 시 60% · 단일 20<br>
       <b>앙</b> 40% · 광역 30 · 2초 행동불가 (해제 시 체력 10 미만이면 +100)<br>
       <b>느금</b> 체력 10% 미만일 때 앙 대신 사용 · 대상 체력 50% 미만이면 대상 사망, 아니면 자신 사망<br>
-      <b>뿡 뿌직뿌직 꺼억</b> 자신 99% 초과 &amp; 대상 99% 미만이면 즉시 사용 · 10 + 대상 최대 체력만큼 고정 피해 + 확정 사망
+      <b>뿡 뿌직뿌직 꺼억</b> 흐헣흐를 제외한 스킬을 총 12번 사용하면 즉시 사용 (사용 후 횟수 초기화) · 10 + 대상 최대 체력만큼 고정 피해 + 확정 사망
     </div>
   </aside>
 
@@ -295,7 +295,7 @@ class Fighter {
     this.vy = this.static ? 0 : Math.sin(a) * d.speed;
     this.alive = true; this.cd = rand(1.0, 2.2); this.cast = null;
     this.stun = 0; this.stunBonus = null; this.usagi = false; this.doomed = false;
-    this.hitFlash = 0; this.trail = []; this.trailT = 0; this.wob = Math.random() * TAU;
+    this.skillUses = 0; this.hitFlash = 0; this.trail = []; this.trailT = 0; this.wob = Math.random() * TAU;
   }
 }
 
@@ -316,7 +316,7 @@ function chooseTarget(f, skill) {
   if (nd.length) list = nd;
   if (!list.length) return null;
   if (skill === 'neugeum') return list.reduce((a, b) => (a.hp / a.maxHp <= b.hp / b.maxHp ? a : b));
-  if (skill === 'ppung') return nearest(f, enemies(f).filter(e => !ppungClaimed(e, f) && e.hp < e.maxHp * 0.99));
+  if (skill === 'ppung') return nearest(f, enemies(f).filter(e => !ppungClaimed(e, f)));
   return nearest(f, list);
 }
 
@@ -411,12 +411,24 @@ function progressCast(f, dt) {
   if (c.t >= c.dur) executeCast(f);
 }
 
+const PPUNG_REQ = 12;
+// 뿡 사용 조건 카운트 (흐헣흐, 뿡 제외)
+function countUse(f) {
+  f.skillUses++;
+  if (f.skillUses === PPUNG_REQ) {
+    floatText(f.x, f.y - f.r - 60, '뿡 준비 완료!', '#b5d84a', 22, { life: 1.4 });
+    ring(f.x, f.y, '#9acd32', f.r * 3, 0.6, 6);
+    log(`${nm(f)} 스킬 ${PPUNG_REQ}회 사용 → ${sk('ppung')} 조건 충족`, 'skill');
+  }
+}
+
 function songAI(f, dt) {
-  // 뿡 뿌직뿌직 꺼억 : 자신 99% 초과 & 대상 99% 미만이면 즉시 사용 (시전 중 스킬 취소)
-  if (!(f.cast && f.cast.skill === 'ppung') && f.hp > f.maxHp * 0.99) {
-    const t = nearest(f, enemies(f).filter(e => !ppungClaimed(e, f) && e.hp < e.maxHp * 0.99));
+  // 뿡 뿌직뿌직 꺼억 : 흐헣흐를 제외한 스킬을 총 12번 사용하면 즉시 사용 (시전 중 스킬 취소)
+  if (!(f.cast && f.cast.skill === 'ppung') && f.skillUses >= PPUNG_REQ) {
+    const t = chooseTarget(f, 'ppung');
     if (t) {
       if (f.cast) log(`${nm(f)}의 ${sk(f.cast.skill)} 취소!`);
+      f.skillUses = 0;
       startCast(f, 'ppung', t);
       return;
     }
@@ -457,6 +469,7 @@ function executeCast(f) {
     case 'unana': {
       if (!valid(t, f)) t = chooseTarget(f, 'unana');
       if (!t) return;
+      countUse(f);
       f.usagi = true;
       floatText(f.x, f.y - f.r - 90, '우사기의 가호', '#ffc0e6', 22, { vy: -25, life: 1.6 });
       usagiPops.push({ x: f.x, y: f.y - f.r, life: 1.2, max: 1.2 });
@@ -488,6 +501,8 @@ function executeCast(f) {
     case 'ang': {
       if (f.hp < f.maxHp * 0.1) { startCast(f, 'neugeum', chooseTarget(f, 'neugeum')); return; }
       const list = enemies(f);
+      if (!list.length) return;
+      countUse(f);
       ring(f.x, f.y, '#ffffff', 450, 0.6, 6);
       ring(f.x, f.y, '#c08bff', 800, 1.0, 14);
       ring(f.x, f.y, '#7b3cff', 1150, 1.4, 22);
@@ -507,6 +522,7 @@ function executeCast(f) {
     case 'neugeum': {
       if (!valid(t, f)) t = chooseTarget(f, 'neugeum');
       if (!t) return;
+      countUse(f);
       const success = t.hp < t.maxHp * 0.5;
       const victim = success ? t : f;
       showBig('느금', '#ff2b2b', 1.6);
@@ -860,6 +876,14 @@ function drawFighter(f) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(bx - 2, cy - 2, bw + 4, 9);
     ctx.save(); ctx.shadowColor = s.color; ctx.shadowBlur = 10; ctx.fillStyle = s.color; ctx.fillRect(bx, cy, bw * p, 5); ctx.restore();
     ctx.font = `700 11px ${FONT}`; ctx.strokeText(s.name, x, cy + 20); ctx.fillStyle = s.color; ctx.fillText(s.name, x, cy + 20);
+  }
+  if (CHAR[f.type].ai) {
+    const ready = f.skillUses >= PPUNG_REQ;
+    ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+    const ty = y + r + (f.cast ? 44 : 24), txt = `💩 ${Math.min(f.skillUses, PPUNG_REQ)}/${PPUNG_REQ}`;
+    ctx.strokeText(txt, x, ty); ctx.fillStyle = ready ? '#c8f04a' : '#a8b878'; ctx.fillText(txt, x, ty);
+  }
+  if (f.cast) {
   } else if (CHAR[f.type].ai && f.cd > 0) {
     const cy = y + r + 10, p = 1 - clamp(f.cd / CHAR[f.type].cooldown, 0, 1);
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx, cy, bw, 3);
