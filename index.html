@@ -119,7 +119,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="info">
       체력 320 · 쿨타임 5초<br>
       물리 피해 <b>2배</b> · 마법 피해 <b>절반</b><br><br>
-      <b>우나나 야하야하</b> 60% · 단일 20 · 우사기의 가호 획득 🔊<br>
+      <b>우나나 야하야하</b> 60% · 단일 20 · 우사기의 가호 획득 · 🎤 음성이 끝날 때까지 연속 사용<br>
       <b>흐헣흐</b> 가호 보유 시 60% · 단일 20<br>
       <b>앙</b> 40% · 광역 30 · 2초 행동불가 (해제 시 체력 10 미만이면 +100)<br>
       <b>느금</b> 체력 10% 미만일 때 앙 대신 사용 · 대상 체력 50% 미만이면 대상 사망, 아니면 자신 사망<br>
@@ -343,6 +343,7 @@ function dealDamage(src, t, amount, kind, srcName) {
 function kill(t, src, reason) {
   if (!t.alive) return;
   t.alive = false; t.hp = 0; t.cast = null; t.stun = 0;
+  if (t.unana) { stopSfx(t.unana.src); t.unana = null; }
   // 사망 폭발
   burst(t.x, t.y, t.color, 110, 750, 22, 1.4, { drag: 0.93 });
   burst(t.x, t.y, '#ffffff', 50, 500, 14, 0.9);
@@ -383,10 +384,19 @@ function onStunEnd(f) {
 }
 
 // ================== 스킬 ==================
+// 우나나 야하야하 음성이 끝날 때까지 연속 사용
+const UNANA_VOICE = 8.3;
+function unanaActive(f) {
+  const u = f.unana; if (!u) return false;
+  return u.src ? !u.src.ended : simTime < u.until;
+}
 function startCast(f, skill, target) {
   if (!target) return;
   f.cast = { skill, target, t: 0, dur: SKILLS[skill].cast, pop: 0 };
-  if (skill === 'unana') playSfx('unana');
+  if (skill === 'unana' && !unanaActive(f)) {
+    f.unana = { src: playSfx('unana'), until: simTime + UNANA_VOICE };
+    log(`${nm(f)} 🎤 음성이 끝날 때까지 ${sk('unana')} 연속 사용!`, 'skill');
+  }
   const s = SKILLS[skill];
   floatText(f.x, f.y - f.r - 46, s.name + '!', s.color, skill === 'ppung' ? 26 : 24, { vy: -30, life: 1.3 });
   ring(f.x, f.y, s.color, f.r * 2.6, 0.45, 5);
@@ -449,6 +459,11 @@ function songAI(f, dt) {
       return;
     }
     progressCast(f, dt);
+    return;
+  }
+  if (unanaActive(f)) {
+    const t = chooseTarget(f, 'unana');
+    if (t) startCast(f, 'unana', t);
     return;
   }
   if (f.cd <= 0) {
@@ -1149,11 +1164,17 @@ function bgmPlay(restart) {
 }
 function bgmPause() { bgm.pause(); }
 
+const liveSfx = new Set();
 function playSfx(name) {
-  if (muted || !actx || !sfx[name]) return;
+  if (muted || !actx || !sfx[name]) return null;
   const src = actx.createBufferSource(); src.buffer = sfx[name];
   src.connect(sfxGain); src.start();
+  liveSfx.add(src);
+  src.onended = () => { src.ended = true; liveSfx.delete(src); };
+  return src;
 }
+function stopSfx(src) { if (!src) return; try { src.stop(); } catch (e) {} src.ended = true; liveSfx.delete(src); }
+function stopAllSfx() { [...liveSfx].forEach(stopSfx); }
 // 브라우저 자동재생 정책: 첫 터치/클릭/키 입력 때 오디오 활성화
 ['pointerdown', 'keydown', 'touchend'].forEach(ev => document.addEventListener(ev, initAudio, { passive: true }));
 
@@ -1259,6 +1280,8 @@ function readSettings() {
 function build() {
   readSettings();
   bgmPause();
+  stopAllSfx();
+  if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
   if (isPortraitStage()) { W = 650; H = 1000; } else { W = 1000; H = 650; }
   resize();
   winInfo = null;
@@ -1337,6 +1360,7 @@ document.getElementById('pauseBtn').onclick = () => {
   if (simTime === 0 && !running) { start(); return; }
   running = !running; updatePauseBtn();
   if (running) bgmPlay(false); else bgmPause();
+  if (actx) { if (running) actx.resume().catch(() => {}); else actx.suspend().catch(() => {}); }
 };
 ['dummyHp', 'dummyMove', 'dummyImmortal'].forEach(id => document.getElementById(id).addEventListener('change', () => { if (!running) build(); else readSettings(); }));
 window.addEventListener('keydown', e => {
