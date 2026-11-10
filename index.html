@@ -120,6 +120,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       체력 320 · 쿨타임 5초<br>
       물리 피해 <b>2배</b> · 마법 피해 <b>절반</b><br><br>
       <b>우나나 야하야하</b> 60% · 단일 20 · 우사기의 가호 획득 · 🎤 음성이 끝날 때까지 연속 사용<br>
+      <b>우사기의 가호</b> 받는 피해 -30% · 가하는 피해 +7.5% (고정 피해 제외)<br>
       <b>흐헣흐</b> 가호 보유 시 60% · 단일 20<br>
       <b>앙</b> 40% · 광역 30 · 2초 행동불가 (해제 시 체력 10 미만이면 +100)<br>
       <b>느금</b> 체력 10% 미만일 때 앙 대신 사용 · 대상 체력 50% 미만이면 대상 사망, 아니면 자신 사망<br>
@@ -327,15 +328,22 @@ function chooseTarget(f, skill) {
 function dealDamage(src, t, amount, kind, srcName) {
   if (!t.alive) return 0;
   const mult = kind === 'true' ? 1 : CHAR[t.type].resist[kind];
-  const dmg = amount * mult;
+  // 우사기의 가호: 받는 피해 -30%, 가하는 피해 +7.5% (고정 피해는 제외)
+  const mods = [];
+  if (kind !== 'true') {
+    if (src && src.usagi) mods.push(1.075);
+    if (t.usagi) mods.push(0.7);
+  }
+  const dmg = amount * mult * mods.reduce((a, b) => a * b, 1);
   if (dmg <= 0) return 0;
   t.hp -= dmg; t.hitFlash = 1;
   playHit(kind, dmg);
   const big = dmg >= 100;
-  const shown = Math.round(dmg * 10) / 10;
+  const shown = Math.round(dmg * 100) / 100;
   floatText(t.x + rand(-14, 14), t.y - t.r - 6, (big ? '💥' : '-') + shown, DMG_COLOR[kind], big ? 38 : 22 + Math.min(14, dmg / 4));
   const kindName = kind === 'magic' ? '마법' : kind === 'physical' ? '물리' : '고정';
-  const note = mult !== 1 ? ` <span style="color:#777">(${amount}×${mult})</span>` : '';
+  const fac = [mult !== 1 ? mult : null, ...mods].filter(v => v !== null);
+  const note = fac.length ? ` <span style="color:#777">(${amount}×${fac.join('×')})</span>` : '';
   log(`${nm(src)} → ${nm(t)} <span style="color:${DMG_COLOR[kind]}">${shown} ${kindName}</span>${note} · ${srcName}`);
   if (t.hp <= 0) { t.hp = 0; kill(t, src, srcName); }
   return dmg;
