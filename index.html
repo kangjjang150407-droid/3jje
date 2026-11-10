@@ -330,6 +330,7 @@ function dealDamage(src, t, amount, kind, srcName) {
   const dmg = amount * mult;
   if (dmg <= 0) return 0;
   t.hp -= dmg; t.hitFlash = 1;
+  playHit(kind, dmg);
   const big = dmg >= 100;
   const shown = Math.round(dmg * 10) / 10;
   floatText(t.x + rand(-14, 14), t.y - t.r - 6, (big ? '💥' : '-') + shown, DMG_COLOR[kind], big ? 38 : 22 + Math.min(14, dmg / 4));
@@ -1174,6 +1175,42 @@ function playSfx(name) {
   return src;
 }
 function stopSfx(src) { if (!src) return; try { src.stop(); } catch (e) {} src.ended = true; liveSfx.delete(src); }
+// 적중 효과음 (Web Audio 합성)
+let noiseBuf = null, lastHitSfx = 0;
+function getNoise() {
+  if (!noiseBuf) {
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.5, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+function playHit(kind, dmg) {
+  if (muted || !actx || actx.state !== 'running') return;
+  const now = actx.currentTime;
+  if (now - lastHitSfx < 0.03) return; // 동시에 너무 많이 겹치지 않게
+  lastHitSfx = now;
+  const heavy = dmg >= 100 || kind === 'true';
+  const out = actx.createGain(); out.connect(sfxGain);
+  const pv = 0.9 + Math.random() * 0.2;
+  // 노이즈 타격음
+  const n = actx.createBufferSource(); n.buffer = getNoise();
+  const f = actx.createBiquadFilter();
+  f.type = heavy ? 'lowpass' : 'bandpass';
+  f.frequency.value = heavy ? 900 : (kind === 'magic' ? 3200 : 1800) * pv; f.Q.value = heavy ? 0.7 : 1.2;
+  const ng = actx.createGain();
+  const nd = heavy ? 0.35 : 0.09;
+  ng.gain.setValueAtTime(heavy ? 0.9 : 0.6, now); ng.gain.exponentialRampToValueAtTime(0.001, now + nd);
+  n.connect(f); f.connect(ng); ng.connect(out); n.start(now); n.stop(now + nd + 0.02);
+  // 톤 (피치가 떨어지는 '퍽' / 마법은 '띵')
+  const o = actx.createOscillator(), og = actx.createGain();
+  o.type = heavy ? 'sine' : (kind === 'magic' ? 'triangle' : 'square');
+  const f0 = (heavy ? 180 : kind === 'magic' ? 1100 : 420) * pv, f1 = heavy ? 35 : kind === 'magic' ? 380 : 90;
+  const od = heavy ? 0.5 : 0.14;
+  o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now + od);
+  og.gain.setValueAtTime(heavy ? 0.9 : 0.35, now); og.gain.exponentialRampToValueAtTime(0.001, now + od);
+  o.connect(og); og.connect(out); o.start(now); o.stop(now + od + 0.02);
+  out.gain.value = heavy ? 0.8 : 0.5;
+}
 function stopAllSfx() { [...liveSfx].forEach(stopSfx); }
 // 브라우저 자동재생 정책: 첫 터치/클릭/키 입력 때 오디오 활성화
 ['pointerdown', 'keydown', 'touchend'].forEach(ev => document.addEventListener(ev, initAudio, { passive: true }));
