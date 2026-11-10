@@ -137,6 +137,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <button id="tbSpeed" title="배속">1x</button>
       <button class="recBtn" title="녹화">⏺ 녹화</button>
       <button id="tbMute" title="소리">🔊</button>
+      <button id="tbBgm" title="배경음악" class="on">🎵</button>
     </div>
   </main>
 
@@ -1126,6 +1127,28 @@ function initAudio() {
   load('unana', SFX_UNANA);
   if (actx.state === 'suspended') actx.resume().catch(() => {});
 }
+// 배경음악: assets/bgm.mp3 (http(s)에서는 Web Audio로 연결해 녹화에도 포함)
+const BGM_VOL = 0.4;
+const bgm = new Audio('assets/bgm.mp3');
+bgm.loop = true; bgm.preload = 'auto'; bgm.setAttribute('playsinline', '');
+let bgmOn = true, bgmGain = null;
+function hookBgm() {
+  if (bgmGain || !actx || location.protocol === 'file:') return;
+  try {
+    const node = actx.createMediaElementSource(bgm);
+    bgmGain = actx.createGain(); bgmGain.gain.value = BGM_VOL;
+    node.connect(bgmGain); bgmGain.connect(sfxGain);
+  } catch (e) { bgmGain = null; }
+}
+function bgmPlay(restart) {
+  if (!bgmOn) return;
+  initAudio(); hookBgm();
+  if (!bgmGain) bgm.volume = muted ? 0 : BGM_VOL;
+  if (restart) { try { bgm.currentTime = 0; } catch (e) {} }
+  const pr = bgm.play(); if (pr && pr.catch) pr.catch(() => {});
+}
+function bgmPause() { bgm.pause(); }
+
 function playSfx(name) {
   if (muted || !actx || !sfx[name]) return;
   const src = actx.createBufferSource(); src.buffer = sfx[name];
@@ -1235,6 +1258,7 @@ function readSettings() {
 
 function build() {
   readSettings();
+  bgmPause();
   if (isPortraitStage()) { W = 650; H = 1000; } else { W = 1000; H = 650; }
   resize();
   winInfo = null;
@@ -1259,6 +1283,7 @@ function start() {
   if (rec && rec.auto) stopRec(true);
   build();
   running = true;
+  bgmPlay(true);
   if (document.getElementById('autoRec').checked && !rec) startRec(true);
   log('⚔ 전투 시작!', 'skill');
   for (const f of fighters) { ring(f.x, f.y, TEAM[f.team].color, 150, 0.8, 8); burst(f.x, f.y, TEAM[f.team].color, 40, 400, 12, 0.8); }
@@ -1294,9 +1319,14 @@ document.addEventListener('click', e => {
 });
 document.getElementById('startBtn').onclick = start;
 document.getElementById('tbStart').onclick = start;
+document.getElementById('tbBgm').onclick = () => {
+  bgmOn = !bgmOn; document.getElementById('tbBgm').classList.toggle('on', bgmOn);
+  if (bgmOn) { if (running) bgmPlay(false); } else bgmPause();
+};
 document.getElementById('tbMute').onclick = () => {
   muted = !muted; document.getElementById('tbMute').textContent = muted ? '🔇' : '🔊';
   if (sfxGain) sfxGain.gain.value = muted ? 0 : 1;
+  if (!bgmGain) bgm.volume = muted ? 0 : BGM_VOL;
 };
 document.getElementById('tbPause').onclick = () => document.getElementById('pauseBtn').click();
 document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
@@ -1306,6 +1336,7 @@ document.getElementById('resetBtn').onclick = () => { renderRoster(); build(); }
 document.getElementById('pauseBtn').onclick = () => {
   if (simTime === 0 && !running) { start(); return; }
   running = !running; updatePauseBtn();
+  if (running) bgmPlay(false); else bgmPause();
 };
 ['dummyHp', 'dummyMove', 'dummyImmortal'].forEach(id => document.getElementById(id).addEventListener('change', () => { if (!running) build(); else readSettings(); }));
 window.addEventListener('keydown', e => {
