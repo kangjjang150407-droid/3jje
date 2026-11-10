@@ -43,6 +43,8 @@
   @keyframes blink{50%{opacity:.6}}
   #recInd{position:absolute;top:10px;left:12px;font-size:13px;font-weight:700;color:#ff4d4d;display:none;pointer-events:none;text-shadow:0 0 8px #f00}
   #recInd.on{display:block}
+  #toast{position:fixed;left:50%;top:20px;transform:translate(-50%,-20px);background:#1d1d33;border:1px solid #4a4a78;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;z-index:30;pointer-events:none}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
   #recModal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
   #recModal.show{display:flex}
   #recModal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(720px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px}
@@ -142,6 +144,7 @@ var IMG_USAGI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALwAAAEACAYAAAAJN
   </aside>
 </div>
 
+<div id="toast"></div>
 <div id="recModal">
   <div class="box">
     <b>🎬 녹화된 전투</b>
@@ -1071,6 +1074,11 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
 // ================== 녹화 ==================
 let rec = null, lastRec = null;
 const recTimeEl = document.getElementById('recTime');
@@ -1080,7 +1088,7 @@ function pickMime() {
 }
 function startRec(auto) {
   if (rec) return;
-  if (!cv.captureStream || !window.MediaRecorder) { alert('이 브라우저는 화면 녹화를 지원하지 않아요. (최신 Chrome / Safari / Samsung Internet 권장)'); return; }
+  if (!cv.captureStream || !window.MediaRecorder) { toast('이 브라우저는 화면 녹화를 지원하지 않아요. (최신 Chrome / Safari / Samsung Internet 권장)'); return; }
   let mr, stream;
   // 고정 크기 녹화용 캔버스에 매 프레임 복사 (화면 회전/리사이즈에도 안정적)
   const rc = document.createElement('canvas');
@@ -1093,7 +1101,7 @@ function startRec(auto) {
     const mime = pickMime();
     const opt = { videoBitsPerSecond: 8000000 }; if (mime) opt.mimeType = mime;
     mr = new MediaRecorder(stream, opt);
-  } catch (e) { alert('녹화를 시작할 수 없어요: ' + e.message); return; }
+  } catch (e) { toast('녹화를 시작할 수 없어요: ' + e.message); return; }
   const chunks = [], discard = { v: false };
   mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => {
@@ -1130,7 +1138,15 @@ function showRecording(blob, type) {
   lastRec.file = file;
   document.getElementById('recModal').classList.add('show');
 }
-document.getElementById('recSave').onclick = () => {
+// claude.ai 아티팩트 안에서는 downloads 기능으로, 그 외에는 일반 다운로드로 저장
+let claudeDownloads = null;
+if (window.claude && window.claude.use) window.claude.use('downloads').then(d => { claudeDownloads = d; }).catch(() => {});
+document.getElementById('recSave').onclick = async () => {
+  if (claudeDownloads) {
+    try { await claudeDownloads.save({ filename: lastRec.name, data: lastRec.blob }); toast('저장했어요'); }
+    catch (e) { if (e && e.code !== 'declined') toast('저장할 수 없어요 (' + (e.code || e.message) + ')'); }
+    return;
+  }
   const a = document.createElement('a'); a.href = lastRec.url; a.download = lastRec.name;
   document.body.appendChild(a); a.click(); a.remove();
 };
@@ -1181,7 +1197,7 @@ function build() {
 }
 
 function start() {
-  if (!roster.some(r => r.team === 0) || !roster.some(r => r.team === 1)) { alert('양 팀에 최소 1명씩 넣어주세요.'); return; }
+  if (!roster.some(r => r.team === 0) || !roster.some(r => r.team === 1)) { toast('양 팀에 최소 1명씩 넣어주세요.'); return; }
   if (rec && rec.auto) stopRec(true);
   build();
   running = true;
