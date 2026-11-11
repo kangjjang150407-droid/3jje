@@ -147,6 +147,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       코인별 출혈 횟수 5 / 출혈 3 / 출혈 횟수 7 / 출혈 13<br>
       <b>배고픔</b> 체력 50% 미만, 턴 시작 시 전투당 1회 · 코카콜라 모두 소모, ×3 회복<br>
       <b>굶주린 북극곰의 처분</b> 파괴불가 2 · 공격 100(+30) · 18 / +12 (코카콜라 효과로만 사용)<br>
+      1코인 [적중시] 출혈 모두 소모 → 위력만큼 고정 피해, 횟수만큼 정신력 감소 · [파괴되지 않고 적중시] 진동폭발 3회, 진동 횟수 -2<br>
+      2코인 [적중시] 진동-과다출혈 3, 횟수 3 · [파괴되지 않고 적중시] 이 코인 재사용 (최대 4회)<br>
       <b>북극곰이라 불린 자</b> (반격) 마이너스 코인 2 · 공격 150(+80) · 54 / -10 (앞면이면 감소) · 파괴 가능한 스킬로 합 패배 후 피격 시 발동<br>
       <b>진동 - 과다출혈</b> 진동폭발 시 위력만큼 고정 피해, 출혈 횟수 -1 · 턴 종료 시 횟수 -1<br>
       <b>출혈</b> 공격 코인 판정 시 위력만큼 고정 피해, 판정 후 횟수 -1<br>
@@ -482,6 +484,26 @@ function tremorOBBurst(src, t) {
   bleedCount(t, -1);
   dealDamage(src, t, tr.pot, 'true', '진동폭발 [과다출혈]', `진동-과다출혈 위력 ${tr.pot}, 출혈 횟수 -1 → `);
 }
+// 일반 진동폭발: 대상이 가진 진동을 터뜨림 (과다출혈 우선, 없으면 애범)
+function genericTremorBurst(src, t) {
+  if (t.tremorOB) return tremorOBBurst(src, t);
+  const tr = t.tremor;
+  if (!t.alive || !tr || tr.cnt <= 0) return;
+  ring(t.x, t.y, '#ffd84d', t.r * 4, 0.5, 8);
+  floatText(t.x, t.y - t.r - 30, '진동폭발', '#ffd84d', 22, { life: 1.0 });
+  tremorPops.push({ x: t.x, y: t.y, life: 0.8, max: 0.8 });
+  shake = Math.max(shake, 12);
+  const pot = tr.pot;
+  tr.cnt--;
+  if (tr.cnt <= 0) t.tremor = null;
+  dealDamage(src, t, pot, 'true', '진동폭발', `진동-애범 위력 ${pot}, 횟수 -1 → `);
+}
+function tremorAnyCount(t, d) {
+  if (t.tremorOB) {
+    t.tremorOB.cnt = Math.max(0, t.tremorOB.cnt + d);
+    if (t.tremorOB.cnt <= 0) { t.tremorOB = null; floatText(t.x, t.y + t.r + 20, '진동-과다출혈 소멸', '#c96a5a', 14, { life: 0.9 }); }
+  } else if (t.tremor) tremorCount(t, d);
+}
 // 턴 종료 시 처리 (1턴 = 5초 구간)
 function onTurnEnd() {
   for (const f of fighters) {
@@ -668,7 +690,7 @@ function onUse(u) {
   } else if (u.sk === 'cheobun') {
     const c = f.cola; f.cola = 0;
     u.pct += c * 10; u.clashBonus += c;
-    log(`${nm(f)} ${sk('cheobun')}: 코카콜라 ${c} 소모 → 피해량 +${c * 10}% · 합 위력 +${c}`);
+    if (c > 0) log(`${nm(f)} ${sk('cheobun')}: 코카콜라 ${c} 소모 → 피해량 +${c * 10}% · 합 위력 +${c}`);
   }
 }
 
@@ -860,10 +882,17 @@ function hitCoin(u, t, pow, i, heads) {
     else if (i === 2) addBleed(t, 0, 7, f);
     else if (i === 3) addBleed(t, 13, 0, f);
   } else if (u.sk === 'cheobun') {
-    if (i === 0 && t.bleed) {
-      const b = t.bleed; t.bleed = null;
-      dealDamage(f, t, b.pot, 'true', '처분: 출혈 소모', `출혈 위력 ${b.pot}, 횟수 ${b.cnt} 소모 → `);
-      if (t.alive) changeSp(t, -b.cnt, '처분: 출혈 횟수');
+    if (i === 0) {
+      if (t.bleed) {
+        const b = t.bleed; t.bleed = null;
+        dealDamage(f, t, b.pot, 'true', '처분: 출혈 소모', `출혈 위력 ${b.pot}, 횟수 ${b.cnt} 소모 → `);
+        if (t.alive) changeSp(t, -b.cnt, '처분: 출혈 횟수');
+      }
+      // [파괴되지 않고 적중시] 진동폭발 3회, 횟수 2 감소
+      if (!u.lost && t.alive) {
+        for (let k = 0; k < 3 && t.alive; k++) genericTremorBurst(f, t);
+        if (t.alive) tremorAnyCount(t, -2);
+      }
     } else if (i === 1) {
       addTremorOB(t, 3, 3);
       if (!u.lost && u.reuse < 4) { u.reuse++; floatText(f.x, f.y - f.r - 40, `코인 재사용 ${u.reuse}/4`, S.color, 18, { life: 0.8 }); return true; }
