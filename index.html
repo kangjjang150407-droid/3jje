@@ -121,7 +121,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="info">
       <b>LV.55</b> · 체력 320 · 방어 레벨 60(+5)<br>
       물리 피해 <b>2배</b> · 마법 피해 <b>절반</b> · 1턴 = 5초<br>
-      스킬은 우나나·앙·흐허헣·가드 중 랜덤 (뿡은 조건부)<br><br>
+      스킬은 우나나·앙·흐허헣·수비 태세 중 랜덤 (뿡은 조건부)<br><br>
       <b>우나나 야하야하</b> 코인 12 · 공격 55(+0) · 12 / +1<br>
       [사용시] 방어 레벨 증가 7 · 우사기의 가호<br>
       <b>우사기의 가호</b> 받는 피해 -30% · 가하는 피해 +7.5% (고정 피해 제외)<br>
@@ -130,11 +130,11 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       1코인 [적중시] 정신력 -5 · [파괴되지 않고 적중시] 진동폭발 [애범], 진동-애범 횟수 -3<br>
       <b>흐허헣</b> 코인 2 · 공격 60(+5) · 6 / +7 · [적중시] 진동-애범 7 부여<br>
       <b>뿡 뿌직뿌직 꺼억</b> 파괴불가 코인 1 · 공격 90(+35) · 10 / +0 · 합 불가 · 수비 스킬 무시<br>
-      대상의 진동-애범 50 이상이면 사용 · [적중시] 진동폭발 [애범] 3회, 횟수 -5, 페이즈 변경<br>
-      <b>수비 태세 : 가드</b> 10 / +12 · 위력만큼 보호막 · [사용시] 공격 레벨 감소 6, 방어 레벨 증가 9<br><br>
+      대상의 진동-애범 50 이상이면 사용 · [적중시] 진동폭발 [애범] 3회, 횟수 -5<br>
+      <b>수비 태세</b> (수비 · 가드) 10 / +12 · 위력만큼 보호막 · [사용시] 공격 레벨 감소 6, 방어 레벨 증가 9<br><br>
       <span style="color:#888">합: 코인 앞면 확률 = 50% + 정신력% · 공격 레벨 3 차이당 합 위력 +1 · 합 승리 시 정신력 +10 · 정신력 -45 = 패닉<br>
       피해 = 코인 위력 × (1 + 레벨차 / (|레벨차| + 25))<br>
-      진동폭발 [애범] = 진동-애범 위력만큼 고정 피해</span>
+      진동-애범: 진동폭발 시 위력만큼 고정 피해, 횟수 -1 · 진동폭발 [애범]: 위력 -5</span>
     </div>
   </aside>
 
@@ -224,7 +224,7 @@ const SKILLS = {
   ang:       { name: '앙',             color: '#b06bff', lvMod: 7,  base: 23, coinPow: 12, coins: 1, unbreakable: true, cast: 0.8 },
   heuheoheu: { name: '흐허헣',         color: '#5ff5d0', lvMod: 5,  base: 6,  coinPow: 7,  coins: 2,  cast: 0.6 },
   ppung:     { name: '뿡 뿌직뿌직 꺼억', color: '#9acd32', lvMod: 35, base: 10, coinPow: 0,  coins: 1, unbreakable: true, noClash: true, noGuard: true, cast: 1.0 },
-  guard:     { name: '수비 태세 : 가드', color: '#7fb2ff', defense: true, base: 10, coinPow: 12, coins: 1 },
+  guard:     { name: '수비 태세', guardType: '가드', color: '#7fb2ff', defense: true, base: 10, coinPow: 12, coins: 1 },
 };
 const POOL = ['unana', 'ang', 'heuheoheu', 'guard']; // 랜덤으로 나오는 스킬 (뿡은 조건부)
 const pickReady = () => POOL[(Math.random() * POOL.length) | 0];
@@ -327,7 +327,7 @@ class Fighter {
   }
   resetCombat() {
     this.sp = 0; this.panic = 0; this.busy = 0; this.buffs = {}; this.shield = null; this.tremor = null;
-    this.usagi = false; this.phase = 1; this.cast = null; this.coinView = null;
+    this.usagi = false; this.cast = null; this.coinView = null;
     this.ready = CHAR[this.type].ai ? pickReady() : null;
   }
 }
@@ -384,7 +384,15 @@ function tremorBurst(src, t) {
   floatText(t.x, t.y - t.r - 30, '진동폭발 [애범]', '#ffd84d', 22, { life: 1.0 });
   tremorPops.push({ x: t.x, y: t.y, life: 0.8, max: 0.8 });
   shake = Math.max(shake, 12);
-  dealDamage(src, t, t.tremor.pot, 'true', '진동폭발 [애범]');
+  // 진동 - 애범: 위력만큼 고정 피해, 횟수 1 감소 / 진동폭발 [애범]: 위력 5 감소
+  const tr = t.tremor, pot = tr.pot;
+  tr.cnt = Math.max(0, tr.cnt - 1);
+  tr.pot = Math.max(0, tr.pot - 5);
+  dealDamage(src, t, pot, 'true', '진동폭발 [애범]', `진동-애범 위력 ${pot} → 위력 -5, 횟수 -1 → `);
+  if (t.tremor === tr && (tr.cnt <= 0 || tr.pot <= 0)) {
+    t.tremor = null;
+    if (t.alive) floatText(t.x, t.y + t.r + 20, '진동-애범 소멸', '#c9b45a', 14, { life: 0.9 });
+  }
 }
 function tremorCount(t, d) {
   if (!t.tremor) return;
@@ -525,8 +533,8 @@ function useGuard(f, why) {
   f.ready = pickReady(); f.cd = TURN;
   ring(f.x, f.y, '#7fb2ff', f.r * 3, 0.6, 8);
   burst(f.x, f.y, '#a8ccff', 30, 300, 10, 0.6, { kind: 'spark' });
-  floatText(f.x, f.y - f.r - 46, `가드! 🛡${p}`, '#9cc4ff', 24, { life: 1.3 });
-  log(`${nm(f)} ${sk('guard')} (${why}) · 위력 ${p} (앞면 ${heads}/${S.coins}) → 보호막 ${p} · 공격 레벨 감소 6 · 방어 레벨 증가 9`, 'skill');
+  floatText(f.x, f.y - f.r - 46, `수비 태세 [가드] 🛡${p}`, '#9cc4ff', 24, { life: 1.3 });
+  log(`${nm(f)} ${sk('guard')} [가드] (${why}) · 위력 ${p} (앞면 ${heads}/${S.coins}) → 보호막 ${p} · 공격 레벨 감소 6 · 방어 레벨 증가 9`, 'skill');
 }
 
 // ---- 합 / 공격 진행 ----
@@ -661,10 +669,6 @@ function hitCoin(u, t, pow, i, heads) {
     doFlash('#8fbf2f', 0.5); shake = Math.max(shake, 26);
     for (let k = 0; k < 3 && t.alive; k++) tremorBurst(f, t);
     if (t.alive) tremorCount(t, -5);
-    f.phase++;
-    floatText(f.x, f.y - f.r - 70, `PHASE ${f.phase}`, '#ff5050', 30, { life: 1.8 });
-    pillars.push({ x: f.x, y: f.y, color: '#ff4040', w: 90, life: 0.9, max: 0.9 });
-    log(`🔺 ${nm(f)} 페이즈 변경 → ${f.phase}페이즈`, 'kill');
   }
 }
 
@@ -1239,7 +1243,7 @@ function render() {
     drawUsagi(u.x, u.y - 60 - p * 40, 110 * sc, Math.sin(p * 12) * 0.2, k < 0.3 ? k / 0.3 : 1);
   }
   drawTexts();
-  // 느금 암전
+  // 화면 암전
   const dk = darkenT > 0 ? Math.min(0.7, darkenT * 1.5) : 0;
   darken += (dk - darken) * 0.2;
   if (darken > 0.01) { ctx.fillStyle = `rgba(0,0,0,${darken})`; ctx.fillRect(-50, -50, W + 100, H + 100); }
