@@ -140,7 +140,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b style="color:#ff9a3d;font-size:12px">윤지호</b><br>
       <b>LV.70</b> · 체력 580 · 방어 레벨 50(-20) · 물리 피해 <b>절반</b> · 마법 피해 <b>1.5배</b><br>
       스킬은 아이씨·아니 중 랜덤<br>
-      <b>코카콜라</b> 최대 30 · 턴당 최대 +20 · 기본 스킬(아이씨·아니) 코인 적중 시 +1<br>
+      <b>코카콜라</b> 최대 30 · 턴당 최대 +20 · 기본 스킬(아이씨·아니) 코인 적중 시 +1 · 수치가 30이면 턴 시작 시 처분 사용<br>
       <b>아이씨</b> 코인 3 · 공격 90(+20) · 10 / +5 · 코카콜라 20 이상: 모든 코인 파괴불가, 피해량 +(코카콜라×3)%<br>
       1코인 타격 추가피해 40 · 2코인 코카콜라 +5 · 3코인 출혈 5<br>
       <b>아니</b> 코인 4 · 공격 90(+20) · 13 / +5 · 코카콜라 10/15/20/25/30 단계 효과 · (대상 출혈+코카콜라) 5당 피해량 +1%<br>
@@ -957,6 +957,18 @@ function unitAI(f, dt) {
   if (!enemies(f).length) return;
   // 턴 시작
   if (CHAR[f.type].hunger && !f.hungerUsed && f.hp < f.maxHp * 0.5) useHunger(f);
+  // 코카콜라 효과: 수치가 30이라면 이번 턴 스킬 대신 처분 사용 (원래 스킬은 다음 턴으로)
+  if (f.type === 'jiho' && f.cola >= 30) {
+    const t = chooseTarget(f, 'cheobun');
+    if (t) {
+      log(`🥤 ${nm(f)} 코카콜라 30 → ${sk('cheobun')}`, 'skill');
+      colaPops.push({ x: f.x, y: f.y - f.r - 20, life: 1.0, max: 1.0, big: true });
+      showBig('굶주린 북극곰의 처분', SKILLS.cheobun.color, 1.4);
+      doFlash('#9be7ff', 0.3);
+      startCast(f, 'cheobun', t);
+      return;
+    }
+  }
   if (f.ready === 'guard') { useGuard(f, '턴 사용'); return; }
   const s = f.ready; f.ready = null;
   startCast(f, s, chooseTarget(f, s));
@@ -1538,7 +1550,7 @@ function render() {
     ctx.drawImage(glow('#ff3a2a'), op.x - sz, op.y - sz, sz * 2, sz * 2); ctx.restore();
     drawIcon(tremorOBImg, op.x, op.y + (op.small ? -p * 20 : 0), sz, k);
   }
-  for (const cp of colaPops) { const k = cp.life / cp.max; drawIcon(colaImg, cp.x, cp.y - (1 - k) * 22, 30, k); }
+  for (const cp of colaPops) { const k = cp.life / cp.max; drawIcon(colaImg, cp.x, cp.y - (1 - k) * 22, cp.big ? 70 + (1 - k) * 40 : 30, k); }
   for (const bp of bleedPops) {
     const k = bp.life / bp.max, p = 1 - k, sz = bp.small ? 20 + p * 8 : 50 + p * 60;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * 0.7;
