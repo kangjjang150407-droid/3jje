@@ -146,7 +146,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       코인별 출혈 횟수 5 / 출혈 3 / 출혈 횟수 7 / 출혈 13<br>
       <b>배고픔</b> 체력 50% 미만, 턴 시작 시 전투당 1회 · 코카콜라 모두 소모, ×3 회복<br>
       <b>굶주린 북극곰의 처분</b> 파괴불가 2 · 공격 100(+30) · 18 / +12 (코카콜라 효과로만 사용)<br>
-      <b>북극곰이라 불린 자</b> (반격) 마이너스 코인 2 · 공격 150(+80) · 54 / ±10 · 파괴 가능한 스킬로 합 패배 후 피격 시 발동<br>
+      <b>북극곰이라 불린 자</b> (반격) 마이너스 코인 2 · 공격 150(+80) · 54 / -10 (앞면이면 감소) · 파괴 가능한 스킬로 합 패배 후 피격 시 발동<br>
       <b>출혈</b> 공격 코인 판정 시 위력만큼 고정 피해, 판정 후 횟수 -1<br>
       <b>굶주린 북극곰의 사냥감</b> 윤지호의 모든 공격 스킬의 타겟으로 지정됨<br><br>
       <span style="color:#888">합: 코인 앞면 확률 = 50% + 정신력% · 공격 레벨 3 차이당 합 위력 +1 · 합 승리 시 정신력 +10 · 정신력 -45 = 패닉<br>
@@ -392,8 +392,8 @@ function headsChance(f) { return clamp(0.5 + f.sp / 100, 0, 1); }
 function flip(f) { return Math.random() < headsChance(f); }
 function levelMult(ol, dl) { const d = ol - dl; return 1 + d / (Math.abs(d) + 25); }
 function shieldVal(f) { return f.shield && f.shield.until > simTime ? f.shield.v : 0; }
-// 코인 1개의 위력 변화 (마이너스 코인: 뒷면이면 +코인 위력, 앞면이면 -코인 위력)
-function coinDelta(u, heads) { return u.minus ? (heads ? -u.coinPow : u.coinPow) : (heads ? u.coinPow : 0); }
+// 코인 1개의 위력 변화 (마이너스 코인: 앞면이면 코인 위력만큼 감소, 뒷면이면 변화 없음)
+function coinDelta(u, heads) { return heads ? (u.minus ? -u.coinPow : u.coinPow) : 0; }
 
 function changeSp(f, v, why) {
   if (!f.alive || !CHAR[f.type].ai || f.panic > 0 || !v) return;
