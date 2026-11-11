@@ -129,7 +129,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 
     <h2>송재범</h2>
     <div id="info">
-      <b>LV.55</b> · 체력 320 · 방어 레벨 60(+5) · 모든 스킬 [사용시] 충전 3 얻음 (요루까지 유지)<br>
+      <b>LV.55</b> · 체력 320 · 방어 레벨 60(+5)<br>
       물리 피해 <b>2배</b> · 마법 피해 <b>절반</b> · 1턴 = 5초<br>
       스킬은 우나나·앙·흐허헣·수비 태세 중 랜덤 (뿡은 조건부)<br><br>
       <b>우나나 야하야하</b> 코인 12 · 공격 55(+0) · 12 / +1<br>
@@ -750,9 +750,9 @@ function makeUse(f, key) {
     minus: !!S.minus, clashBonus: 0, pct: 0, notes: [], cola30: false, reuse: 0 };
 }
 
-// 송재범의 모든 스킬: [사용시] 충전 3 얻음
+// 송재범 - [요루]의 모든 스킬: [사용시] 충전 3 얻음
 function gainCharge(f, v) {
-  if (!f.alive || (f.type !== 'song' && f.type !== 'yoru')) return;
+  if (!f.alive || f.type !== 'yoru') return;
   f.charge = Math.min(99, f.charge + v);
   floatText(f.x - 34, f.y - f.r, `충전 +${v}`, '#7fe0ff', 14, { vy: -30, life: 0.8 });
   chargePops.push({ x: f.x - 34, y: f.y - f.r - 12, life: 0.5, max: 0.5 });
