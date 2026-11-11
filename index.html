@@ -152,7 +152,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>북극곰이라 불린 자</b> (반격) 마이너스 코인 2 · 공격 150(+80) · 54 / -10 (앞면이면 감소) · 파괴 가능한 스킬로 합 패배 후 피격 시 발동<br>
       <b>진동 - 과다출혈</b> 진동폭발 시 위력만큼 고정 피해, 출혈 횟수 -1 · 턴 종료 시 횟수 -1<br>
       <b>출혈</b> 공격 코인 판정 시 위력만큼 고정 피해, 판정 후 횟수 -1<br>
-      <b>굶주린 북극곰의 사냥감</b> 윤지호의 모든 공격 스킬의 타겟으로 지정됨<br><br>
+      <b>굶주린 북극곰의 사냥감</b> 전투 시작 시 무작위 적에게 부여 · 사냥감을 가진 적이 죽으면 다른 적에게 이동 · 윤지호의 모든 공격 스킬의 타겟으로 지정됨<br><br>
       <span style="color:#888">합: 코인 앞면 확률 = 50% + 정신력% · 공격 레벨 3 차이당 합 위력 +1 · 합 승리 시 정신력 +10 · 정신력 -45 = 패닉<br>
       피해 = 코인 위력 × (1 + 레벨차 / (|레벨차| + 25))<br>
       진동-애범: 진동폭발 시 위력만큼 고정 피해, 횟수 -1 · 진동폭발 [애범]: 위력 -5</span>
@@ -216,7 +216,7 @@ function drawTremorIcon(x, y, size, alpha = 1) {
   const w = size * tremorImg.naturalWidth / tremorImg.naturalHeight;
   ctx.save(); ctx.globalAlpha *= alpha; ctx.drawImage(tremorImg, x - w / 2, y - size / 2, w, size); ctx.restore();
 }
-let tremorPops = [], bleedPops = [], colaPops = [], obPops = [], lastTurnIdx = 0;
+let tremorPops = [], bleedPops = [], colaPops = [], obPops = [], preyPops = [], lastTurnIdx = 0;
 const jihoImg = new Image(); jihoImg.src = IMG_JIHO;
 const bleedImg = new Image(); bleedImg.src = IMG_BLEED;
 const colaImg = new Image(); colaImg.src = IMG_COLA;
@@ -368,7 +368,7 @@ class Fighter {
   }
   resetCombat() {
     this.sp = 0; this.panic = 0; this.busy = 0; this.buffs = {}; this.shield = null;
-    this.tremor = null; this.tremorOB = null; this.bleed = null; this.cola = 0; this.colaTurn = -1; this.colaGain = 0; this.prey = false; this.hungerUsed = false;
+    this.tremor = null; this.tremorOB = null; this.bleed = null; this.cola = 0; this.colaTurn = -1; this.colaGain = 0; this.preyOf = []; this.hungerUsed = false;
     this.usagi = false; this.cast = null; this.coinView = null;
     this.ready = CHAR[this.type].ai ? pickReady(this) : null;
   }
@@ -381,10 +381,29 @@ function nearest(f, list) {
   for (const e of list) { const d = Math.hypot(e.x - f.x, e.y - f.y); if (d < bd) { bd = d; best = e; } }
   return best;
 }
+// ---- 굶주린 북극곰의 사냥감 ----
+// 윤지호는 전투 시작 시 무작위 적에게 사냥감을 부여하고, 사냥감이 있는 적이 죽으면 다른 적에게 옮겨짐
+function isPrey(e, owner) { return e.preyOf.includes(owner.id); }
+function updatePrey() {
+  for (const j of fighters) {
+    if (!j.alive || j.type !== 'jiho') continue;
+    const en = enemies(j);
+    if (!en.length || en.some(e => isPrey(e, j))) continue;
+    const t = en[(Math.random() * en.length) | 0];
+    t.preyOf.push(j.id);
+    const moved = j.preyGiven;
+    j.preyGiven = true;
+    ring(t.x, t.y, '#ff4a3a', t.r * 4, 0.7, 8);
+    burst(t.x, t.y, '#ff4a3a', 30, 300, 10, 0.7, { kind: 'spark' });
+    preyPops.push({ x: t.x, y: t.y, life: 1.0, max: 1.0 });
+    floatText(t.x, t.y - t.r - 50, '굶주린 북극곰의 사냥감', '#ff6a5a', 20, { life: 1.4 });
+    log(`🐻‍❄️ ${nm(j)}의 <b style="color:#ff6a5a">굶주린 북극곰의 사냥감</b> ${moved ? '이동' : '부여'} → ${nm(t)}`, 'skill');
+  }
+}
 function chooseTarget(f, key) {
   const list = enemies(f);
   // 굶주린 북극곰의 사냥감: 윤지호의 모든 공격 스킬의 타겟으로 지정됨
-  if (f.type === 'jiho') { const prey = list.filter(e => e.prey); if (prey.length) return nearest(f, prey); }
+  if (f.type === 'jiho') { const prey = list.filter(e => isPrey(e, f)); if (prey.length) return nearest(f, prey); }
   return nearest(f, list);
 }
 
@@ -586,7 +605,7 @@ function heal(f, v, why) {
 
 function kill(t, src, reason) {
   if (!t.alive) return;
-  t.alive = false; t.hp = 0; t.cast = null; t.busy = 0;
+  t.alive = false; t.hp = 0; t.cast = null; t.busy = 0; t.preyOf = [];
   burst(t.x, t.y, t.color, 110, 750, 22, 1.4, { drag: 0.93 });
   burst(t.x, t.y, '#ffffff', 50, 500, 14, 0.9);
   burst(t.x, t.y, TEAM[t.team].color, 60, 950, 10, 1.2, { kind: 'spark', drag: 0.95 });
@@ -846,7 +865,7 @@ function hitCoin(u, t, pow, i, heads) {
   let pct = u.pct;
   if (u.sk === 'ang' && u.lost) pct -= 80; // [합 패배시] 피해량 -80%
   if (u.sk === 'ani') pct += Math.floor(((t.bleed ? t.bleed.pot : 0) + f.cola) / 5);
-  if (u.sk === 'cheobun' && t.prey) pct += 100;
+  if (u.sk === 'cheobun' && isPrey(t, f)) pct += 100;
   const dm = Math.max(0, 1 + pct / 100);
   // VFX
   lightning(f.x, f.y, t.x, t.y, S.color, u.sk === 'ppung' || u.sk === 'polarbear' ? 14 : 7, 0.25);
@@ -1034,6 +1053,7 @@ function update(dt) {
       log(`✨ ${nm(f)} 부활`);
     }
   }
+  updatePrey();
   for (const f of fighters) if (f.alive) updateFighter(f, dt);
   for (const e of [...engagements]) {
     e.t -= dt;
@@ -1066,7 +1086,7 @@ function update(dt) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
   }
   if (particles.length > 2500) particles.splice(0, particles.length - 2500);
-  for (const arr of [rings, beams, pillars, usagiPops, tremorPops, bleedPops, colaPops, obPops]) for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) arr.splice(i, 1); }
+  for (const arr of [rings, beams, pillars, usagiPops, tremorPops, bleedPops, colaPops, obPops, preyPops]) for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) arr.splice(i, 1); }
   for (let i = texts.length - 1; i >= 0; i--) {
     const t = texts[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.pow(0.95, dt * 60);
     if (t.life <= 0) texts.splice(i, 1);
@@ -1358,7 +1378,7 @@ function drawFighter(f) {
   if (f.type === 'jiho') icons.push([colaImg, `${f.cola}/30`, f.cola >= 20 ? '#ff5a5a' : '#ffb0b0']);
   if (f.bleed) icons.push([bleedImg, `${f.bleed.pot}/${f.bleed.cnt}`, '#ff4a4a']);
   if (f.tremorOB) icons.push([tremorOBImg, `${f.tremorOB.pot}/${f.tremorOB.cnt}`, '#ff7a5a']);
-  if (f.prey) icons.push([preyImg, '사냥감', '#ff6a5a']);
+  if (f.preyOf.length) icons.push([preyImg, '사냥감', '#ff6a5a']);
   if (icons.length) {
     ctx.font = `800 11px ${FONT}`; const isz = 15;
     const ws = icons.map(([, t]) => isz + 3 + ctx.measureText(t).width);
@@ -1506,6 +1526,12 @@ function render() {
   drawBeams();
   drawProjectiles();
   drawParticles();
+  for (const pp of preyPops) {
+    const k = pp.life / pp.max, p = 1 - k, sz = 50 + p * 70;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * 0.7;
+    ctx.drawImage(glow('#ff3a2a'), pp.x - sz, pp.y - sz, sz * 2, sz * 2); ctx.restore();
+    drawIcon(preyImg, pp.x, pp.y, sz, k);
+  }
   for (const op of obPops) {
     const k = op.life / op.max, p = 1 - k, sz = op.small ? 22 + p * 10 : 60 + p * 90;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * 0.8;
@@ -1809,7 +1835,7 @@ function build() {
   resize();
   winInfo = null;
   fighters = []; projectiles = []; particles = []; rings = []; texts = []; beams = []; pillars = []; respawns = [];
-  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; lastTurnIdx = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
+  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; lastTurnIdx = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
   logEl.innerHTML = '';
   document.getElementById('overlay').classList.remove('show');
   const counts = {}, totals = {};
