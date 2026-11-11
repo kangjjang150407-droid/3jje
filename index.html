@@ -300,7 +300,7 @@ const SKILLS = {
   gwanmun:   { name: '관문 충돌',      color: '#3f7bff', type: 'magic', lvMod: 35, base: 20, coinPow: 10, coins: 1, unbreakable: true, aoe: true, ammo: [3], cast: 0.7 },
   drift:     { name: '차원 표류',      color: '#b0e8ff', type: 'magic', lvMod: 135, base: 90, coinPow: 1, coins: 2, unbreakable: true, ammo: ['all', 0], cast: 1.0 },
   evade:     { name: '쉽다',           color: '#c8f0ff', defense: true, evade: true, base: 10, coinPow: 10, coins: 1 },
-  polarbear: { name: '북극곰이라 불린 자', color: '#e0f7ff', type: 'physical', lvMod: 80, base: 54, coinPow: 10, coins: 2, minus: true },
+  polarbear: { name: '북극곰이라 불린 자', color: '#e0f7ff', type: 'physical', lvMod: 80, base: 54, coinPow: 10, coins: 2, minus: true, defense: true, counter: true },
 };
 const turnCd = f => TURN / (CHAR[f.type].slots || 1);
 const pickReady = f => { const p = CHAR[f.type].pool; return p.length ? p[(Math.random() * p.length) | 0] : null; };
@@ -881,7 +881,8 @@ function beginEngagement(f, key, t) {
   const A = makeUse(f, key);
   onUse(A);
   let B = null;
-  if (canRespond(t) && !(t.cast && t.cast.skill === 'ppung')) {
+  // 수비 스킬(가드·회피·반격)끼리는 수비 스킬을 발동하지 않음
+  if (!S.defense && canRespond(t) && !(t.cast && t.cast.skill === 'ppung')) {
     let rk = null;
     if (t.cast && t.cast.target === f) { rk = t.cast.skill; t.cast = null; }
     else if (!t.cast) rk = t.ready;
