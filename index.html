@@ -563,13 +563,13 @@ function beginEngagement(f, key, t) {
   if (B) {
     floatText((f.x + t.x) / 2, (f.y + t.y) / 2 - 20, '합!', '#ffffff', 40, { vy: -20, life: 0.9 });
     log(`⚔ 합: ${nm(f)} ${sk(key)} vs ${nm(t)} ${sk(B.sk)}`, 'skill');
-    f.coinView = { total: S.coins, alive: S.coins, res: [] };
-    t.coinView = { total: SKILLS[B.sk].coins, alive: SKILLS[B.sk].coins, res: [] };
+    f.coinView = { total: S.coins, alive: S.coins, res: [], ub: !!S.unbreakable };
+    t.coinView = { total: SKILLS[B.sk].coins, alive: SKILLS[B.sk].coins, res: [], ub: !!SKILLS[B.sk].unbreakable };
   } else {
     if (S.noClash) log(`${nm(f)} ${sk(key)} — 합 불가 · 일방 공격`, 'skill');
     else log(`${nm(f)} ${sk(key)} — 일방 공격`, 'skill');
     e.queue.push({ use: A, tgt: t, coins: S.coins });
-    f.coinView = { total: S.coins, alive: S.coins, res: [] };
+    f.coinView = { total: S.coins, alive: S.coins, res: [], ub: !!S.unbreakable };
   }
   engagements.push(e);
 }
@@ -629,8 +629,8 @@ function stepEngagement(e) {
   if (!q.use.f.alive || !q.tgt.alive || q.coins <= 0) { e.queue.shift(); e.t = 0.05; return; }
   if (q.i === undefined) {
     q.i = 0; q.pow = S.base;
-    q.use.f.coinView = { total: q.coins, alive: q.coins, res: [] };
-    if (q.use.lost) floatText(q.use.f.x, q.use.f.y - q.use.f.r - 60, '파괴불가 코인!', '#ffcc33', 20, { life: 1.0 });
+    q.use.f.coinView = { total: q.coins, alive: q.coins, res: [], ub: !!S.unbreakable };
+    if (q.use.lost) floatText(q.use.f.x, q.use.f.y - q.use.f.r - 60, '파괴불가 코인!', '#ff4040', 20, { life: 1.0 });
   }
   const heads = flip(q.use.f);
   if (heads) q.pow += S.coinPow;
@@ -651,7 +651,7 @@ function hitCoin(u, t, pow, i, heads) {
   burst(t.x, t.y, S.color, u.sk === 'unana' ? 14 : 30, 380, 11, 0.5, { kind: u.sk === 'unana' ? 'heart' : 'glow' });
   ring(t.x, t.y, heads ? '#fff27a' : '#ffffff', t.r * 2.2, 0.3, 4);
   shake = Math.max(shake, u.sk === 'unana' ? 4 : 9);
-  floatText(t.x + rand(-24, 24), t.y + t.r + 22, heads ? '앞면!' : '뒷면', heads ? '#ffcc33' : '#9aa0b0', heads ? 16 : 13, { vy: -35, life: 0.6 });
+  floatText(t.x + rand(-24, 24), t.y + t.r + 22, heads ? '앞면!' : '뒷면', heads ? (S.unbreakable ? '#ff5050' : '#ffcc33') : '#9aa0b0', heads ? 16 : 13, { vy: -35, life: 0.6 });
   const extra = `위력 ${pow} × 레벨 ${lm.toFixed(3)} [${ol} vs ${dl}]${mod !== 1 ? ` × ${+mod.toFixed(3)}` : ''} → `;
   dealDamage(f, t, pow * lm * mod, 'magic', `${S.name} ${i + 1}번째 코인`, extra);
   if (!t.alive) return;
@@ -1015,7 +1015,10 @@ function drawFighter(f) {
   }
   // 코인 (합 / 공격 중)
   if (f.coinView) {
-    // 금색 = 앞면, 회색 = 뒷면, 테두리만 = 아직 안 던짐, 빨간 X = 파괴됨
+    // 금색(파괴불가 코인은 붉은색) = 앞면, 어두운색 = 뒷면, 테두리만 = 아직 안 던짐, X = 파괴됨
+    const C = f.coinView.ub
+      ? { head: '#ff3b3b', headLine: '#ffc0c0', glow: '#ff2b2b', tail: '#6a2228', tailLine: '#2a0c10', empty: 'rgba(255,59,59,0.18)', emptyLine: '#ff3b3b', headTxt: '#4a0000', tailTxt: '#e8b0b4' }
+      : { head: '#ffcc33', headLine: '#fff3b0', glow: '#ffcc33', tail: '#5a5f6e', tailLine: '#2a2d36', empty: 'rgba(255,204,51,0.15)', emptyLine: '#ffcc33', headTxt: '#5a3a00', tailTxt: '#c8ccd8' };
     const cv2 = f.coinView, n = cv2.total, cs = Math.min(13, 150 / n);
     const cx0 = x - (n - 1) * cs * 1.2 / 2, cy0 = y + r + 30;
     for (let k = 0; k < n; k++) {
@@ -1030,17 +1033,17 @@ function drawFighter(f) {
       }
       if (res === true) {
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.7;
-        ctx.drawImage(glow('#ffcc33'), cx1 - rr * 2.2, cy0 - rr * 2.2, rr * 4.4, rr * 4.4); ctx.restore();
+        ctx.drawImage(glow(C.glow), cx1 - rr * 2.2, cy0 - rr * 2.2, rr * 4.4, rr * 4.4); ctx.restore();
         ctx.beginPath(); ctx.arc(cx1, cy0, rr, 0, TAU);
-        ctx.fillStyle = '#ffcc33'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff3b0'; ctx.stroke();
+        ctx.fillStyle = C.head; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = C.headLine; ctx.stroke();
       } else if (res === false) {
-        ctx.fillStyle = '#5a5f6e'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#2a2d36'; ctx.stroke();
+        ctx.fillStyle = C.tail; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = C.tailLine; ctx.stroke();
       } else {
-        ctx.fillStyle = 'rgba(255,204,51,0.15)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#ffcc33'; ctx.stroke();
+        ctx.fillStyle = C.empty; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = C.emptyLine; ctx.stroke();
       }
       if (cs >= 10 && res !== undefined) {
         ctx.font = `900 ${Math.round(cs * 0.7)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = res ? '#5a3a00' : '#c8ccd8'; ctx.fillText(res ? '앞' : '뒤', cx1, cy0 + 0.5);
+        ctx.fillStyle = res ? C.headTxt : C.tailTxt; ctx.fillText(res ? '앞' : '뒤', cx1, cy0 + 0.5);
         ctx.textBaseline = 'alphabetic';
       }
     }
