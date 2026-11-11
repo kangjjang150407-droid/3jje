@@ -43,6 +43,15 @@
   @keyframes blink{50%{opacity:.6}}
   #recInd{position:absolute;top:10px;left:12px;font-size:13px;font-weight:700;color:#ff4d4d;display:none;pointer-events:none;text-shadow:0 0 8px #f00}
   #recInd.on{display:block}
+  #testPanel{display:none;border:1px solid #3a6;border-radius:10px;padding:8px;background:#0c1a12;margin-top:4px}
+  #testPanel.on{display:block}
+  #testPanel select{background:#0b0b18;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-family:inherit;font-size:12px;max-width:100%}
+  .tgrid{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 6px;align-items:center;font-size:11px;margin:6px 0}
+  .tgrid input{width:100%;background:#0b0b18;border:1px solid var(--line);color:var(--txt);border-radius:5px;padding:3px;font-size:12px}
+  .tgrid .h{color:#7c9;font-size:10px}
+  #testPanel .row{margin-top:5px}
+  #testPanel .row button{flex:1;padding:6px 4px;font-size:11px}
+  #testPanel .hint{font-size:10px;color:#7c9;margin-top:6px}
   #toast{position:fixed;left:50%;top:20px;transform:translate(-50%,-20px);background:#1d1d33;border:1px solid #4a4a78;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;z-index:30;pointer-events:none}
   #toast.show{opacity:1;transform:translate(-50%,0)}
   #recModal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
@@ -120,6 +129,21 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <h2>녹화</h2>
     <button class="recBtn" style="width:100%">⏺ 녹화</button>
     <label><input type="checkbox" id="autoRec"> 전투 자동 녹화 (시작~승리)</label>
+
+    <h2>🧪 테스트 모드</h2>
+    <label><input type="checkbox" id="testOn"> 테스트 모드 켜기</label>
+    <div id="testPanel">
+      <label><input type="checkbox" id="tAiOff"> AI 자동 행동 멈춤 (합 대응은 함)</label>
+      <div class="row">대상&nbsp;<select id="tFighter" style="flex:1"></select></div>
+      <div class="tgrid" id="tGrid"></div>
+      <label><input type="checkbox" id="tUsagi"> 우사기의 가호</label>
+      <label><input type="checkbox" id="tGod"> 무적 (체력이 1 아래로 내려가지 않음)</label>
+      <div class="row"><select id="tSkill" style="flex:1"></select>→<select id="tTarget" style="flex:1"></select></div>
+      <div class="row"><button id="tUse">⚡ 스킬 바로 사용</button><button id="tReady">다음 스킬로 지정</button></div>
+      <div class="row"><button id="tPhase">요루로 페이즈 변경</button><button id="tPanic">패닉</button></div>
+      <div class="row"><button id="tHeal">체력 가득</button><button id="tClear">상태 초기화</button><button id="tNow">쿨타임 0</button></div>
+      <div class="hint">화면의 볼을 눌러서 대상을 고를 수 있어요. 일시정지 중에도 수치를 바꿀 수 있어요.</div>
+    </div>
 
     <h2>과녁 설정</h2>
     <label>체력 <input type="number" id="dummyHp" value="500" min="1" max="99999"></label>
@@ -670,6 +694,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (absorbed) body += ` · 보호막 ${Math.round(absorbed * 100) / 100} 흡수`;
   const note = body ? ` <span style="color:#777">(${body})</span>` : '';
   log(`${nm(src)} → ${nm(t)} <span style="color:${DMG_COLOR[kind]}">${shown} ${kindName}</span>${note} · ${srcName}`);
+  if (t.god && t.hp < 1) t.hp = 1; // 테스트 모드: 무적
   if (t.hp <= 0) {
     t.hp = 0;
     // 송재범: 체력이 0이 되면 요루로 페이즈 변경
@@ -1147,6 +1172,7 @@ function ppungTarget(f) {
 
 function unitAI(f, dt) {
   if (f.busy) return;
+  if (test.on && test.aiOff && !f.cast) return; // 테스트 모드: AI 자동 행동 멈춤
   if (!f.ready && !f.cast) f.ready = pickReady(f);
   // 뿡 (송재범): 대상의 진동 - 애범이 50 이상이면 사용 (사용 중인 스킬은 취소)
   if (f.type === 'song' && !(f.cast && f.cast.skill === 'ppung')) {
@@ -1441,6 +1467,10 @@ function drawMagicCircle(f) {
 function drawFighter(f) {
   const { x, y, r } = f;
   const tc = TEAM[f.team].color;
+  if (test.on && test.sel === f) {
+    ctx.save(); ctx.strokeStyle = '#5dff9a'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -simTime * 30;
+    ctx.beginPath(); ctx.arc(x, y, r + 14, 0, TAU); ctx.stroke(); ctx.restore();
+  }
   if (f.cast) drawMagicCircle(f);
 
   // 그림자 & 오라
@@ -2081,6 +2111,112 @@ document.getElementById('recClose').onclick = () => {
   const v = document.getElementById('recVideo'); v.pause();
   document.getElementById('recModal').classList.remove('show');
 };
+
+// ================== 테스트 모드 ==================
+const test = { on: false, aiOff: false, sel: null };
+const T_FIELDS = [['hp', '체력'], ['sp', '정신력'], ['level', '레벨'], ['cola', '코카콜라'], ['charge', '충전'], ['ammo', '탄환']];
+const T_STACKS = [['tremor', '진동-애범'], ['tremorOB', '진동-과다출혈'], ['bleed', '출혈'], ['poise', '호흡'], ['sinking', '침잠'], ['burn', '화상']];
+const T_SKILLS = {
+  song: ['unana', 'ang', 'heuheoheu', 'ppung', 'guard'],
+  yoru: ['gimman', 'gisup', 'gwanmun', 'drift', 'evade'],
+  jiho: ['aishi', 'ani', 'cheobun', 'polarbear', 'hunger'],
+};
+const $ = id => document.getElementById(id);
+(function buildTestGrid() {
+  let h = '';
+  for (const [k, n] of T_FIELDS) h += `<span>${n}</span><input type="number" data-f="${k}" step="1"><span></span>`;
+  h += `<span></span><span class="h">위력</span><span class="h">횟수</span>`;
+  for (const [k, n] of T_STACKS) h += `<span>${n}</span><input type="number" data-s="${k}" data-p="pot" min="0" max="99"><input type="number" data-s="${k}" data-p="cnt" min="0" max="99">`;
+  $('tGrid').innerHTML = h;
+})();
+function testFighters() { return fighters.filter(f => f.alive); }
+function testRefresh(force) {
+  if (!test.on) return;
+  const list = testFighters();
+  if (!list.includes(test.sel)) test.sel = list[0] || null;
+  const sel = $('tFighter');
+  const sig = list.map(f => f.id + f.label).join('|');
+  if (force || sel.dataset.sig !== sig) {
+    sel.dataset.sig = sig;
+    sel.innerHTML = list.map(f => `<option value="${f.id}">${TEAM[f.team].name.slice(0, 2)} · ${f.label}</option>`).join('');
+  }
+  const f = test.sel; if (!f) return;
+  if (document.activeElement !== sel) sel.value = f.id;
+  for (const inp of $('tGrid').querySelectorAll('input')) {
+    if (inp === document.activeElement) continue;
+    if (inp.dataset.f) inp.value = Math.round((f[inp.dataset.f] || 0) * 100) / 100;
+    else { const b = f[inp.dataset.s]; inp.value = b ? b[inp.dataset.p] : 0; }
+  }
+  $('tUsagi').checked = !!f.usagi; $('tGod').checked = !!f.god;
+  // 스킬 / 대상 목록
+  const sk2 = T_SKILLS[f.type] || [];
+  const ssig = f.type;
+  if (force || $('tSkill').dataset.sig !== ssig) { $('tSkill').dataset.sig = ssig; $('tSkill').innerHTML = sk2.map(k => `<option value="${k}">${SKILLS[k].name}</option>`).join('') || '<option value="">(스킬 없음)</option>'; }
+  const en = enemies(f), tsig = en.map(e => e.id).join('|');
+  if (force || $('tTarget').dataset.sig !== tsig) { $('tTarget').dataset.sig = tsig; $('tTarget').innerHTML = en.map(e => `<option value="${e.id}">${e.label}</option>`).join('') || '<option value="">(적 없음)</option>'; }
+  $('tPhase').disabled = f.type !== 'song';
+}
+function testSet(inp) {
+  const f = test.sel; if (!f || !f.alive) return;
+  const v = Math.round(+inp.value || 0);
+  if (inp.dataset.f) {
+    const k = inp.dataset.f;
+    if (k === 'hp') f.hp = clamp(+inp.value || 0, 1, f.maxHp);
+    else if (k === 'sp') { f.sp = clamp(v, -45, 45); if (f.sp <= -45 && f.panic <= 0) enterPanic(f); }
+    else if (k === 'cola') f.cola = clamp(v, 0, 30);
+    else if (k === 'ammo') f.ammo = clamp(v, 0, CHAR[f.type].maxAmmo || 99);
+    else f[k] = Math.max(k === 'level' ? 1 : 0, v);
+    log(`🧪 ${nm(f)} ${T_FIELDS.find(x => x[0] === k)[1]} → ${Math.round(f[k] * 100) / 100}`);
+  } else {
+    const k = inp.dataset.s, part = inp.dataset.p;
+    const cur = f[k] || { pot: 0, cnt: 0 };
+    cur[part] = clamp(v, 0, 99);
+    if (k === 'bleed' && !cur.src) cur.src = f;
+    f[k] = cur.pot > 0 && cur.cnt > 0 ? cur : (cur.pot > 0 || cur.cnt > 0 ? cur : null);
+    log(`🧪 ${nm(f)} ${T_STACKS.find(x => x[0] === k)[1]} → ${cur.pot}/${cur.cnt}`);
+  }
+}
+$('testOn').onchange = e => { test.on = e.target.checked; $('testPanel').classList.toggle('on', test.on); testRefresh(true); };
+$('tAiOff').onchange = e => { test.aiOff = e.target.checked; };
+$('tFighter').onchange = e => { test.sel = fighters.find(f => f.id === +e.target.value) || null; testRefresh(true); };
+$('tGrid').addEventListener('change', e => { if (e.target.tagName === 'INPUT') testSet(e.target); });
+$('tUsagi').onchange = e => { if (test.sel) test.sel.usagi = e.target.checked; };
+$('tGod').onchange = e => { if (test.sel) test.sel.god = e.target.checked; };
+$('tUse').onclick = () => {
+  const f = test.sel, k = $('tSkill').value; if (!f || !f.alive || !k) return;
+  const t = fighters.find(x => x.id === +$('tTarget').value && x.alive) || chooseTarget(f, k);
+  log(`🧪 ${nm(f)} ${sk(k)} 강제 사용`);
+  f.cast = null;
+  if (k === 'guard') useGuard(f, '테스트');
+  else if (k === 'gimman') useGimman(f);
+  else if (k === 'hunger') { f.hungerUsed = false; useHunger(f); }
+  else if (k === 'evade') { f.ready = 'evade'; toast('쉽다는 공격받을 때 발동해요 — 다음 스킬로 지정했어요'); }
+  else if (k === 'polarbear') {
+    if (!t) return;
+    const u = makeUse(f, k); f.busy++;
+    engagements.push({ a: u, b: null, mode: 'attack', t: 0.2, ca: 0, cb: 0, round: 0, queue: [{ use: u, tgt: t, coins: SKILLS[k].coins, counter: true }] });
+  } else if (t) beginEngagement(f, k, t);
+};
+$('tReady').onclick = () => { const f = test.sel, k = $('tSkill').value; if (f && k) { f.ready = k; log(`🧪 ${nm(f)} 다음 스킬 → ${sk(k)}`); } };
+$('tPhase').onclick = () => { if (test.sel && test.sel.type === 'song') { transformYoru(test.sel); testRefresh(true); } };
+$('tPanic').onclick = () => { if (test.sel && CHAR[test.sel.type].ai && test.sel.panic <= 0) { test.sel.sp = -45; enterPanic(test.sel); } };
+$('tHeal').onclick = () => { const f = test.sel; if (f) { f.hp = f.maxHp; log(`🧪 ${nm(f)} 체력 가득`); } };
+$('tNow').onclick = () => { const f = test.sel; if (f) f.cd = 0; };
+$('tClear').onclick = () => {
+  const f = test.sel; if (!f) return;
+  for (const [k] of T_STACKS) f[k] = null;
+  f.buffs = {}; f.shield = null; f.sp = 0; f.panic = 0;
+  log(`🧪 ${nm(f)} 상태 초기화`);
+};
+cv.addEventListener('click', e => {
+  if (!test.on) return;
+  const r = cv.getBoundingClientRect();
+  const wx = (e.clientX - r.left - offX) / scale, wy = (e.clientY - r.top - offY) / scale;
+  let best = null, bd = Infinity;
+  for (const f of testFighters()) { const d = Math.hypot(f.x - wx, f.y - wy); if (d < f.r + 20 && d < bd) { bd = d; best = f; } }
+  if (best) { test.sel = best; testRefresh(true); }
+});
+setInterval(() => testRefresh(false), 300);
 
 // ================== 셋업 ==================
 function placeFighter(f) {
