@@ -169,7 +169,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b style="color:#5fb8ff;font-size:12px">송재범 - [요루]</b> (2페이즈 · 체력이 0이 되거나 뿡 적중 시 변경)<br>
       <b>LV.65</b> · 체력 482 · 방어 레벨 90(+25) · 물리 피해 1.5배 절감 · 마법 피해 <b>2배</b> · 스킬 슬롯 2개 · 우사기의 가호 제거 · 모든 스킬 [사용시] 충전 3 얻음 · 매 턴 시작 시 침잠 3 얻음 (자가 침잠)<br>
       스킬은 기만·기습·관문 충돌·쉽다 중 랜덤 · 탄환 최대 7 (없으면 공격 취소 · 턴 시작 시 탄환이 0이거나 이번 스킬에 부족하면 재장전)<br>
-      <b>기만</b> 합 불가 · 최대 체력 5% 분신 소환 (최대 1개) · 분신 사망 시 처치한 대상에게 분신 체력만큼 고정 피해<br>
+      <b>기만</b> 합 불가 · 최대 체력 5% 분신 소환 (최대 1개, 분신이 있으면 쉽다로 바뀜) · 분신 사망 시 처치한 대상에게 분신 체력만큼 고정 피해<br>
       <b>기습</b> 코인 2 · 공격 90(+25) · 30 / +5 · 충전 4당 피해량 +20% · 1코인 탄환 1, 호흡 3 · 2코인(파괴불가) 탄환 1, 호흡 횟수 4, 크리티컬 시 재사용<br>
       <b>관문 충돌</b> 광역 · 파괴불가 1 · 공격 100(+35) · 20 / +10 · 충전 15 이상이면 모두 소모, 피해량 +40%, 합 위력 +5% · 호흡 (위력+횟수) 10당 피해량 +100% · 탄환 3, 침잠 5, 크리티컬 시 재사용<br>
       <b>차원 표류</b> 파괴불가 2 · 공격 200(+135) · 90 / +1 · 충전·침잠·호흡 합 100 이상일 때 사용, 모두 소모해 그만큼 피해량 +% · 1코인 탄환 모두 소모(다음 턴 재장전), 화상 9·횟수 4 · 2코인 재사용 (최대 7회)<br>
@@ -1186,6 +1186,8 @@ function ppungTarget(f) {
 }
 
 function unitAI(f, dt) {
+  // 요루: 분신이 이미 있으면 기만 대신 쉽다
+  if (f.type === 'yoru' && hasClone(f)) { if (f.ready === 'gimman') f.ready = 'evade'; if (f.ready2 === 'gimman') f.ready2 = 'evade'; }
   if (f.busy) return;
   if (test.on && test.aiOff && !f.cast) return; // 테스트 모드: AI 자동 행동 멈춤
   if (!f.ready && !f.cast) f.ready = pickReady(f);
@@ -1212,11 +1214,6 @@ function unitAI(f, dt) {
     if (total >= 100) {
       const t = chooseTarget(f, 'drift');
       if (t) { log(`${nm(f)} 충전·침잠·호흡 합 ${total} ≥ 100 → ${sk('drift')}`, 'skill'); startCast(f, 'drift', t); return; }
-    }
-    if (f.ready === 'gimman' && hasClone(f)) {
-      // 분신이 있으면 기만 대신 다른 스킬을 다시 고름
-      const p2 = CHAR.yoru.pool.filter(k => k !== 'gimman');
-      f.ready = p2[(Math.random() * p2.length) | 0];
     }
     if (f.ready === 'gimman') { useGimman(f); nextReady(f); f.cd = turnCd(f); return; }
     if (f.ready === 'evade') { log(`${nm(f)} ${sk('evade')} 대기 (공격받지 않음)`); nextReady(f); f.cd = turnCd(f); return; }
