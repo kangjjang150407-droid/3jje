@@ -178,7 +178,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>터헣 (회피)</b> 7 / +10 · 대상 화상 4당 코인 위력 +1 · 회피 성공 시 체력 15% 회복<br>
       <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#ff5a3a;font-size:12px">강주원 [불타는 울음]</b> (2페이즈 · 전장 복귀 시 변경 · 붉은 날개)<br>
-      <b>LV.65</b> · 체력 1090 · 방어 레벨 90 · 물리 피해 절반 · 마법 피해 절반 · 스킬은 짜증·눈물을 글썽이며·터진 분노와 울음 중 랜덤<br>
+      <b>LV.65</b> · 체력 1090 · 방어 레벨 90 · 물리 피해 절반 · 마법 피해 절반 · 정신력이 0 아래로 내려가지 않음 · 스킬은 짜증·눈물을 글썽이며·터진 분노와 울음 중 랜덤<br>
       <b>짜증</b> 코인 2 · 공격 70 · 4 / +5 · 정신력 40 이상이면 합 위력 +1 · 정신력 +10 · 1코인 화상 4 · 2코인 대상 화상만큼 정신력 감소<br>
       <b>눈물을 글썽이며</b> 코인 2 · 공격 70 · 4 / +5 · 대상이 화상이면 피해량 +10% · 1코인 화상 4 · 2코인 대상 화상만큼 침잠<br>
       <b>터진 분노와 울음</b> 파괴불가 1 · 공격 80 · 35 / +55 · 대상 화상만큼 최종 위력 + · 정신력 × 10 피해량 % · [공격 종료시] 이번 턴 종료 · 울음 10 부여<br>
@@ -522,9 +522,11 @@ function shieldVal(f) { return f.shield && f.shield.until > simTime ? f.shield.v
 // 코인 1개의 위력 변화 (마이너스 코인: 앞면이면 코인 위력만큼 감소, 뒷면이면 변화 없음)
 function coinDelta(u, heads) { return heads ? (u.minus ? -u.coinPow : u.coinPow) : 0; }
 
+// 강주원 [불타는 울음]은 정신력이 0 아래로 내려가지 않음
+const minSp = f => f.type === 'juwon2' ? 0 : -45;
 function changeSp(f, v, why) {
   if (!f.alive || !CHAR[f.type].ai || f.panic > 0 || !v) return;
-  const old = f.sp; f.sp = clamp(f.sp + v, -45, 45);
+  const old = f.sp; f.sp = clamp(f.sp + v, minSp(f), 45);
   if (f.sp === old) return;
   floatText(f.x + 30, f.y + f.r + 6, `정신력 ${v > 0 ? '+' : ''}${f.sp - old}`, v > 0 ? '#7fd4ff' : '#ff7f9a', 15, { vy: -30, life: 1.0 });
   log(`${nm(f)} 정신력 ${old} → ${f.sp} <span style="color:#777">(${why})</span>`);
@@ -743,6 +745,7 @@ function transformJuwon2(f) {
   const d = CHAR.juwon2;
   f.maxHp = d.maxHp; f.hp = d.maxHp; f.dispHp = f.lagHp = d.maxHp; f.level = d.level; f.r = d.radius; f.baseSpeed = d.speed; f.m = d.mass;
   f.cast = null; f.cd = 1.5; f.ready = pickReady(f); f.wingT = 0;
+  if (f.sp < 0) f.sp = 0; f.panic = 0;
   showBig('강주원 [불타는 울음]', '#ff3b2f', 2.0); darkenT = 1.2; slowmo = 1.2;
   doFlash('#ff3020', 0.7); shake = Math.max(shake, 30);
   for (let k = 0; k < 4; k++) ring(f.x, f.y, k % 2 ? '#ffd0a0' : '#ff2a1a', 200 + k * 180, 0.8 + k * 0.3, 14 - k * 2);
@@ -2422,7 +2425,7 @@ function testSet(inp) {
   if (inp.dataset.f) {
     const k = inp.dataset.f;
     if (k === 'hp') f.hp = clamp(+inp.value || 0, 1, f.maxHp);
-    else if (k === 'sp') { f.sp = clamp(v, -45, 45); if (f.sp <= -45 && f.panic <= 0) enterPanic(f); }
+    else if (k === 'sp') { f.sp = clamp(v, minSp(f), 45); if (f.sp <= -45 && f.panic <= 0) enterPanic(f); }
     else if (k === 'cola') f.cola = clamp(v, 0, 30);
     else if (k === 'ammo') f.ammo = clamp(v, 0, CHAR[f.type].maxAmmo || 99);
     else if (k === 'tears') f.tears = clamp(v, 0, 99);
@@ -2460,7 +2463,7 @@ $('tUse').onclick = () => {
 };
 $('tReady').onclick = () => { const f = test.sel, k = $('tSkill').value; if (f && k) { f.ready = k; log(`🧪 ${nm(f)} 다음 스킬 → ${sk(k)}`); } };
 $('tPhase').onclick = () => { const f = test.sel; if (!f) return; if (f.type === 'song') transformYoru(f); else if (f.type === 'juwon') transformJuwon2(f); testRefresh(true); };
-$('tPanic').onclick = () => { if (test.sel && CHAR[test.sel.type].ai && test.sel.panic <= 0) { test.sel.sp = -45; enterPanic(test.sel); } };
+$('tPanic').onclick = () => { if (test.sel && CHAR[test.sel.type].ai && test.sel.panic <= 0 && minSp(test.sel) < 0) { test.sel.sp = -45; enterPanic(test.sel); } };
 $('tHeal').onclick = () => { const f = test.sel; if (f) { f.hp = f.maxHp; log(`🧪 ${nm(f)} 체력 가득`); } };
 $('tNow').onclick = () => { const f = test.sel; if (f) f.cd = 0; };
 $('tClear').onclick = () => {
