@@ -225,8 +225,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>수호자</b> (레이드 보상 · 합 가능 반격) 물리 · 10 / +6 · 원호방어 전용 스킬 · [사용시] 보호 1 얻음<br>
       <b style="color:#ffd27a">원호방어</b> 최대 3 · 아군이 적에게 일방공격 당할 때 1 소모해 공격 대상을 자신으로 바꾸고 수호자 사용 · 여러 명이면 수치가 높은 아군 우선 · 수비 스킬을 장착한 아군에게는 발동하지 않음 · 턴 종료 시 제거<br><br>
       <b style="color:#ffcc33;font-size:12px">레이드 — 과녁의 왕</b> (과녁 8 동반 · 레이드 과녁은 LV.55, 체력 500 고정)<br>
-      <b>LV.100</b> · 체력 7000 · 방어 레벨 150 · 모든 피해 절반 · 흐트러짐 50% · 공격하지 않고, 공격받으면 반격<br>
-      <b>과녁들은 힘을 합쳐라!</b> (반격) 10 / +10 · 생존한 아군 1당 코인 +1, 피해량 +100%<br><br>
+      <b>LV.50</b> · 체력 7000 · 방어 레벨 150 · 모든 피해 절반 · 흐트러짐 50% · 공격하지 않고 합도 하지 않음 · 공격을 받은 뒤 공격자에게 반격<br>
+      <b>과녁들은 힘을 합쳐라!</b> (반격 · 공격 50) 10 / +10 · 생존한 아군 1당 코인 +1, 피해량 +100%<br><br>
       <b style="color:#7ad0ff;font-size:12px">강우주</b><br>
       <b>LV.75</b> · 체력 493 · 방어 레벨 77 · 물리 피해 절반 · 마법 피해 1.2배 · 흐트러짐 65% / 40% · 스킬은 퉤·머리 때리기 중 랜덤<br>
       <b>퉤</b> 파괴불가 2 · 공격 80 · 3 / +3 · 정신력 +10 · [합 패배] 피해 -80%, 이 스킬로 흐트러지지 않음 · 1코인 화상 2 · 2코인 [파괴 후 적중시] 다음 턴 코인 위력 +1<br>
@@ -432,7 +432,7 @@ const CHAR = {
   // 레이드 보스
   targetking: {
     name: '과녁의 왕', maxHp: 7000, radius: 62, color: '#ffcc33', speed: 40, mass: 8,
-    resist: { physical: 0.5, magic: 0.5, true: 1 }, ai: false, respond: 'kingcounter', level: 100, defMod: 50, pool: [], staggerAt: [0.5],
+    resist: { physical: 0.5, magic: 0.5, true: 1 }, ai: false, hitCounter: 'kingcounter', level: 50, defMod: 100, pool: [], staggerAt: [0.5],
   },
   dummy: {
     name: '과녁', maxHp: 500, radius: 40, color: '#ffd34d', speed: 70, mass: 3,
@@ -1634,6 +1634,9 @@ function beginEngagement(f, key, t) {
     log(`${nm(f)} ${sk(key)} — ${S.noClash ? '합 불가 · ' : ''}일방 공격`, 'skill');
     e.queue.push({ use: A, tgt: t, coins: A.coins });
     f.coinView = coinView(A, A.coins);
+    // 합을 하지 않는 반격 (과녁의 왕): 공격을 받은 뒤 공격자에게 반격
+    const hc = CHAR[t.type].hitCounter;
+    if (hc && !S.defense && t.alive && t.stagger <= 0) { const cu = makeUse(t, hc); cu.tgt = f; onUse(cu); e.queue.push({ use: cu, tgt: f, coins: cu.coins, counter: true }); }
   }
   engagements.push(e);
   // 연: 해당하는 아군이 전장에 행동 가능한 상태로 생존해 있으면 함께 공격함
@@ -1752,7 +1755,7 @@ function stepEngagement(e) {
     if (q.counter) {
       floatText(u.f.x, u.f.y - u.f.r - 60, `반격! ${S.name}`, S.color, 24, { life: 1.3 });
       ring(u.f.x, u.f.y, S.color, u.f.r * 4, 0.6, 8); doFlash('#bfefff', 0.3); shake = Math.max(shake, 14);
-      log(`🐻‍❄️ ${nm(u.f)} 반격 ${sk(u.sk)} → ${nm(q.tgt)}`, 'skill');
+      log(`↩ ${nm(u.f)} 반격 ${sk(u.sk)} → ${nm(q.tgt)}`, 'skill');
     } else if (u.lost) floatText(u.f.x, u.f.y - u.f.r - 60, '파괴불가 코인!', '#ff4040', 20, { life: 1.0 });
   }
   // 탄환: 특정 스킬 사용 시 소모, 탄환이 없으면 공격 취소
@@ -1836,7 +1839,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   const extra = `위력 ${pow} × 레벨 ${lm.toFixed(3)} [${ol} vs ${dl}]${pct ? ` × 피해량 ${pct > 0 ? '+' : ''}${pct}%` : ''}${crit ? ' × 크리티컬 1.2' : ''} → `;
   if (u.sk === 'teoheong' && u.lost) t.nonLethal = true;
   if ((u.sk === 'pwe' || u.sk === 'noon') && u.lost) t.noStagger = true; // 이 스킬로 흐트러지지 않음
-  dealDamage(f, t, pow * lm * dm, S.type, `${S.name} ${i + 1}번째 코인${crit ? ' (크리티컬)' : ''}`, extra);
+  dealDamage(f, t, pow * lm * dm, S.type, `${S.name} ${(u.rawCoin ?? i) + 1}번째 코인${crit ? ' (크리티컬)' : ''}`, extra);
   t.nonLethal = false; t.noStagger = false;
   if (CHAR[f.type].pool.includes(u.sk) && f.type === 'jiho') addCola(f, 1); // 기본 스킬 적중 시 코카콜라 1
   if (CHAR[f.type].pool.includes(u.sk) && f.type === 'wooju') addTongue(f, 2); // 기본 스킬 적중 시 혓바닥 2
