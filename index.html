@@ -224,7 +224,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>아지랑이</b> (레이드 보상 · 합 가능 방어) 6 / +14 · [사용시] 원호방어 1 얻음 · 합에서 이기면 방어 성공<br>
       <b>수호자</b> (레이드 보상 · 합 가능 반격) 물리 · 10 / +6 · 원호방어 전용 스킬 · [사용시] 보호 1 얻음<br>
       <b style="color:#ffd27a">원호방어</b> 최대 3 · 아군이 적에게 일방공격 당할 때 1 소모해 공격 대상을 자신으로 바꾸고 수호자 사용 · 여러 명이면 수치가 높은 아군 우선 · 수비 스킬을 장착한 아군에게는 발동하지 않음 · 턴 종료 시 제거<br><br>
-      <b style="color:#ffcc33;font-size:12px">레이드 — 과녁의 왕</b> (과녁 8 동반)<br>
+      <b style="color:#ffcc33;font-size:12px">레이드 — 과녁의 왕</b> (과녁 8 동반 · 레이드 과녁은 LV.55, 체력 500 고정)<br>
       <b>LV.100</b> · 체력 7000 · 방어 레벨 150 · 모든 피해 절반 · 흐트러짐 50% · 공격하지 않고, 공격받으면 반격<br>
       <b>과녁들은 힘을 합쳐라!</b> (반격) 10 / +10 · 생존한 아군 1당 코인 +1, 피해량 +100%<br><br>
       <b style="color:#7ad0ff;font-size:12px">강우주</b><br>
@@ -589,8 +589,9 @@ class Fighter {
     const d = CHAR[type];
     this.id = nextId++; this.type = type; this.team = team; this.label = label;
     this.x = x; this.y = y; this.r = d.radius; this.color = d.color; this.m = d.mass;
-    this.maxHp = type === 'dummy' ? settings.dummyHp : d.maxHp;
-    this.level = type === 'dummy' ? settings.dummyLv : d.level;
+    // 레이드 과녁은 설정과 상관없이 LV.55 · 체력 500
+    this.maxHp = type === 'dummy' ? (raidMode ? 500 : settings.dummyHp) : d.maxHp;
+    this.level = type === 'dummy' ? (raidMode ? 55 : settings.dummyLv) : d.level;
     this.hp = this.maxHp; this.dispHp = this.hp; this.lagHp = this.hp;
     this.static = type === 'dummy' && !settings.dummyMove;
     this.baseSpeed = d.speed;
