@@ -2604,6 +2604,7 @@ const liveSfx = new Set();
 function playSfx(name) {
   if (muted || !actx || !sfx[name]) return null;
   const src = actx.createBufferSource(); src.buffer = sfx[name];
+  if (name === 'unana') { src.playbackRate.value = speed; src.followSpeed = true; } // 배속만큼 음성 빨라짐
   src.connect(sfxGain); src.start();
   liveSfx.add(src);
   src.onended = () => { src.ended = true; liveSfx.delete(src); };
@@ -2913,6 +2914,7 @@ function updatePauseBtn() {
 }
 function setSpeed(v) {
   speed = v;
+  for (const src of liveSfx) if (src.followSpeed) src.playbackRate.value = v; // 재생 중인 우나나 음성도 바로 반영
   document.querySelectorAll('#speeds button').forEach(x => x.classList.toggle('on', +x.dataset.s === v));
   document.getElementById('tbSpeed').textContent = v + 'x';
 }
