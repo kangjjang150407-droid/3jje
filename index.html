@@ -61,7 +61,8 @@
   #recModal .row button{flex:1;padding:12px;font-size:14px;font-weight:700}
   #recModal .meta{font-size:12px;color:var(--dim)}
   #log{flex:1;overflow-y:auto;font-size:12px;line-height:1.5}
-  .log{padding:3px 6px;border-bottom:1px solid #ffffff08;animation:fade .3s}
+  .log{padding:3px 6px;border-bottom:1px solid #ffffff08}
+  .log:first-child{animation:fade .3s}
   .log .t{color:#55557a;font-size:10px;margin-right:4px}
   .log.kill{background:#ff2b2b18}
   .log.skill{color:#d8c8ff}
@@ -459,7 +460,7 @@ let simTime = 0, running = false, ended = false, speed = 1, nextId = 1;
 let winInfo = null, usagiPops = []; // { team, time, t }
 
 // ================== 캔버스 ==================
-const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const cv = document.getElementById('cv'); let ctx = cv.getContext('2d');
 let dpr = 1, scale = 1, offX = 0, offY = 0, cw = 0, ch = 0;
 function isPortraitStage() {
   const r = cv.parentElement.getBoundingClientRect();
@@ -467,7 +468,8 @@ function isPortraitStage() {
 }
 function resize() {
   const r = cv.parentElement.getBoundingClientRect();
-  dpr = window.devicePixelRatio || 1; cw = r.width; ch = r.height;
+  dpr = Math.min(window.devicePixelRatio || 1, 1.5); cw = r.width; ch = r.height; // 고해상도 화면에서도 1.5배까지만 (렉 감소)
+  bgCache = null; vignetteCache = null;
   const nw = Math.round(cw * dpr), nh = Math.round(ch * dpr);
   if (cv.width !== nw || cv.height !== nh) { cv.width = nw; cv.height = nh; }
   const bottom = 58; // 하단 툴바 공간
@@ -498,7 +500,11 @@ function glow(color) {
 }
 
 // ================== VFX 헬퍼 ==================
+// 성능: 입자 수를 품질에 맞게 줄임 (프레임이 느리면 자동으로 더 줄어듦)
+let QUALITY = 0.6, PARTICLE_CAP = 900;
 function burst(x, y, color, n, spd, size, life, opt = {}) {
+  n = Math.max(1, Math.round(n * QUALITY));
+  if (particles.length > PARTICLE_CAP) return;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * TAU, s = spd * rand(0.2, 1);
     particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life * rand(0.5, 1), max: life,
@@ -517,12 +523,18 @@ function lightning(x1, y1, x2, y2, color, width, life) { beams.push({ x1, y1, x2
 const logEl = document.getElementById('log');
 function nm(f) { return `<b style="color:${TEAM[f.team].color}">${f.label}</b>`; }
 function sk(k) { return `<b style="color:${SKILLS[k].color}">${SKILLS[k].name}</b>`; }
+// 성능: 로그는 모았다가 한 번에 붙임
+let logQueue = [];
 function log(html, cls = '') {
-  const d = document.createElement('div');
-  d.className = 'log ' + cls;
-  d.innerHTML = `<span class="t">${simTime.toFixed(1)}s</span>${html}`;
-  logEl.prepend(d);
-  while (logEl.children.length > 250) logEl.lastChild.remove();
+  logQueue.push(`<div class="log ${cls}"><span class="t">${simTime.toFixed(1)}s</span>${html}</div>`);
+}
+function flushLog() {
+  if (!logQueue.length) return;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = logQueue.reverse().join('');
+  logQueue = [];
+  logEl.prepend(tpl.content);
+  while (logEl.children.length > 150) logEl.lastChild.remove();
 }
 
 // ================== 파이터 ==================
@@ -2079,7 +2091,7 @@ function update(dt) {
     p.vx *= dr; p.vy *= dr; p.vy += p.g * dt;
     p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
   }
-  if (particles.length > 2500) particles.splice(0, particles.length - 2500);
+  if (particles.length > PARTICLE_CAP) particles.splice(0, particles.length - PARTICLE_CAP);
   for (const arr of [rings, beams, pillars, usagiPops, tremorPops, bleedPops, colaPops, obPops, preyPops, ammoPops, reloadPops, chargePops, cryPops, panicPops, tremorBasePops, staggerPops, tonguePops, overheatPops, markPops, scorchPops, linkPops, dawnfirePops]) for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) arr.splice(i, 1); }
   for (let i = texts.length - 1; i >= 0; i--) {
     const t = texts[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.pow(0.95, dt * 60);
@@ -2087,6 +2099,7 @@ function update(dt) {
   }
   if (bigText) { bigText.life -= dt; if (bigText.life <= 0) bigText = null; }
   darkenT -= dt;
+  flushLog();
 }
 
 function checkWin() {
@@ -2107,25 +2120,37 @@ function checkWin() {
 }
 
 // ================== 렌더링 ==================
+let bgCache = null, vignetteCache = null;
 function drawBackground() {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#0d0b1f'); g.addColorStop(1, '#05050c');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // 그리드
-  ctx.lineWidth = 1;
-  const pulse = 0.06 + Math.sin(simTime * 1.5) * 0.02;
-  ctx.strokeStyle = `rgba(140,110,255,${pulse})`;
-  ctx.beginPath();
-  for (let x = 0; x <= W; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
-  for (let y = 0; y <= H; y += 50) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
-  ctx.stroke();
-  // 중앙 문양
+  // 배경(그라데이션·그리드·진영색·테두리)은 한 번만 그려서 재사용
+  if (!bgCache || bgCache.w !== W || bgCache.h !== H || bgCache.s !== scale * dpr) {
+    const k = scale * dpr, c = document.createElement('canvas');
+    c.width = Math.ceil(W * k); c.height = Math.ceil(H * k);
+    const g0 = c.getContext('2d'); g0.scale(k, k);
+    const saved = ctx; ctx = g0; drawBackgroundRaw(); drawBorderRaw(); ctx = saved;
+    bgCache = { c, w: W, h: H, s: scale * dpr };
+  }
+  ctx.drawImage(bgCache.c, 0, 0, W, H);
+  // 중앙 문양 (회전)
   ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(simTime * 0.05);
   ctx.strokeStyle = 'rgba(176,107,255,0.08)'; ctx.lineWidth = 2;
   for (const r of [90, 150, 210]) { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); }
   ctx.beginPath();
   for (let i = 0; i <= 6; i++) { const a = i / 6 * TAU; ctx.lineTo(Math.cos(a) * 210, Math.sin(a) * 210); }
   ctx.stroke(); ctx.restore();
+}
+function drawBackgroundRaw() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#0d0b1f'); g.addColorStop(1, '#05050c');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 그리드
+  ctx.lineWidth = 1;
+  const pulse = 0.06;
+  ctx.strokeStyle = `rgba(140,110,255,${pulse})`;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = 0; y <= H; y += 50) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
   // 팀 진영 색
   const lg = H > W ? ctx.createLinearGradient(0, 0, 0, H) : ctx.createLinearGradient(0, 0, W, 0);
   lg.addColorStop(0, 'rgba(255,77,109,0.08)'); lg.addColorStop(0.35, 'rgba(0,0,0,0)');
@@ -2133,7 +2158,8 @@ function drawBackground() {
   ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
 }
 
-function drawBorder() {
+function drawBorder() { /* 배경 캐시에 포함됨 */ }
+function drawBorderRaw() {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.strokeStyle = '#7b5cff'; ctx.shadowColor = '#9b7bff'; ctx.shadowBlur = 20; ctx.lineWidth = 3;
@@ -2156,13 +2182,15 @@ function drawTrails() {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (const f of fighters) {
     if (!f.alive) continue;
-    const img = glow(TEAM[f.team].color);
-    f.trail.forEach((p, i) => {
-      const k = (i + 1) / f.trail.length;
-      ctx.globalAlpha = k * 0.25;
-      const s = f.r * (0.6 + k * 0.8);
-      ctx.drawImage(img, p.x - s, p.y - s, s * 2, s * 2);
-    });
+    if (f.away || f.trail.length < 2) continue;
+    // 성능: 잔상은 굵은 반투명 선 몇 개로 그림 (빛 이미지 14장 대신)
+    ctx.strokeStyle = TEAM[f.team].color; ctx.lineCap = 'round';
+    const n = f.trail.length;
+    for (let i = 1; i < n; i += 2) {
+      const k = i / n, a = f.trail[i - 1], b = f.trail[Math.min(n - 1, i + 1)];
+      ctx.globalAlpha = k * 0.22; ctx.lineWidth = f.r * (0.5 + k * 0.9);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -2202,6 +2230,16 @@ function drawMagicCircle(f) {
   ctx.restore();
 }
 
+let hlSprite = null;
+function highlightSprite() {
+  if (!hlSprite) {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const hl = g.createRadialGradient(64 - 64 * 0.35, 64 - 64 * 0.4, 0, 64, 64, 64);
+    hl.addColorStop(0, 'rgba(255,255,255,0.35)'); hl.addColorStop(0.45, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.35)');
+    g.fillStyle = hl; g.fillRect(0, 0, 128, 128); hlSprite = c;
+  }
+  return hlSprite;
+}
 // 붉은 날개 (강주원 [불타는 울음])
 function drawWings(f) {
   const { x, y, r } = f;
@@ -2222,9 +2260,7 @@ function drawWings(f) {
     for (let k = 0; k < 7; k++) {
       const len = r * (3.8 - k * 0.38), ang = -1.15 + k * 0.27, wdt = r * (0.55 - k * 0.04);
       ctx.save(); ctx.rotate(ang);
-      const g = ctx.createLinearGradient(0, 0, len, 0);
-      g.addColorStop(0, '#ff7a4a'); g.addColorStop(0.45, '#ff2a1a'); g.addColorStop(1, '#8a0000');
-      ctx.fillStyle = g; ctx.strokeStyle = 'rgba(70,0,0,0.9)'; ctx.lineWidth = 1.5;
+      ctx.fillStyle = k % 2 ? '#d81e10' : '#ff3a1e'; ctx.strokeStyle = 'rgba(70,0,0,0.9)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(0, 0);
       ctx.quadraticCurveTo(len * 0.45, -wdt, len, -wdt * 0.15);
       ctx.quadraticCurveTo(len * 0.6, wdt * 0.45, 0, 0);
@@ -2326,13 +2362,11 @@ function drawFighter(f) {
     ctx.restore();
   }
   // 하이라이트
-  const hl = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, 0, x, y, r);
-  hl.addColorStop(0, 'rgba(255,255,255,0.35)'); hl.addColorStop(0.45, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.35)');
-  ctx.fillStyle = hl; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.drawImage(highlightSprite(), x - r, y - r, r * 2, r * 2); // 성능: 미리 그린 하이라이트 재사용
   if (f.panic > 0) { ctx.fillStyle = `rgba(90,0,30,${0.45 + Math.sin(simTime * 8) * 0.12})`; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
   if (f.hitFlash > 0) { ctx.fillStyle = `rgba(255,255,255,${f.hitFlash * 0.8})`; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
   ctx.restore();
-  ctx.lineWidth = 4; ctx.strokeStyle = tc; ctx.shadowColor = tc; ctx.shadowBlur = 14;
+  ctx.lineWidth = 4; ctx.strokeStyle = tc;
   ctx.stroke();
   ctx.restore();
 
@@ -2426,9 +2460,8 @@ function drawFighter(f) {
   ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(bx, by, bw * clamp(f.lagHp / f.maxHp, 0, 1), bh);
   const hr = clamp(f.dispHp / f.maxHp, 0, 1);
-  const hg = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-  hg.addColorStop(0, hr < 0.25 ? '#ff2b2b' : tc); hg.addColorStop(1, hr < 0.25 ? '#ff8a3b' : '#ffffff');
-  ctx.fillStyle = hg; ctx.fillRect(bx, by, bw * hr, bh);
+  ctx.fillStyle = hr < 0.25 ? '#ff4b2b' : tc; ctx.fillRect(bx, by, bw * hr, bh);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(bx, by, bw * hr, bh / 2);
   ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1;
   for (let m = 0.25; m < 1; m += 0.25) { ctx.beginPath(); ctx.moveTo(bx + bw * m, by); ctx.lineTo(bx + bw * m, by + bh); ctx.stroke(); }
   if (staggerable(f)) f.staggerTh.forEach((th, k) => {
@@ -2447,7 +2480,7 @@ function drawFighter(f) {
     const s = SKILLS[f.cast.skill], p = Math.min(1, f.cast.t / f.cast.dur);
     const cy = y + r + 10;
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(bx - 2, cy - 2, bw + 4, 9);
-    ctx.save(); ctx.shadowColor = s.color; ctx.shadowBlur = 10; ctx.fillStyle = s.color; ctx.fillRect(bx, cy, bw * p, 5); ctx.restore();
+    ctx.save(); ctx.fillStyle = s.color; ctx.fillRect(bx, cy, bw * p, 5); ctx.restore();
     ctx.font = `700 11px ${FONT}`; ctx.strokeText(s.name, x, cy + 20); ctx.fillStyle = s.color; ctx.fillText(s.name, x, cy + 20);
   }
   // 정신력 / 상태 / 다음 스킬
@@ -2614,8 +2647,9 @@ function drawBeams() {
   for (const b of beams) {
     const k = b.life / b.max;
     const pts = jagged(b.x1, b.y1, b.x2, b.y2, Math.hypot(b.x2 - b.x1, b.y2 - b.y1) * 0.15);
-    ctx.globalAlpha = k; ctx.strokeStyle = b.color; ctx.lineWidth = b.width * k; ctx.shadowColor = b.color; ctx.shadowBlur = 20;
-    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.globalAlpha = k * 0.35; ctx.strokeStyle = b.color; ctx.lineWidth = b.width * k * 2.4; ctx.stroke(); // 번짐 대신 굵은 반투명 선
+    ctx.globalAlpha = k; ctx.lineWidth = b.width * k; ctx.stroke();
     ctx.lineWidth = b.width * k * 0.35; ctx.strokeStyle = '#ffffff'; ctx.stroke();
   }
   ctx.restore();
@@ -2644,8 +2678,7 @@ function drawTexts() {
     ctx.globalAlpha = k < 0.3 ? k / 0.3 : 1;
     ctx.font = `900 ${t.size * sc}px ${FONT}`;
     ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(t.text, t.x, t.y);
-    ctx.shadowColor = t.color; ctx.shadowBlur = 14; ctx.fillStyle = t.color; ctx.fillText(t.text, t.x, t.y);
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = t.color; ctx.fillText(t.text, t.x, t.y);
   }
   ctx.restore();
 }
@@ -2744,9 +2777,14 @@ function render() {
   drawBorder();
   // 비네트 & 플래시 (화면 좌표)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const vg = ctx.createRadialGradient(cw / 2, ch / 2, Math.min(cw, ch) * 0.35, cw / 2, ch / 2, Math.max(cw, ch) * 0.75);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, cw, ch);
+  if (!vignetteCache) {
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(cw / 2)); c.height = Math.max(1, Math.ceil(ch / 2));
+    const g2 = c.getContext('2d');
+    const vg = g2.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * 0.35, c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+    g2.fillStyle = vg; g2.fillRect(0, 0, c.width, c.height); vignetteCache = c;
+  }
+  ctx.drawImage(vignetteCache, 0, 0, cw, ch);
   if (flash.a > 0.01) { ctx.globalAlpha = flash.a; ctx.fillStyle = flash.color; ctx.fillRect(0, 0, cw, ch); ctx.globalAlpha = 1; }
   // 전장 이탈 표시
   { let ay = 30; ctx.font = `700 12px ${FONT}`; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
@@ -2784,13 +2822,19 @@ function drawWin() {
 
 // ================== 루프 ==================
 let last = performance.now();
+let frameAvg = 16;
 function frame(now) {
-  const rdt = Math.min(0.05, (now - last) / 1000); last = now;
+  const rawDt = now - last;
+  const rdt = Math.min(0.05, rawDt / 1000); last = now;
+  // 자동 품질 조절: 프레임이 느리면 입자를 줄이고, 여유가 있으면 조금씩 되돌림
+  frameAvg += (Math.min(rawDt, 100) - frameAvg) * 0.05;
+  if (frameAvg > 28) { QUALITY = Math.max(0.25, QUALITY - 0.01); PARTICLE_CAP = Math.max(300, PARTICLE_CAP - 10); }
+  else if (frameAvg < 18) { QUALITY = Math.min(0.6, QUALITY + 0.005); PARTICLE_CAP = Math.min(900, PARTICLE_CAP + 5); }
   if (running) {
     slowmo -= rdt;
     const f = slowmo > 0 ? 0.3 : 1;
     const sdt = rdt * speed * f;
-    const n = Math.max(1, Math.ceil(sdt / (1 / 120)));
+    const n = Math.max(1, Math.ceil(sdt / (1 / 60)));
     for (let i = 0; i < n; i++) update(sdt / n);
   }
   shake = Math.max(0, shake - rdt * (shake * 5 + 4));
@@ -2805,6 +2849,7 @@ function frame(now) {
     const sec = Math.floor((now - rec.t0) / 1000);
     recTimeEl.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   }
+  flushLog();
   render();
   requestAnimationFrame(frame);
 }
@@ -3132,7 +3177,7 @@ function build() {
   winInfo = null;
   fighters = []; projectiles = []; particles = []; rings = []; texts = []; beams = []; pillars = []; respawns = [];
   usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; ammoPops = []; reloadPops = []; chargePops = []; cryPops = []; panicPops = []; tremorBasePops = []; staggerPops = []; tonguePops = []; overheatPops = []; markPops = []; scorchPops = []; linkPops = []; dawnfirePops = []; lastTurnIdx = 0; turnBase = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
-  logEl.innerHTML = '';
+  logEl.innerHTML = ''; logQueue = [];
   document.getElementById('overlay').classList.remove('show');
   const counts = {}, totals = {};
   roster.forEach(r => totals[r.type] = (totals[r.type] || 0) + 1);
