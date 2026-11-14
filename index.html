@@ -156,7 +156,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <label><input type="checkbox" id="tGod"> 무적 (체력이 1 아래로 내려가지 않음)</label>
       <div class="row"><select id="tSkill" style="flex:1"></select>→<select id="tTarget" style="flex:1"></select></div>
       <div class="row"><button id="tUse">⚡ 스킬 바로 사용</button><button id="tReady">다음 스킬로 지정</button></div>
-      <div class="row"><button id="tPhase">페이즈 변경</button><button id="tPanic">패닉</button><button id="tStagger">흐트러짐</button><button id="tSunset">노을</button></div>
+      <div class="row"><button id="tPhase">페이즈 변경</button><button id="tPanic">패닉</button><button id="tStagger">흐트러짐</button><button id="tSunset">노을</button><button id="tBurnSunset">타오르는 노을</button><button id="tWax">밀랍날개</button></div>
       <div class="row"><button id="tHeal">체력 가득</button><button id="tClear">상태 초기화</button><button id="tNow">쿨타임 0</button></div>
       <div class="hint">화면의 볼을 눌러서 대상을 고를 수 있어요. 일시정지 중에도 수치를 바꿀 수 있어요.</div>
     </div>
@@ -193,6 +193,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되거나 같은 팀 강우주의 체력이 50%가 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#ffb84a;font-size:12px">이건민</b><br>
       <b>LV.82</b> · 체력 589 · 방어 레벨 86 · 물리 피해 절반 · 마법 피해 2배 · 흐트러짐 55% · 스킬은 해줘·흐하핳·가래침 뱉기 중 랜덤<br>
+      <b>패시브</b> 강주원과 아군이라면: 강주원에게 노을 부여 · 자신의 체력이 50% 미만이면 강주원 전장 이탈<br>
       <b>해줘</b> 코인 2 · 공격 87 · 3 / +4 · 대상 화상+진동 4당 최종 위력 +1 (최대 3) · 새벽불 20 이상이면 2코인이 파괴불가 코인으로 1개 추가 · 화상 1, 진동 2 / 화상 7<br>
       <b>흐하핳</b> 코인 3 · 공격 90 · 4 / +4 · 화상+진동 4당 최종 위력 +1 (최대 4) · 새벽불 20 이상이면 3코인이 파괴불가 코인으로 1개 추가, 추가 코인 적중 시 진동폭발·진동 횟수 -1 · 화상 4 / 진동 7 / 진동 횟수 +6, 화상 횟수 +5<br>
       <b>가래침 뱉기</b> 코인 4 · 공격 95 · 4 / +3 · 피해량 +(자신+대상 화상 위력)% (최대 30%) · [전투 시작시] 무작위 아군 2명 보호 2 (강주원·강우주 우선, 턴당 1회) · 새벽불 30이면 새벽녘으로 발동 · 화상+진동 6당 코인 위력 +1 (최대 2) · 새벽불 20 이상: 최종 위력 +1, 모든 코인 파괴불가, 마지막 코인 화상 발동 · [공격 종료시] 다음 턴 모든 아군 새벽맞이 1 (새벽불 20 이상이면 +1) · 화상 6 / 화상 횟수 +6 / 진동 6 / 진동-작열 진폭변환, 진동폭발<br>
@@ -240,7 +241,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>출혈</b> 공격 코인 판정 시 위력만큼 고정 피해, 판정 후 횟수 -1<br>
       <b>굶주린 북극곰의 사냥감</b> 전투 시작 시 무작위 적에게 부여 · 사냥감을 가진 적이 죽으면 다른 적에게 이동 · 윤지호의 모든 공격 스킬의 타겟으로 지정됨<br><br>
       <b style="color:#ffe14d">흐트러짐</b> 체력이 최대 체력의 70% / 40% 아래로 처음 내려갈 때 발동 (체력바의 노란 표시) · 이번 턴과 다음 턴 동안 행동 불가 · 모든 내성이 치명(받는 피해 2배) · 페이즈가 바뀌면 다시 생김<br>
-      <b style="color:#ff9a6a">노을</b> 첫 번째 흐트러짐 구간 삭제 · 턴 종료 시 흐트러짐이면 해제 · 턴 시작 시 정신력 +5 · 외부 효과로 정신력이 25 미만으로 감소하지 않음 (아직 노을을 주는 효과는 없음 — 테스트 모드 버튼으로 부여)<br>
+      <b style="color:#ff9a6a">노을</b> 첫 번째 흐트러짐 구간 삭제 · 턴 종료 시 흐트러짐이면 해제 · 턴 시작 시 정신력 +5 · 외부 효과로 정신력이 25 미만으로 감소하지 않음 · 이건민 사망 시 타오르는 노을로 바뀜<br>
+      <b style="color:#ff6a3a">타오르는 노을</b> 첫 번째 흐트러짐 구간 삭제 · 턴 종료 시 흐트러짐 해제 · 턴 시작 시 정신력 +8 · 패닉 대신 정신력 +10 · 턴 시작 시 최대 체력 50% 회복, 정신력 최대 (전투당 1회) · 불안정 E.G.O::밀랍날개 상태면 턴 시작 시 최대 체력 20% 보호막, 보호막이 있는 동안 피격 시 공격자에게 화상 2 (턴당 2회)<br>
       <b style="color:#ffd84a">연</b> 해당하는 아군이 전장에 행동 가능한 상태로 생존해 있으면 함께 공격함 (아직 연이 붙은 스킬은 없음)<br>
       <b style="color:#ff8a3a">진동 - 작열</b> 진동폭발 시 (진동 위력 + 화상 위력) / 2 만큼 분노 피해, 화상 횟수 -1 · 위력만큼 흐트러짐 손상 · 턴 종료 후 횟수 -1 · 진동 위력/횟수 증감 효과를 똑같이 받음<br>
       <b style="color:#ffcf5a">진동</b> 진동폭발 시 다음 흐트러짐 구간을 위력(%)만큼 끌어올림 (현재 체력보다 높아지면 바로 흐트러짐) · 횟수 -1<br><br>
@@ -567,6 +569,18 @@ function giveSunset(f) {
   log(`🌇 ${nm(f)} <b style="color:#ff9a6a">노을</b> 얻음 · 첫 번째 흐트러짐 구간 삭제`, 'skill');
 }
 
+// ---- 타오르는 노을 ----
+function giveBurningSunset(f) {
+  if (!f.alive || f.burningSunset) return;
+  const hadSunset = f.sunset;
+  f.sunset = false; f.burningSunset = true;
+  if (!hadSunset) { const idx = f.staggerTh.findIndex((th, k) => !f.staggerHit[k]); if (idx !== -1) { f.staggerTh.splice(idx, 1); f.staggerHit.splice(idx, 1); } }
+  markPops.push({ x: f.x, y: f.y - f.r - 20, life: 1.3, max: 1.3, img: sunsetImg });
+  floatText(f.x, f.y - f.r - 50, '타오르는 노을', '#ff6a3a', 24, { life: 1.6 });
+  ring(f.x, f.y, '#ff6a3a', f.r * 4, 0.8, 10); burst(f.x, f.y, '#ff8a4a', 60, 450, 12, 1.0, { g: -120 });
+  log(`🔥 ${nm(f)} <b style="color:#ff6a3a">타오르는 노을</b> 얻음${hadSunset ? ' (노을 → 타오르는 노을)' : ' · 첫 번째 흐트러짐 구간 삭제'}`, 'kill');
+}
+
 // ---- 이건민: 새벽불 / 새벽맞이 / 보호 ----
 const tremorSum = t => (t.tremorBase ? t.tremorBase.pot : 0) + (t.tremorScorch ? t.tremorScorch.pot : 0) + (t.tremor ? t.tremor.pot : 0) + (t.tremorOB ? t.tremorOB.pot : 0);
 const burnTremor = t => t ? burnPot(t) + tremorSum(t) : 0;
@@ -616,7 +630,15 @@ function tongueTurnEnd(f) {
 }
 
 // 강우주: 강주원이 전장에 있다면 강주원에게 정오 1 부여
+// 이건민 패시브 (강주원과 아군이라면): 강주원에게 노을 부여
+function updateSunset() {
+  for (const g of fighters) {
+    if (!g.alive || g.type !== 'gunmin') continue;
+    for (const j of fighters) if (j.alive && !j.away && (j.type === 'juwon' || j.type === 'juwon2') && j.team === g.team && !j.sunsetGiven) { j.sunsetGiven = true; giveSunset(j); }
+  }
+}
 function updateNoon() {
+  updateSunset();
   for (const w of fighters) if (w.alive && w.type === 'wooju' && !w.ohInit) { w.ohInit = true; gainOverheat(w); } // 첫 턴 시작
   if (!fighters.some(w => w.alive && w.type === 'wooju')) return;
   for (const j of fighters) {
@@ -687,7 +709,7 @@ function enterStagger(f, th) {
   doFlash('#ffe14d', 0.25); shake = Math.max(shake, 16);
   log(`💫 ${nm(f)} <b style="color:#ffe14d">흐트러짐</b> (체력 ${Math.round(th * 100)}% 구간) — 다음 턴까지 행동 불가 · 받는 피해 치명(2배)`, 'kill');
 }
-function resetStagger(f) { f.stagger = 0; f.staggerHit = []; f.staggerTh = (CHAR[f.type].staggerAt || STAGGER_AT).slice(); }
+function resetStagger(f) { f.stagger = 0; f.staggerHit = []; f.staggerTh = (CHAR[f.type].staggerAt || STAGGER_AT).slice(); if (f.sunset || f.burningSunset) f.staggerTh.shift(); } // 노을 / 타오르는 노을: 첫 번째 흐트러짐 구간 삭제 유지
 
 function changeSp(f, v, why) {
   if (!f.alive || !CHAR[f.type].ai || f.panic > 0 || !v) return;
@@ -710,6 +732,12 @@ const isRedGlow = f => f && f.panic > 0 && CHAR[f.type].panicType === 'redglow';
 const panicActs = f => f && f.panic > 0 && !!CHAR[f.type].panicType; // 패닉 유형이 있으면 패닉 중에도 행동
 const PANIC_INFO = { wrath: { name: '새벽녘', color: '#ff3030', img: () => wrathImg }, redglow: { name: '붉은 노을', color: '#ff7040', img: () => redglowImg } };
 function enterPanic(f) {
+  if (f.burningSunset) { // 타오르는 노을: 패닉 상태가 되지 않고 정신력 10 회복
+    floatText(f.x, f.y - f.r - 40, '패닉 무효 (타오르는 노을)', '#ff6a3a', 18);
+    const old = f.sp; f.sp = clamp(f.sp + 10, minSp(f), 45);
+    log(`${nm(f)} 타오르는 노을: 패닉 대신 정신력 ${old} → ${f.sp}`);
+    return;
+  }
   if (CHAR[f.type].panicType === 'wrath') {
     f.panic = TURN;
     floatText(f.x, f.y - f.r - 40, '패닉 · 새벽녘!', '#ff3030', 34, { life: 1.6 });
@@ -881,6 +909,20 @@ function forceTurnEnd(by) {
 }
 // 턴 종료 시 처리 (1턴 = 5초 구간)
 function onTurnEnd() {
+  for (const f of fighters) {
+    if (!f.alive || !f.burningSunset) continue;
+    if (f.stagger > 0) { f.stagger = 0; floatText(f.x, f.y - f.r - 40, '흐트러짐 해제 (타오르는 노을)', '#ff6a3a', 18); log(`${nm(f)} 타오르는 노을: 턴 종료 시 흐트러짐 해제`); }
+    changeSp(f, 8, '타오르는 노을');
+    if (!f.burnSunsetUsed) { // 전투당 1회: 최대 체력 50% 회복, 정신력 최대치
+      f.burnSunsetUsed = true; heal(f, f.maxHp * 0.5, '타오르는 노을 (전투당 1회)'); f.sp = 45; f.panic = 0;
+      floatText(f.x, f.y - f.r - 60, '정신력 최대', '#7fd4ff', 18);
+    }
+    if (f.waxWing) { // 불안정 E.G.O::밀랍날개: 턴 시작 시 최대 체력 20% 보호막
+      const v = Math.round(f.maxHp * 0.2 * 10) / 10;
+      f.shield = { v, max: v, until: simTime + TURN }; f.waxBurnCount = 0;
+      floatText(f.x, f.y - f.r - 46, `밀랍날개 🛡${v}`, '#ffb36a', 18); log(`${nm(f)} 밀랍날개: 보호막 ${v}`);
+    }
+  }
   for (const f of fighters) {
     if (!f.alive || !f.sunset) continue;
     if (f.stagger > 0) { f.stagger = 0; floatText(f.x, f.y - f.r - 40, '흐트러짐 해제 (노을)', '#ff9a6a', 18); log(`${nm(f)} 노을: 턴 종료 시 흐트러짐 해제`); } // 노을: 턴 종료 시 흐트러짐 해제
@@ -1079,6 +1121,10 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   // 보호막
   let absorbed = 0;
   const sh = shieldVal(t);
+  if (sh > 0 && t.waxWing && t.burningSunset && src && src !== t && src.alive && kind !== 'true') {
+    const turn = turnIdx() + '@' + turnBase; if (t.waxTurn !== turn) { t.waxTurn = turn; t.waxBurnCount = 0; }
+    if (t.waxBurnCount < 2) { t.waxBurnCount++; addStack(src, 'burn', 2, 0, '화상', '#ff8a3a'); }
+  }
   if (sh > 0 && kind !== 'true') {
     absorbed = Math.min(sh, dmg); t.shield.v -= absorbed; dmg -= absorbed;
     floatText(t.x - 20, t.y - t.r - 6, `🛡-${Math.round(absorbed * 10) / 10}`, '#9cc4ff', 18);
@@ -1101,6 +1147,10 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (t.nonLethal && t.hp < 1) t.hp = 1; // 터헣 [합 패배]: 이 스킬로 대상이 사망하지 않음
   // 강주원: 아군이 있으면 체력 50% 미만 시 전장 이탈
   if (CHAR[t.type].retreat && !t.away && !t.returned && t.hp > 0 && t.hp < t.maxHp * 0.5 && realAllies(t).length) t.leaving = true;
+  // 이건민의 체력이 50% 미만이면 같은 팀 강주원 전장 이탈
+  if (t.type === 'gunmin' && t.hp < t.maxHp * 0.5) for (const j of fighters) {
+    if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '이건민 체력 50% 미만'; }
+  }
   // 강우주의 체력이 50%가 되면 같은 팀 강주원도 전장 이탈
   if (t.type === 'wooju' && t.hp <= t.maxHp * 0.5) for (const j of fighters) {
     if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '강우주 체력 50%'; }
@@ -1156,6 +1206,8 @@ function kill(t, src, reason) {
   if (src && src !== t && src.team !== t.team) changeSp(src, 10, '적 처치');
   if (t.type !== 'clone') for (const al of fighters) if (al !== t && al.alive && al.team === t.team) changeSp(al, -10, '아군 사망');
   if (t.type === 'dummy' && settings.dummyImmortal) respawns.push({ f: t, t: 1.6 });
+  // 노을 추가 효과: 이건민 사망 시 타오르는 노을 부여
+  if (t.type === 'gunmin') for (const j of fighters) if (j.alive && j.sunset && j.team === t.team) giveBurningSunset(j);
   // 강우주 사망 시 정오 → 고독한 정오
   if (t.type === 'wooju') for (const j of fighters) if (j.alive && j.noonMark) {
     j.noonMark = 0; j.lonelyNoon = 1;
@@ -2420,6 +2472,7 @@ function drawFighter(f) {
   if (f.tremorOB) icons.push([tremorOBImg, `${f.tremorOB.pot}/${f.tremorOB.cnt}`, '#ff7a5a']);
   if (f.preyOf.length) icons.push([preyImg, '사냥감', '#ff6a5a']);
   if (f.sunset) icons.push([sunsetImg, '노을', '#ff9a6a', 24]);
+  if (f.burningSunset) icons.push([sunsetImg, f.waxWing ? '타오르는 노을 · 밀랍날개' : '타오르는 노을', '#ff6a3a', 24]);
   if (f.noonMark) icons.push([noonImg, `정오 ${f.noonMark}`, '#ffd84a', 24]);
   if (f.lonelyNoon) icons.push([lonelyImg, f.lonelyUntil > simTime ? '고독한 정오 (버팀)' : '고독한 정오', '#c8a040', 24]);
   if (f.overheat) icons.push([overheatImg, '과열', '#ff5a5a']);
@@ -2987,6 +3040,8 @@ $('tReady').onclick = () => { const f = test.sel, k = $('tSkill').value; if (f &
 $('tPhase').onclick = () => { const f = test.sel; if (!f) return; if (f.type === 'song') transformYoru(f); else if (f.type === 'juwon') transformJuwon2(f); testRefresh(true); };
 $('tPanic').onclick = () => { if (test.sel && CHAR[test.sel.type].ai && test.sel.panic <= 0 && minSp(test.sel) >= 0) { enterPanic(test.sel); return; } if (test.sel && CHAR[test.sel.type].ai && test.sel.panic <= 0 && minSp(test.sel) < 0) { test.sel.sp = -45; enterPanic(test.sel); } };
 $('tSunset').onclick = () => { if (test.sel) giveSunset(test.sel); };
+$('tBurnSunset').onclick = () => { if (test.sel) giveBurningSunset(test.sel); };
+$('tWax').onclick = () => { const f = test.sel; if (!f) return; f.waxWing = !f.waxWing; log(`🧪 ${nm(f)} 불안정 E.G.O::밀랍날개 ${f.waxWing ? '켬' : '끔'}`); };
 $('tStagger').onclick = () => { const f = test.sel; if (f && f.alive && staggerable(f)) enterStagger(f, f.hp / f.maxHp); };
 $('tHeal').onclick = () => { const f = test.sel; if (f) { f.hp = f.maxHp; log(`🧪 ${nm(f)} 체력 가득`); } };
 $('tNow').onclick = () => { const f = test.sel; if (f) f.cd = 0; };
