@@ -3316,9 +3316,14 @@ function start() {
 function renderRoster() {
   for (const t of [0, 1]) {
     const html = roster.map((r, i) => r.team !== t ? '' :
-      `<div class="unit"><span class="dot" style="background:${CHAR[r.type].color}"></span>${CHAR[r.type].name}<button class="rm" data-rm="${i}">✕</button></div>`).join('');
+      `<div class="unit"><span class="dot" style="background:${CHAR[r.type].color}"></span>${CHAR[r.type].name}${raidMode && t === 1 ? '' : `<button class="rm" data-rm="${i}">✕</button>`}</div>`).join('');
     document.getElementById('team' + t).innerHTML = html || '<div class="empty">비어 있음</div>';
   }
+  // 레이드 중에는 적 추가 버튼과 과녁 추가 버튼을 잠금
+  document.querySelectorAll('[data-add]').forEach(btn => {
+    const lock = raidMode && (+btn.dataset.team === 1 || btn.dataset.add === 'dummy');
+    btn.disabled = lock; btn.style.opacity = lock ? 0.35 : 1;
+  });
 }
 
 function updatePauseBtn() {
@@ -3334,7 +3339,9 @@ function setSpeed(v) {
 
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if ((b.dataset.add || b.dataset.rm !== undefined) && raidMode) { raidMode = false; setTestLock(false); }
+  // 레이드: 적(블루 팀)은 바꿀 수 없고, 과녁은 추가할 수 없음
+  if (raidMode && b.dataset.add && (+b.dataset.team === 1 || b.dataset.add === 'dummy')) { toast(+b.dataset.team === 1 ? '레이드에서는 적에 추가할 수 없어요' : '레이드에서는 과녁을 추가할 수 없어요'); return; }
+  if (raidMode && b.dataset.rm !== undefined && roster[+b.dataset.rm] && roster[+b.dataset.rm].team === 1) { toast('레이드에서는 적을 뺄 수 없어요'); return; }
   if (b.dataset.add) { roster.push({ type: b.dataset.add, team: +b.dataset.team }); renderRoster(); build(); }
   else if (b.dataset.rm !== undefined) { roster.splice(+b.dataset.rm, 1); renderRoster(); build(); }
   else if (b.dataset.s) {
@@ -3349,11 +3356,11 @@ function setTestLock(lock) {
   cb.parentElement.title = lock ? '레이드 중에는 테스트 모드를 쓸 수 없어요' : '';
   cb.parentElement.style.opacity = lock ? 0.45 : 1;
 }
-document.getElementById('startBtn').onclick = () => { raidMode = false; setTestLock(false); start(); };
+document.getElementById('startBtn').onclick = () => { raidMode = false; setTestLock(false); renderRoster(); start(); };
 document.getElementById('raidBtn').onclick = () => {
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'targetking', team: 1 }], Array.from({ length: 8 }, () => ({ type: 'dummy', team: 1 })));
-  renderRoster(); raidMode = true; setTestLock(true); start();
+  raidMode = true; renderRoster(); setTestLock(true); start();
   showBig('레이드: 과녁의 왕', '#ffcc33', 1.8);
   log('🎯 <b style="color:#ffcc33">레이드 — 과녁의 왕</b> 시작! (과녁의 왕 + 과녁 8)', 'kill');
 };
