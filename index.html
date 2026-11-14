@@ -177,7 +177,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>닳아있는 연필심</b> 광역 · 코인 3 · 공격 65 · 3 / +3 · 대상 화상 4당 최종 위력 +1 (최대 3) · 화상 횟수 2 / 화상 2 / 화상 횟수 2<br>
       <b>느린 달리기</b> 파괴불가 2 · 공격 65 · 4 / +6 · 대상 화상 4당 최종 위력 +1 · 체력 15 회복 · [합 패배] 피해 -80%, 다음 턴 위력 증가 (대상 화상 ÷ 10) · 1코인 화상 5 · 2코인 화상 2회 발동, 화상 횟수 -2 (둘 다 파괴되지 않고 적중시)<br>
       <b>터헣 (회피)</b> 7 / +10 · 대상 화상 4당 코인 위력 +1 · 회피 성공 시 체력 15% 회복<br>
-      <b>패닉 유형: 분노</b> 패닉 중에도 무작위 대상을 공격 · 받는 피해 +10% +10% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발로 피해를 입지 않음<br>
+      <b>패닉 유형: 새벽녘</b> 패닉 중에도 무작위 대상을 공격 · 받는 피해 +10% +10% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발로 피해를 입지 않음<br>
       <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#ff5a3a;font-size:12px">강주원 [불타는 울음]</b> (2페이즈 · 전장 복귀 시 변경 · 붉은 날개)<br>
       <b>LV.65</b> · 체력 1090 · 방어 레벨 90 · 물리 피해 절반 · 마법 피해 절반 · 정신력이 0 아래로 내려가지 않음 · 스킬은 짜증·눈물을 글썽이며·터진 분노와 울음 중 랜덤<br>
@@ -508,7 +508,7 @@ function updatePrey() {
 }
 function chooseTarget(f, key) {
   const list = enemies(f);
-  if (isWrath(f) && list.length) return list[(Math.random() * list.length) | 0]; // 분노: 무작위 대상
+  if (isWrath(f) && list.length) return list[(Math.random() * list.length) | 0]; // 새벽녘: 무작위 대상
   // 굶주린 북극곰의 사냥감: 윤지호의 모든 공격 스킬의 타겟으로 지정됨
   if (f.type === 'jiho') { const prey = list.filter(e => isPrey(e, f)); if (prey.length) return nearest(f, prey); }
   return nearest(f, list);
@@ -536,16 +536,16 @@ function changeSp(f, v, why) {
   log(`${nm(f)} 정신력 ${old} → ${f.sp} <span style="color:#777">(${why})</span>`);
   if (f.sp <= -45) enterPanic(f);
 }
-// 패닉 유형: 분노 — 패닉 중에도 행동 (무작위 대상), 받는 피해 +20%, 가하는 피해 +10%, 공격 위력 +2, 진동폭발로 피해를 입지 않음
+// 패닉 유형: 새벽녘 — 패닉 중에도 행동 (무작위 대상), 받는 피해 +20%, 가하는 피해 +10%, 공격 위력 +2, 진동폭발로 피해를 입지 않음
 const isWrath = f => f && f.panic > 0 && CHAR[f.type].panicType === 'wrath';
 function enterPanic(f) {
   if (CHAR[f.type].panicType === 'wrath') {
     f.panic = TURN;
-    floatText(f.x, f.y - f.r - 40, '패닉 · 분노!', '#ff3030', 34, { life: 1.6 });
+    floatText(f.x, f.y - f.r - 40, '패닉 · 새벽녘!', '#ff3030', 34, { life: 1.6 });
     ring(f.x, f.y, '#ff2020', f.r * 4, 0.9, 10); burst(f.x, f.y, '#ff3020', 50, 400, 14, 1.0);
     panicPops.push({ x: f.x, y: f.y - f.r - 30, life: 1.2, max: 1.2 });
     doFlash('#500000', 0.4); shake = Math.max(shake, 14);
-    log(`😡 ${nm(f)} <b style="color:#ff3030">패닉 (분노)</b> — ${TURN}초 · 무작위 대상 공격 · 받는 피해 +20% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발 피해 무효`, 'kill');
+    log(`🌅 ${nm(f)} <b style="color:#ff3030">패닉 (새벽녘)</b> — ${TURN}초 · 무작위 대상 공격 · 받는 피해 +20% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발 피해 무효`, 'kill');
     return;
   }
   f.panic = TURN; f.cast = null; f.ready = null;
@@ -591,7 +591,7 @@ function tremorBurst(src, t) {
   const tr = t.tremor, pot = tr.pot;
   tr.cnt = Math.max(0, tr.cnt - 1);
   tr.pot = Math.max(0, tr.pot - 5);
-  if (isWrath(t)) floatText(t.x, t.y - t.r - 10, '피해 없음 (분노)', '#ff8080', 16); else
+  if (isWrath(t)) floatText(t.x, t.y - t.r - 10, '피해 없음 (새벽녘)', '#ff8080', 16); else
   dealDamage(src, t, pot, 'true', '진동폭발 [애범]', `진동-애범 위력 ${pot} → 위력 -5, 횟수 -1 → `);
   if (t.tremor === tr && (tr.cnt <= 0 || tr.pot <= 0)) {
     t.tremor = null;
@@ -622,7 +622,7 @@ function tremorOBBurst(src, t) {
   obPops.push({ x: t.x, y: t.y, life: 0.8, max: 0.8 });
   shake = Math.max(shake, 12);
   bleedCount(t, -1);
-  if (isWrath(t)) { floatText(t.x, t.y - t.r - 10, '피해 없음 (분노)', '#ff8080', 16); return; }
+  if (isWrath(t)) { floatText(t.x, t.y - t.r - 10, '피해 없음 (새벽녘)', '#ff8080', 16); return; }
   dealDamage(src, t, tr.pot, 'true', '진동폭발 [과다출혈]', `진동-과다출혈 위력 ${tr.pot}, 출혈 횟수 -1 → `);
 }
 // 일반 진동폭발: 대상이 가진 진동을 터뜨림 (과다출혈 우선, 없으면 애범)
@@ -637,7 +637,7 @@ function genericTremorBurst(src, t) {
   const pot = tr.pot;
   tr.cnt--;
   if (tr.cnt <= 0) t.tremor = null;
-  if (isWrath(t)) { floatText(t.x, t.y - t.r - 10, '피해 없음 (분노)', '#ff8080', 16); return; }
+  if (isWrath(t)) { floatText(t.x, t.y - t.r - 10, '피해 없음 (새벽녘)', '#ff8080', 16); return; }
   dealDamage(src, t, pot, 'true', '진동폭발', `진동-애범 위력 ${pot}, 횟수 -1 → `);
 }
 function tremorAnyCount(t, d) {
@@ -808,8 +808,8 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (kind !== 'true') {
     if (src && src.usagi) mods.push(1.075);
     if (t.usagi) mods.push(0.7);
-    if (isWrath(src)) mods.push(1.1); // 분노: 가하는 피해 +10%
-    if (isWrath(t)) mods.push(1.2);   // 분노: 받는 피해 +10% +10%
+    if (isWrath(src)) mods.push(1.1); // 새벽녘: 가하는 피해 +10%
+    if (isWrath(t)) mods.push(1.2);   // 새벽녘: 받는 피해 +10% +10%
   }
   let dmg = amount * mult * mods.reduce((a, b) => a * b, 1);
   if (dmg <= 0) return 0;
@@ -1834,7 +1834,7 @@ function drawFighter(f) {
       const pg = r * 2.6; ctx.drawImage(glow('#ff1a1a'), x - pg, y - pg, pg * 2, pg * 2); ctx.restore();
       drawIcon(wrathImg, x + r * 0.95, y - r * 0.85, r * 0.9);
     }
-    const ptxt = CHAR[f.type].panicType === 'wrath' ? '분노' : '패닉';
+    const ptxt = CHAR[f.type].panicType === 'wrath' ? '새벽녘' : '패닉';
     ctx.font = `900 16px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000';
     ctx.strokeText(ptxt, x, y + 6); ctx.fillStyle = '#ff4060'; ctx.fillText(ptxt, x, y + 6);
   }
