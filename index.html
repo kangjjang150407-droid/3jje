@@ -187,7 +187,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>느린 달리기</b> 파괴불가 2 · 공격 65 · 4 / +6 · 대상 화상 4당 최종 위력 +1 · 체력 15 회복 · [합 패배] 피해 -80%, 다음 턴 위력 증가 (대상 화상 ÷ 10) · 1코인 화상 5 · 2코인 화상 2회 발동, 화상 횟수 -2 (둘 다 파괴되지 않고 적중시)<br>
       <b>터헣 (회피)</b> 7 / +10 · 대상 화상 4당 코인 위력 +1 · 회피 성공 시 체력 15% 회복<br>
       <b>패닉 유형: 새벽녘</b> 패닉 중에도 무작위 대상을 공격 · 받는 피해 +10% +10% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발로 피해를 입지 않음<br>
-      <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
+      <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되거나 같은 팀 강우주의 체력이 50%가 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#7ad0ff;font-size:12px">강우주</b><br>
       <b>LV.75</b> · 체력 493 · 방어 레벨 77 · 물리 피해 절반 · 마법 피해 1.2배 · 흐트러짐 65% / 40% · 스킬은 퉤·머리 때리기 중 랜덤<br>
       <b>퉤</b> 파괴불가 2 · 공격 80 · 3 / +3 · 정신력 +10 · [합 패배] 피해 -80%, 이 스킬로 흐트러지지 않음 · 1코인 화상 2 · 2코인 [파괴 후 적중시] 다음 턴 코인 위력 +1<br>
@@ -929,7 +929,7 @@ function leaveField(f) {
   burst(f.x, f.y, '#888899', 40, 260, 30, 1.4, { kind: 'smoke', drag: 0.95, g: -20 });
   ring(f.x, f.y, '#c9a07a', f.r * 3, 0.6, 6);
   floatText(f.x, f.y - f.r - 30, '전장 이탈', '#c9a07a', 24, { life: 1.4 });
-  log(`🚪 ${nm(f)} 체력 50% 미만 · <b>전장 이탈</b>`, 'kill');
+  log(`🚪 ${nm(f)} ${f.leaveWhy || '체력 50% 미만'} · <b>전장 이탈</b>`, 'kill'); f.leaveWhy = null;
 }
 function returnField(f) {
   f.away = false; f.returned = true;
@@ -1024,6 +1024,10 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (t.nonLethal && t.hp < 1) t.hp = 1; // 터헣 [합 패배]: 이 스킬로 대상이 사망하지 않음
   // 강주원: 아군이 있으면 체력 50% 미만 시 전장 이탈
   if (CHAR[t.type].retreat && !t.away && !t.returned && t.hp > 0 && t.hp < t.maxHp * 0.5 && realAllies(t).length) t.leaving = true;
+  // 강우주의 체력이 50%가 되면 같은 팀 강주원도 전장 이탈
+  if (t.type === 'wooju' && t.hp <= t.maxHp * 0.5) for (const j of fighters) {
+    if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '강우주 체력 50%'; }
+  }
   // 고독한 정오: 이번 턴에 체력이 0이 되는 피해를 받으면 흐트러짐 해제, 이번 턴 동안 체력이 1 미만으로 감소하지 않음 (전투당 1회)
   if (t.lonelyUntil > simTime && t.hp < 1) t.hp = 1;
   if (t.lonelyNoon && !t.lonelyUsed && t.hp <= 0) {
