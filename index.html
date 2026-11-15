@@ -219,6 +219,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되거나 같은 팀 강우주의 체력이 50%가 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#6ad8c0;font-size:12px">정선우</b><br>
       <b>LV.80</b> · 체력 973 · 방어 레벨 89 · 모든 피해 1.2배 절감 · 흐트러짐 55% · 스킬은 마이볼·하.하.하·새벽 뒤에 꿰뚫어오는 쐐기 중 랜덤<br>
+      <b>패시브: 불굴의 정선우</b> 체력이 0이 되는 피해를 받았을 때 (전투당 1회): 그 피해를 받지 않고 그 턴 동안 체력이 1 미만으로 감소하지 않음 · 턴 종료 시 최대 체력 50% 회복 · 이번 전투 동안 받는 피해량 -20%<br>
       <b>마이볼</b> 코인 3 · 공격 83 · 6 / +3 · 호흡+대상 진동 6 이상이면 코인 위력 +1 · 쐐기의 창 3이면 최종 위력 +1 · 호흡 횟수 +2 · 호흡 6 / 호흡 3 / 진동 12<br>
       <b>하.하.하</b> 코인 2 · 공격 85 · 4 / +6 · [전투 시작시] 자신과 이도윤 이번 턴 물리 피해량 +10% · 호흡+진동 6당 코인 위력 +1 (최대 2) · 쐐기의 창 1당 최종 위력 +1 (최대 3) · 호흡 횟수 +3 · 호흡 3 / 진동 2, 진동 횟수 +1, 크리티컬 시 진동폭발·진동 횟수 -1<br>
       <b>새벽 뒤에 꿰뚫어오는 쐐기</b> 코인 5 · 공격 100 · 8 / +7 · 호흡 8당 코인 위력 +1 (최대 2) · 대상 진동 8당 최종 위력 +1 (최대 2) · 호흡 횟수 +3 · 행동 가능한 아군 수만큼 공격 가중치 + (최대 2) · [합 승리시] 진동-붕괴로 진폭 얽힘 · 1코인 화상 6 (연: 강주원) / 2코인 진동 8 (연: 강우주) / 3코인 진동 9, 화상 9 (연: 이건민) / 4코인 대상 화상 위력만큼 피해량 +% (연: 이도윤) / 5코인 크리티컬 피해량 +100%<br><br>
@@ -1061,6 +1062,7 @@ function forceTurnEnd(by) {
 }
 // 턴 종료 시 처리 (1턴 = 5초 구간)
 function onTurnEnd() {
+  for (const f of fighters) if (f.alive && f.indomHeal) { f.indomHeal = false; heal(f, f.maxHp * 0.5, '불굴의 정선우'); } // 턴 종료 시 최대 체력 50% 회복
   // 승기: 턴 시작 시 자신이 흐트러짐 상태면 흐트러짐 해제 (전투당 1회, 강제 흐트러짐 제외)
   for (const f of fighters) {
     if (!f.alive || !(f.momentum > 0) || f.momentumUsed || f.stagger <= 0 || f.forcedStagger) continue;
@@ -1290,6 +1292,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (isRedGlow(src)) mods.push(0.925); // 붉은 노을: 가하는 피해 -7.5%
     if (kind === 'physical' && buffVal(src, 'physUp')) mods.push(1 + buffVal(src, 'physUp') / 100); // 물리 피해량 증가
     if (isRedGlow(t)) mods.push(0.9);     // 붉은 노을: 보호 10
+    if (t.indomUsed) mods.push(0.8);      // 불굴의 정선우: 받는 피해량 -20%
     if (buffVal(t, 'protect')) mods.push(Math.max(0, 1 - buffVal(t, 'protect') / 100)); // 보호
   }
   let dmg = amount * mult * mods.reduce((a, b) => a * b, 1);
@@ -1332,6 +1335,17 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '강우주 체력 50%'; }
   }
   // 고독한 정오: 이번 턴에 체력이 0이 되는 피해를 받으면 흐트러짐 해제, 이번 턴 동안 체력이 1 미만으로 감소하지 않음 (전투당 1회)
+  // 패시브: 불굴의 정선우 (전투당 1회) — 체력이 0이 되는 피해를 받지 않고, 그 턴 동안 체력 1 미만으로 감소하지 않음
+  if (t.indomUntil > simTime && t.hp < 1) t.hp = 1;
+  if (t.type === 'sunwoo' && !t.indomUsed && t.hp <= 0) {
+    t.indomUsed = true; t.hp += dmg; if (t.hp < 1) t.hp = 1;
+    t.indomUntil = simTime + (TURN - ((simTime - turnBase) % TURN)); t.indomHeal = true;
+    showBig('불굴의 정선우', '#7fe8d0', 1.5); doFlash('#7fe8d0', 0.4); shake = Math.max(shake, 20);
+    ring(t.x, t.y, '#7fe8d0', t.r * 5, 0.9, 12); burst(t.x, t.y, '#bff5ea', 60, 500, 12, 1.0);
+    floatText(t.x, t.y - t.r - 46, '불굴 — 피해 무효!', '#7fe8d0', 24, { life: 1.6 });
+    log(`💪 ${nm(t)} <b style="color:#7fe8d0">불굴의 정선우</b>: 치명적인 피해 무효 · 이번 턴 체력 1 미만으로 감소하지 않음 · 턴 종료 시 최대 체력 50% 회복 · 이번 전투 동안 받는 피해량 -20%`, 'kill');
+    return 0;
+  }
   if (t.lonelyUntil > simTime && t.hp < 1) t.hp = 1;
   if (t.lonelyNoon && !t.lonelyUsed && t.hp <= 0) {
     t.lonelyUsed = true; t.hp = 1; t.stagger = 0;
@@ -2758,6 +2772,7 @@ function drawFighter(f) {
   if (buffVal(f, 'coinPowUp')) tags.push([`코인위력↑${buffVal(f, 'coinPowUp')}`, '#9fd8ff']);
   if (f.nextCoinPowUp) tags.push([`다음 코인위력↑${f.nextCoinPowUp}`, '#7fb0d0']);
   if (isRedGlow(f)) tags.push(['보호 10', '#ffb090']);
+  if (f.indomUsed) tags.push([f.indomUntil > simTime ? '불굴 (버팀)' : '불굴 · 받는 피해 -20%', '#7fe8d0']);
   if (buffVal(f, 'physUp')) tags.push([`물리↑${buffVal(f, 'physUp')}%`, '#7fe8d0']);
   if (buffVal(f, 'dmgUp')) tags.push([`피해량↑${buffVal(f, 'dmgUp')}%`, '#c8a8ff']);
   if (buffVal(f, 'powerUp')) tags.push([`위력↑${buffVal(f, 'powerUp')}`, '#ffd27a']);
