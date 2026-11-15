@@ -43,6 +43,19 @@
   @keyframes blink{50%{opacity:.6}}
   #recInd{position:absolute;top:10px;left:12px;font-size:13px;font-weight:700;color:#ff4d4d;display:none;pointer-events:none;text-shadow:0 0 8px #f00}
   #recInd.on{display:block}
+  #coinBar{display:flex;align-items:center;gap:6px;background:#1a1608;border:1px solid #6a5a1a;border-radius:10px;padding:6px 8px;margin-bottom:10px}
+  #coinBar img{width:26px;height:26px} #coinBar b{font-size:17px;color:#ffd84a} #coinBar span{font-size:11px;color:#b8a860}
+  #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
+  #questPanel{display:none;border:1px solid #6a5a1a;border-radius:10px;padding:8px;margin-bottom:10px;background:#12100a}
+  #questPanel.on{display:block}
+  .qbox{font-size:12px;border-bottom:1px solid #3a3210;padding-bottom:8px;margin-bottom:8px}
+  .qtitle{font-size:12px;font-weight:700;color:#ffd84a;margin-bottom:6px} .qtitle span{font-weight:400;color:#8a8060;font-size:10px}
+  .q{display:grid;grid-template-columns:1fr auto;gap:2px 6px;align-items:center;font-size:11px;margin-bottom:7px}
+  .q .bar{grid-column:1;height:5px;background:#2a2410;border-radius:3px;overflow:hidden} .q .bar i{display:block;height:100%;background:#ffcc33}
+  .q button{grid-row:1/3;grid-column:2;font-size:11px;padding:5px 7px;min-width:62px}
+  .q button.can,#attendBtn.can{background:linear-gradient(90deg,#ffcc33,#ff9a3a);border:none;color:#2a1600;font-weight:700}
+  .q.done{opacity:.5}
+  .dots{display:flex;gap:3px;margin:5px 0} .dots i{flex:1;height:6px;border-radius:3px;background:#2a2410} .dots i.on{background:#ffcc33}
   .gsel{background:#0b0b18;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-family:inherit;font-size:12px;flex:1}
   #testPanel{display:none;border:1px solid #3a6;border-radius:10px;padding:8px;background:#0c1a12;margin-top:4px}
   #testPanel.on{display:block}
@@ -137,6 +150,12 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
+    <div id="coinBar"><img src="data:image/png;base64,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" alt=""><b id="coinNum">0</b><span>코인</span><button id="questToggle">📋 퀘스트 · 출석</button></div>
+    <div id="questPanel">
+      <div class="qbox" id="attendBox"></div>
+      <div class="qtitle">오늘의 퀘스트 <span>(매일 초기화 · 테스트 모드에서는 진행되지 않음)</span></div>
+      <div id="questList"></div>
+    </div>
 
     <div class="team t0">
       <div class="title">🔴 레드 팀</div>
@@ -866,6 +885,7 @@ function checkStagger(f) {
   });
 }
 function enterStagger(f, th) {
+  questEvent('stagger');
   f.forcedStagger = false;
   const toNext = TURN - ((simTime - turnBase) % TURN);
   f.stagger = Math.max(f.stagger, toNext + TURN);
@@ -1404,6 +1424,7 @@ function kill(t, src, reason) {
   floatText(t.x, t.y - 10, 'K.O.', '#ffffff', 54, { vy: -40, life: 1.6 });
   doFlash('#ffffff', 0.6); shake = Math.max(shake, 24); slowmo = 0.9;
   log(`☠ ${nm(t)} 사망 <span style="color:#ff8080">(${reason})</span>`, 'kill');
+  if (t.type !== 'clone' && src && src.team !== t.team) questEvent('kill');
   // 분신 사망 시 처치한 대상에게 분신의 체력만큼 고정 피해
   if (t.type === 'clone' && src && src !== t && src.alive) {
     lightning(t.x, t.y, src.x, src.y, '#7fd4ff', 8, 0.5);
@@ -1866,6 +1887,7 @@ function stepEngagement(e) {
       floatText(Wn.f.x, Wn.f.y - Wn.f.r - 60, '합 승리!', '#fff27a', 26, { life: 1.1 });
       ring(Wn.f.x, Wn.f.y, '#fff27a', Wn.f.r * 4, 0.6, 8);
       log(`🏅 ${nm(Wn.f)} 합 승리 (${e.round}합)`, 'skill');
+      questEvent('clash');
       changeSp(Wn.f, 10, '합 승리');
       // 쐐기 [합 승리시]: 진동 - 붕괴로 진폭 얽힘
       if (Wn.sk === 'wedge' && L.f.tremorBase && !L.f.tremorBase.collapse) { L.f.tremorBase.collapse = true; floatText(L.f.x, L.f.y - L.f.r - 30, '진폭 얽힘 → 진동-붕괴', '#b48cff', 16); log(`${nm(L.f)} 진동 → <b style="color:#b48cff">진동 - 붕괴</b> (진폭 얽힘)`); }
@@ -2390,6 +2412,7 @@ function checkWin() {
     ended = true;
     const w = [...teams][0];
     const wasRaid = raidMode;
+    questEvent('battle'); if (raidMode && w === 0) questEvent('raidClear');
     if (raidMode && w === 0) {
       // 레이드 승리 보상: 이건민 스킬 수호자·아지랑이 추가
       const first = !gunminUnlocked;
@@ -3653,7 +3676,7 @@ document.getElementById('startBtn').onclick = () => { raidMode = false; setTestL
 document.getElementById('raidBtn').onclick = () => {
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'targetking', team: 1 }], Array.from({ length: 8 }, () => ({ type: 'dummy', team: 1 })));
-  raidMode = true; renderRoster(); setTestLock(true); start();
+  raidMode = true; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
   showBig('레이드: 과녁의 왕', '#ffcc33', 1.8);
   log('🎯 <b style="color:#ffcc33">레이드 — 과녁의 왕</b> 시작! (과녁의 왕 + 과녁 8)', 'kill');
 };
@@ -3684,6 +3707,65 @@ document.getElementById('pauseBtn').onclick = () => {
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); document.getElementById('pauseBtn').click(); }
 });
+
+// ================== 코인 · 출석 · 퀘스트 (브라우저에 저장) ==================
+const QUESTS = [
+  { id: 'battle1', ev: 'battle', need: 1, coin: 50, name: '전투 1회 완료' },
+  { id: 'battle3', ev: 'battle', need: 3, coin: 100, name: '전투 3회 완료' },
+  { id: 'kill5', ev: 'kill', need: 5, coin: 80, name: '적 5명 처치' },
+  { id: 'clash10', ev: 'clash', need: 10, coin: 80, name: '합 10회 승리' },
+  { id: 'stagger5', ev: 'stagger', need: 5, coin: 60, name: '흐트러짐 5회 발생' },
+  { id: 'raidTry', ev: 'raidTry', need: 1, coin: 100, name: '레이드 도전' },
+  { id: 'raidClear', ev: 'raidClear', need: 1, coin: 300, name: '레이드 클리어' },
+];
+const dayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const save = { coins: 0, lastAttend: '', streak: 0, questDay: '', prog: {}, claimed: {} };
+try { Object.assign(save, JSON.parse(localStorage.getItem('ballfight-save') || '{}')); } catch (e) {}
+function persist() { try { localStorage.setItem('ballfight-save', JSON.stringify(save)); } catch (e) {} }
+function questDayCheck() { if (save.questDay !== dayStr()) { save.questDay = dayStr(); save.prog = {}; save.claimed = {}; persist(); } }
+function addCoins(v, why) {
+  save.coins += v; persist(); renderQuests();
+  toast(`🪙 코인 +${v} (${why})`);
+}
+// 퀘스트 진행 (테스트 모드에서는 진행되지 않음)
+function questEvent(ev, n = 1) {
+  if (test.on) return;
+  questDayCheck();
+  save.prog[ev] = (save.prog[ev] || 0) + n; persist();
+  questDirty = true;
+}
+let questDirty = false;
+const attendReward = streak => 100 + 20 * (Math.min(7, streak) - 1);
+function renderQuests() {
+  questDayCheck();
+  $('coinNum').textContent = save.coins.toLocaleString();
+  const today = dayStr(), done = save.lastAttend === today;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const nextStreak = done ? save.streak : (save.lastAttend === dayStr(y) ? save.streak % 7 + 1 : 1);
+  $('attendBox').innerHTML = `<b>📅 출석 보상</b> — ${done ? `오늘 출석 완료 (연속 ${save.streak}일차)` : `연속 ${nextStreak}일차 · 🪙 ${attendReward(nextStreak)}`}
+    <div class="dots">${Array.from({ length: 7 }, (_, i) => `<i class="${i < (done ? save.streak : nextStreak - 1) ? 'on' : ''}"></i>`).join('')}</div>
+    <button id="attendBtn" class="${done ? '' : 'can'}" ${done ? 'disabled' : ''} style="width:100%">${done ? '내일 다시 받을 수 있어요' : `출석하고 🪙 ${attendReward(nextStreak)} 받기`}</button>
+    <div style="font-size:10px;color:#8a8060;margin-top:4px">매일 연속으로 출석하면 보상이 100 → 220까지 늘어요 (7일 주기)</div>`;
+  const ab = $('attendBtn');
+  if (!done) ab.onclick = () => { save.lastAttend = today; save.streak = nextStreak; addCoins(attendReward(nextStreak), `출석 ${nextStreak}일차`); };
+  $('questList').innerHTML = QUESTS.map(q => {
+    const pr = Math.min(q.need, save.prog[q.ev] || 0), cl = save.claimed[q.id], can = pr >= q.need && !cl;
+    return `<div class="q ${cl ? 'done' : ''}"><span>${q.name} <b style="color:#ffd84a">${pr}/${q.need}</b></span><div class="bar"><i style="width:${pr / q.need * 100}%"></i></div>
+      <button data-q="${q.id}" class="${can ? 'can' : ''}" ${can ? '' : 'disabled'}>${cl ? '완료' : `🪙 ${q.coin}`}</button></div>`;
+  }).join('');
+  const anyClaim = !done || QUESTS.some(q => (save.prog[q.ev] || 0) >= q.need && !save.claimed[q.id]);
+  $('questToggle').textContent = anyClaim ? '📋 퀘스트 · 출석 ●' : '📋 퀘스트 · 출석';
+  $('questToggle').style.color = anyClaim ? '#ffd84a' : '';
+}
+$('questList').addEventListener('click', e => {
+  const b2 = e.target.closest('button[data-q]'); if (!b2) return;
+  const q = QUESTS.find(x => x.id === b2.dataset.q);
+  if (!q || save.claimed[q.id] || (save.prog[q.ev] || 0) < q.need) return;
+  save.claimed[q.id] = true; addCoins(q.coin, q.name);
+});
+$('questToggle').onclick = () => $('questPanel').classList.toggle('on');
+setInterval(() => { if (questDirty || save.questDay !== dayStr()) { questDirty = false; renderQuests(); } }, 500);
+renderQuests();
 
 // 그래픽 설정 UI
 (function () {
