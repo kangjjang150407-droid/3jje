@@ -359,7 +359,7 @@ function drawTremorIcon(x, y, size, alpha = 1) {
 }
 let turnBase = 0;
 const turnIdx = () => Math.floor((simTime - turnBase) / TURN);
-let tremorPops = [], bleedPops = [], colaPops = [], obPops = [], preyPops = [], ammoPops = [], reloadPops = [], chargePops = [], cryPops = [], panicPops = [], tremorBasePops = [], staggerPops = [], tonguePops = [], overheatPops = [], markPops = [], scorchPops = [], linkPops = [], dawnfirePops = [], lastTurnIdx = 0;
+let tremorPops = [], bleedPops = [], colaPops = [], obPops = [], preyPops = [], ammoPops = [], reloadPops = [], chargePops = [], cryPops = [], panicPops = [], tremorBasePops = [], staggerPops = [], tonguePops = [], overheatPops = [], markPops = [], scorchPops = [], linkPops = [], dawnfirePops = [], slashes = [], lastTurnIdx = 0;
 const jihoImg = new Image(); jihoImg.src = IMG_JIHO;
 const juwonImg = new Image(); juwonImg.src = IMG_JUWON;
 const juwon2Img = new Image(); juwon2Img.src = IMG_JUWON2;
@@ -1960,6 +1960,12 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
   const dm = Math.max(0, 1 + pct / 100) * (crit ? (u.sk === 'wedge' && i === 4 ? 2.2 : 1.2) : 1); // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
+  if (f.type === 'sunwoo' || f.type === 'doyun') {
+    // 회색 창이 휘둘러지는 검기
+    const ang = Math.atan2(t.y - f.y, t.x - f.x);
+    slashes.push({ x: t.x, y: t.y, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.4 + (u.sk === 'wedge' ? 30 : 0), life: 0.38, max: 0.38 });
+    burst(t.x, t.y, '#d8dce6', 14, 420, 8, 0.4, { kind: 'spark' });
+  } else
   lightning(f.x, f.y, t.x, t.y, S.color, u.sk === 'ppung' || u.sk === 'polarbear' ? 14 : 7, 0.25);
   burst(t.x, t.y, S.color, u.sk === 'unana' ? 14 : 30, 380, 11, 0.5, { kind: u.sk === 'unana' ? 'heart' : 'glow' });
   ring(t.x, t.y, heads ? '#fff27a' : '#ffffff', t.r * 2.2, 0.3, 4);
@@ -2336,7 +2342,7 @@ function update(dt) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
   }
   if (particles.length > PARTICLE_CAP) particles.splice(0, particles.length - PARTICLE_CAP);
-  for (const arr of [rings, beams, pillars, usagiPops, tremorPops, bleedPops, colaPops, obPops, preyPops, ammoPops, reloadPops, chargePops, cryPops, panicPops, tremorBasePops, staggerPops, tonguePops, overheatPops, markPops, scorchPops, linkPops, dawnfirePops]) for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) arr.splice(i, 1); }
+  for (const arr of [rings, beams, pillars, usagiPops, tremorPops, bleedPops, colaPops, obPops, preyPops, ammoPops, reloadPops, chargePops, cryPops, panicPops, tremorBasePops, staggerPops, tonguePops, overheatPops, markPops, scorchPops, linkPops, dawnfirePops, slashes]) for (let i = arr.length - 1; i >= 0; i--) { arr[i].life -= dt; if (arr[i].life <= 0) arr.splice(i, 1); }
   for (let i = texts.length - 1; i >= 0; i--) {
     const t = texts[i]; t.life -= dt; t.y += t.vy * dt; t.vy *= Math.pow(0.95, dt * 60);
     if (t.life <= 0) texts.splice(i, 1);
@@ -2981,6 +2987,24 @@ function render() {
   drawParticles();
   for (const cp2 of chargePops) { const k = cp2.life / cp2.max; drawIcon(chargeImg, cp2.x, cp2.y - (1 - k) * 20, 22, k); }
   for (const pp2 of panicPops) { const k = pp2.life / pp2.max, p = 1 - k; drawIcon(pp2.type === 'redglow' ? redglowImg : wrathImg, pp2.x, pp2.y - p * 30, 70 + p * 40, k); }
+  for (const sl of slashes) {
+    const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
+    const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    ctx.save(); ctx.translate(sl.x, sl.y);
+    // 검기 (초승달 모양 회색 궤적)
+    const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
+    ctx.globalAlpha = k * 0.9;
+    ctx.beginPath(); ctx.arc(0, 0, sl.r, lo, hi); ctx.arc(-Math.cos(sl.ang) * sl.r * 0.28, -Math.sin(sl.ang) * sl.r * 0.28, sl.r * 0.86, hi, lo, true); ctx.closePath();
+    ctx.fillStyle = '#c4c9d4'; ctx.fill();
+    ctx.globalAlpha = k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, sl.r, lo, hi); ctx.stroke();
+    // 회색 창 (휘두르는 끝에 위치)
+    ctx.rotate(a1); ctx.globalAlpha = Math.min(1, k * 1.6);
+    const L = sl.r * 1.25;
+    ctx.strokeStyle = '#8a8f9c'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-L * 0.25, 0); ctx.lineTo(L * 0.82, 0); ctx.stroke();
+    ctx.fillStyle = '#e6e9f0'; ctx.strokeStyle = '#6a6f7c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(L * 1.08, 0); ctx.lineTo(L * 0.8, -8); ctx.lineTo(L * 0.72, 0); ctx.lineTo(L * 0.8, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   for (const dp of dawnfirePops) { const k = dp.life / dp.max; drawIcon(dawnfireImg, dp.x, dp.y - (1 - k) * 22, 26, k); }
   for (const lp of linkPops) { const k = lp.life / lp.max, p = 1 - k; drawIcon(linkImg, lp.x, lp.y - p * 20, 40 + p * 30, k); }
   for (const sc of scorchPops) { const k = sc.life / sc.max, p = 1 - k, sz = 50 + p * 70; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * 0.7; ctx.drawImage(glow('#ff5a1a'), sc.x - sz, sc.y - sz, sz * 2, sz * 2); ctx.restore(); drawIcon(scorchImg, sc.x, sc.y, sz, k); }
@@ -3453,7 +3477,7 @@ function build() {
   resize();
   winInfo = null;
   fighters = []; projectiles = []; particles = []; rings = []; texts = []; beams = []; pillars = []; respawns = [];
-  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; ammoPops = []; reloadPops = []; chargePops = []; cryPops = []; panicPops = []; tremorBasePops = []; staggerPops = []; tonguePops = []; overheatPops = []; markPops = []; scorchPops = []; linkPops = []; dawnfirePops = []; lastTurnIdx = 0; turnBase = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
+  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; ammoPops = []; reloadPops = []; chargePops = []; cryPops = []; panicPops = []; tremorBasePops = []; staggerPops = []; tonguePops = []; overheatPops = []; markPops = []; scorchPops = []; linkPops = []; dawnfirePops = []; slashes = []; lastTurnIdx = 0; turnBase = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
   logEl.innerHTML = ''; logQueue = [];
   document.getElementById('overlay').classList.remove('show');
   const counts = {}, totals = {};
