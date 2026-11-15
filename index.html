@@ -1965,6 +1965,13 @@ function hitCoin(u, t, pow, i, heads, crit) {
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
     slashes.push({ x: t.x, y: t.y, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.4 + (u.sk === 'wedge' ? 30 : 0), life: 0.38, max: 0.38 });
     burst(t.x, t.y, '#d8dce6', 14, 420, 8, 0.4, { kind: 'spark' });
+  } else if (f.type === 'juwon' || f.type === 'juwon2' || f.type === 'gunmin' || f.type === 'wooju') {
+    // 이글거리는 붉은 검이 휘둘러지는 검기
+    const ang = Math.atan2(t.y - f.y, t.x - f.x);
+    const big = u.sk === 'dawn' || u.sk === 'rage' || u.sk === 'noon';
+    slashes.push({ fire: true, x: t.x, y: t.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.4 + (big ? 35 : 0), life: 0.45, max: 0.45 });
+    burst(t.x, t.y, '#ff5a2a', 16, 380, 12, 0.6, { g: -220 });
+    burst(t.x, t.y, '#ffc24a', 8, 300, 7, 0.4, { kind: 'spark' });
   } else
   lightning(f.x, f.y, t.x, t.y, S.color, u.sk === 'ppung' || u.sk === 'polarbear' ? 14 : 7, 0.25);
   burst(t.x, t.y, S.color, u.sk === 'unana' ? 14 : 30, 380, 11, 0.5, { kind: u.sk === 'unana' ? 'heart' : 'glow' });
@@ -2500,6 +2507,35 @@ function highlightSprite() {
   }
   return hlSprite;
 }
+// 이글거리는 붉은 검 검기 (강주원·이건민·강우주)
+function drawFireSlash(sl, k, a0, a1) {
+  const lo = Math.min(a0, a1), hi = Math.max(a0, a1), fl = simTime * 40;
+  ctx.save(); ctx.translate(sl.x, sl.y); ctx.globalCompositeOperation = 'lighter';
+  // 일렁이는 불꽃 궤적 (겹겹이)
+  for (const [col, rr, wd, al] of [['#ff2a10', 1.0, 16, 0.55], ['#ff7a1a', 0.97, 9, 0.8], ['#ffe08a', 0.95, 3.5, 1]]) {
+    ctx.globalAlpha = k * al; ctx.strokeStyle = col; ctx.lineWidth = wd * (0.6 + k * 0.6); ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let a = lo; a <= hi + 0.001; a += 0.12) {
+      const r2 = sl.r * rr + Math.sin(a * 9 + fl) * 4 + Math.sin(a * 17 - fl * 0.7) * 2.5; // 이글거림
+      ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+    }
+    ctx.stroke();
+  }
+  // 궤적을 따라 피어오르는 불꽃
+  ctx.globalAlpha = k * 0.7;
+  for (let a = lo; a <= hi; a += 0.3) { const fs = 14 + Math.sin(a * 5 + fl) * 6; ctx.drawImage(glow('#ff4a1a'), Math.cos(a) * sl.r - fs, Math.sin(a) * sl.r - fs - (1 - k) * 18, fs * 2, fs * 2); }
+  ctx.globalCompositeOperation = 'source-over';
+  // 붉은 검 (휘두르는 끝)
+  ctx.rotate(a1); ctx.globalAlpha = Math.min(1, k * 1.6);
+  const L = sl.r * 1.2;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.7; ctx.drawImage(glow('#ff3a1a'), L * 0.2, -22, L * 0.95, 44); ctx.restore();
+  ctx.fillStyle = '#3a0c08'; ctx.fillRect(-L * 0.12, -3, L * 0.2, 6);                       // 손잡이
+  ctx.fillStyle = '#ffb04a'; ctx.fillRect(L * 0.08, -9, 5, 18);                             // 코등이
+  ctx.beginPath(); ctx.moveTo(L * 0.12, -5.5); ctx.lineTo(L * 0.95, -4); ctx.lineTo(L * 1.1, 0); ctx.lineTo(L * 0.95, 4); ctx.lineTo(L * 0.12, 5.5); ctx.closePath();
+  ctx.fillStyle = '#e8281a'; ctx.fill(); ctx.strokeStyle = '#ffd08a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = '#ffe9b0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(L * 0.16, 0); ctx.lineTo(L * 1.0, 0); ctx.stroke();
+  ctx.restore();
+}
 // 붉은 날개 (강주원 [불타는 울음])
 function drawWings(f) {
   const { x, y, r } = f;
@@ -2990,6 +3026,7 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.fire) { drawFireSlash(sl, k, a0, a1); continue; }
     ctx.save(); ctx.translate(sl.x, sl.y);
     // 검기 (초승달 모양 회색 궤적)
     const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
