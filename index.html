@@ -574,7 +574,7 @@ const SKILLS = {
 // 레이드 보상: 이건민 스킬 해금 (브라우저에 저장)
 // 서버: 본 서버 / 테스트 서버 (저장 데이터가 완전히 분리됨)
 let TEST_SERVER = false;
-try { TEST_SERVER = localStorage.getItem('ballfight-server') === 'test'; } catch (e) {}
+TEST_SERVER = !!window.BALLFIGHT_TEST_SITE; // 테스트 사이트(test/index.html)에서만 켜짐
 const SV = TEST_SERVER ? '-test' : '';
 let gunminUnlocked = false;
 try { gunminUnlocked = localStorage.getItem('ballfight-unlock-gunmin' + SV) === '1'; } catch (e) {}
@@ -3349,7 +3349,7 @@ function initAudio() {
 }
 // 배경음악: assets/bgm.mp3 (http(s)에서는 Web Audio로 연결해 녹화에도 포함)
 const BGM_VOL = 0.4;
-const bgm = new Audio('assets/bgm.mp3');
+const bgm = new Audio((/\/test\/(index\.html)?$/.test(location.pathname) ? '../' : '') + 'assets/bgm.mp3');
 bgm.loop = true; bgm.preload = 'auto'; bgm.setAttribute('playsinline', '');
 let bgmOn = true, bgmGain = null;
 function hookBgm() {
@@ -3839,8 +3839,9 @@ if (TEST_SERVER) { for (const k of GACHA) save.owned[k] = true; if (save.coins <
 (function () {
   const nm = document.getElementById('serverName'), bt = document.getElementById('serverBtn'), rs = document.getElementById('serverReset');
   nm.textContent = TEST_SERVER ? '🧪 테스트 서버' : '🌐 본 서버'; nm.style.color = TEST_SERVER ? '#7dffb0' : '#9fc4ff';
-  bt.textContent = TEST_SERVER ? '본 서버로 이동' : '🧪 테스트 서버로 이동';
-  bt.onclick = () => { try { localStorage.setItem('ballfight-server', TEST_SERVER ? 'main' : 'test'); } catch (e) {} location.reload(); };
+  const pages = /github\.io$/.test(location.hostname) || location.protocol === 'file:';
+  if (pages) { bt.textContent = TEST_SERVER ? '본 사이트로 이동' : '🧪 테스트 사이트로 이동'; bt.onclick = () => { location.href = TEST_SERVER ? '../' + (location.protocol === 'file:' ? 'index.html' : '') : 'test/' + (location.protocol === 'file:' ? 'index.html' : ''); }; }
+  else bt.style.display = 'none';
   if (TEST_SERVER) {
     document.title = '[테스트 서버] ' + document.title;
     rs.style.display = '';
