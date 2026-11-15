@@ -3841,7 +3841,8 @@ if (TEST_SERVER) { for (const k of GACHA) save.owned[k] = true; if (save.coins <
   const nm = document.getElementById('serverName'), bt = document.getElementById('serverBtn'), rs = document.getElementById('serverReset');
   nm.textContent = TEST_SERVER ? '🧪 테스트 서버' : '🌐 본 서버'; nm.style.color = TEST_SERVER ? '#7dffb0' : '#9fc4ff';
   const pages = /github\.io$/.test(location.hostname) || location.protocol === 'file:';
-  if (pages) { bt.textContent = TEST_SERVER ? '본 사이트로 이동' : '🧪 테스트 사이트로 이동'; bt.onclick = () => { location.href = TEST_SERVER ? '../' + (location.protocol === 'file:' ? 'index.html' : '') : 'test/' + (location.protocol === 'file:' ? 'index.html' : ''); }; }
+  if (!TEST_SERVER) document.getElementById('serverBar').style.display = 'none';
+  if (pages && TEST_SERVER) { bt.textContent = TEST_SERVER ? '본 사이트로 이동' : '🧪 테스트 사이트로 이동'; bt.onclick = () => { location.href = TEST_SERVER ? '../' + (location.protocol === 'file:' ? 'index.html' : '') : 'test/' + (location.protocol === 'file:' ? 'index.html' : ''); }; }
   else bt.style.display = 'none';
   if (TEST_SERVER) {
     document.title = '[테스트 서버] ' + document.title;
