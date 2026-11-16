@@ -602,7 +602,7 @@ const SKILLS = {
 let TEST_SERVER = false;
 TEST_SERVER = !!window.BALLFIGHT_TEST_SITE; // 테스트 사이트(test/index.html)에서만 켜짐
 // 구글 로그인: Google Cloud Console에서 만든 OAuth 클라이언트 ID를 넣으면 켜짐 (승인된 자바스크립트 원본에 사이트 주소 등록 필요)
-const GOOGLE_CLIENT_ID = '';
+const GOOGLE_CLIENT_ID = '841206483785-aol8f081t3gr4d62okio61nomjp9kfnn.apps.googleusercontent.com';
 let account = null; // { sub, name, picture }
 try { account = JSON.parse(localStorage.getItem('ballfight-user') || 'null'); if (account && !account.sub) account = null; } catch (e) { account = null; }
 const SV = (TEST_SERVER ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
