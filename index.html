@@ -3640,8 +3640,9 @@ function testRefresh(force) {
   const sk2 = T_SKILLS[f.type] || [];
   const ssig = f.type;
   if (force || $('tSkill').dataset.sig !== ssig) { $('tSkill').dataset.sig = ssig; $('tSkill').innerHTML = sk2.map(k => `<option value="${k}">${SKILLS[k].name}</option>`).join('') || '<option value="">(스킬 없음)</option>'; }
-  const en = enemies(f), tsig = en.map(e => e.id).join('|');
-  if (force || $('tTarget').dataset.sig !== tsig) { $('tTarget').dataset.sig = tsig; $('tTarget').innerHTML = en.map(e => `<option value="${e.id}">${e.label}</option>`).join('') || '<option value="">(적 없음)</option>'; }
+  // 곽시율: 벌레 컷 대상으로 아군 송재범도 지정 가능
+  const en = enemies(f).concat(f.type === 'kwak' ? fighters.filter(a => a.alive && !a.away && a.team === f.team && isSong(a)) : []), tsig = en.map(e => e.id).join('|');
+  if (force || $('tTarget').dataset.sig !== tsig) { $('tTarget').dataset.sig = tsig; $('tTarget').innerHTML = en.map(e => `<option value="${e.id}">${e.label}${e.team === f.team ? ' (아군)' : ''}</option>`).join('') || '<option value="">(적 없음)</option>'; }
   $('tPhase').disabled = f.type !== 'song' && f.type !== 'juwon';
 }
 function testSet(inp) {
@@ -3678,7 +3679,8 @@ $('tUsagi').onchange = e => { if (test.sel) test.sel.usagi = e.target.checked; }
 $('tGod').onchange = e => { if (test.sel) test.sel.god = e.target.checked; };
 $('tUse').onclick = () => {
   const f = test.sel, k = $('tSkill').value; if (!f || !f.alive || !k) return;
-  const t = fighters.find(x => x.id === +$('tTarget').value && x.alive) || chooseTarget(f, k);
+  let t = fighters.find(x => x.id === +$('tTarget').value && x.alive) || chooseTarget(f, k);
+  if (t && t.team === f.team && k !== 'bugcut') { toast('아군 송재범은 벌레 컷으로만 지정할 수 있어요'); return; }
   log(`🧪 ${nm(f)} ${sk(k)} 강제 사용`);
   f.cast = null;
   if (k === 'guard') useGuard(f, '테스트');
