@@ -48,6 +48,11 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #artPanel{display:none;border:1px solid #8a3a3a;border-radius:10px;padding:8px;margin-bottom:10px;background:#180a0c;font-size:12px;line-height:1.5}
+  #artPanel.on{display:block}
+  #artPanel .art{padding:6px 0;border-bottom:1px solid #2a1418}
+  #artPanel .art:last-child{border-bottom:none}
+  #artPanel select{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:6px;padding:4px;margin-top:4px;width:100%}
   #gachaPanel .row button{flex:1;padding:8px 4px;font-size:12px;font-weight:700}
   .can2{background:linear-gradient(90deg,#b06bff,#ff6fc0)!important;border:none!important;color:#fff!important}
   #gachaResult{font-size:11px;min-height:16px;margin-top:6px;line-height:1.6}
@@ -187,7 +192,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;gap:6px;margin:2px 0 6px"><button id="patchBtn" style="flex:1;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1;font-size:12px">❓ 튜토리얼</button></div>
+    <div style="display:flex;gap:6px;margin:2px 0 6px"><button id="patchBtn" style="flex:1;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1;font-size:12px">💍 아티팩트</button></div>
+    <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
       <b id="accName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9aa0b0">게스트</b>
@@ -713,6 +719,11 @@ const UP_KEY = { yoru: 'song', juwon2: 'juwon' };
 const owned = type => { try { return type === 'dummy' || !!save.owned[type]; } catch (e) { return type === 'dummy' || type === 'song' || type === 'juwon'; } };
 const up = type => { try { return !!save.upg[UP_KEY[type] || type]; } catch (e) { return false; } };
 const turnCd = f => TURN / (CHAR[f.type].slots || 1);
+// 아티팩트: 캐릭터에게 장착하는 장비 (save.artifacts = 보유, save.equip = { 아티팩트: 캐릭터 })
+const ARTIFACTS = {
+  pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
+};
+const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; return !!save.artifacts[id] && save.equip[id] === b; } catch (e) { return false; } };
 // 반격 스킬 (곽시율의 넌 나가라는 강화 시 해금)
 const counterOf = f => f.type === 'kwak' ? (up('kwak') ? 'getout' : null) : CHAR[f.type].counter;
 const bbSum = t => (t.bleed ? t.bleed.pot : 0) + burnPot(t); // 출혈 + 화상 위력 합
@@ -1617,6 +1628,12 @@ function kill(t, src, reason) {
   doFlash('#ffffff', 0.6); shake = Math.max(shake, 24); slowmo = 0.9;
   log(`☠ ${nm(t)} 사망 <span style="color:#ff8080">(${reason})</span>`, 'kill');
   if (t.type !== 'clone' && src && src.team !== t.team) questEvent('kill');
+  // 흉탄의 사수 처치 시 아티팩트 '찢어진 펜던트' 획득
+  if (t.type === 'marksman' && src && src.team !== t.team) {
+    const first = !save.artifacts.pendant; save.artifacts.pendant = true; persist(); renderArtifacts();
+    log(`💍 아티팩트 <b style="color:#ff4a2a">찢어진 펜던트</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
+    if (first) toast('💍 아티팩트 찢어진 펜던트 획득!');
+  }
   // 분신 사망 시 처치한 대상에게 분신의 체력만큼 고정 피해
   if (t.type === 'clone' && src && src !== t && src.alive) {
     lightning(t.x, t.y, src.x, src.y, '#7fd4ff', 8, 0.5);
@@ -1974,6 +1991,12 @@ function beginEngagement(f, key, t) {
   const S = SKILLS[key];
   const A = makeUse(f, key);
   A.tgt = t; A.linked = linkedStart;
+  // 찢어진 펜던트: 아군을 지정하는 스킬 피해량 +100%
+  if (t.team === f.team && t !== f && hasArt(f, 'pendant')) {
+    A.pct += 100; A.pendant = t;
+    floatText(f.x, f.y - f.r - 66, '찢어진 펜던트 · 피해량 +100%', '#ff4a2a', 16, { life: 1.2 });
+    log(`💍 ${nm(f)} <b style="color:#ff4a2a">찢어진 펜던트</b>: 아군 ${nm(t)} 지정 → 피해량 +100%`);
+  }
   // 연 효과가 발동하는지 (해당 아군이 행동 가능한 상태로 생존)
   A.linkOn = !!(S.link && !linkedStart && fighters.some(a => a !== f && a.team === f.team && S.link.includes(a.type) && canAct(a)));
   onUse(A);
@@ -2057,7 +2080,7 @@ function clashPower(u, coins, opp) {
   for (let i = 0; i < coins; i++) { const h = flip(u.f); res.push(h); p += coinDelta(u, h); }
   const diff = offLv(u.f, u.sk) - offLv(opp.f, opp.sk);
   if (diff > 0) p += Math.floor(diff / 3);
-  p += u.clashBonus + (u.finalBonus || 0) + buffVal(u.f, 'powerUp') + (isWrath(u.f) ? 2 : 0);
+  p += u.clashBonus - (u.f.pendantDebuff || 0) + (u.finalBonus || 0) + buffVal(u.f, 'powerUp') + (isWrath(u.f) ? 2 : 0);
   if (u.sk === 'ang') p += Math.min(10, 2 * buffVal(u.f, 'defUp'));
   if (u.clashMul) p = Math.floor(p * u.clashMul);
   return { p: Math.max(0, p), res };
@@ -2208,6 +2231,12 @@ function stepEngagement(e) {
   q.done++;
   if (q.i >= q.coins || q.done > 60) {
     e.queue.shift(); e.t = 0.45;
+    // 찢어진 펜던트: 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5
+    if (u.pendant && u.pendant.alive && u.f.alive && !u.pendantDone) {
+      u.pendantDone = true; u.f.pendantDebuff = (u.f.pendantDebuff || 0) + 5;
+      floatText(u.f.x, u.f.y - u.f.r - 46, '찢어진 펜던트 · 합 위력 -5', '#ff4a2a', 18, { life: 1.4 });
+      log(`💍 ${nm(u.f)} <b style="color:#ff4a2a">찢어진 펜던트</b>: 아군이 사망하지 않음 → 이번 전투 동안 합 위력 -5 (누적 -${u.f.pendantDebuff})`);
+    }
     if (u.sk === 'rage' && u.f.alive) forceTurnEnd(u.f); // [공격 종료시] 이번 턴 종료
     if (u.sk === 'spit' && u.f.alive) giveDawnGreet(u.f, u.dawn20 ? 2 : 1);
     if (u.sk === 'dawn' && u.f.alive) {
@@ -4167,6 +4196,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '2.0', date: '2026-11-17', items: ['💍 아티팩트 추가: 캐릭터에게 장착하는 장비 (제목 아래 아티팩트 버튼)', '찢어진 펜던트 추가: 흉탄의 사수 처치 시 획득'] },
   { v: '1.9', date: '2026-11-17', items: ['던전 11층에 히든 보스가 0.5% 확률로 등장'] },
   { v: '1.8', date: '2026-11-16', items: ['❓ 튜토리얼 추가: 처음 접속하면 자동으로 시작 · 제목 아래 버튼으로 다시 보기'] },
   { v: '1.7', date: '2026-11-16', items: ['던전에는 과녁 소속(던전 과녁 · 과녁의 왕)만 등장하도록 층 구성 변경', '던전 과녁이 층마다 더 강해짐 (LV 30 + 층×5 · 체력 300 + 층×60)'] },
@@ -4229,6 +4259,21 @@ document.getElementById('tutSkip').onclick = () => tutShow(-1);
   if (seen === null && !tutDone) { try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} tutShow(0); return; }
   if (seen !== PATCH_NOTES[0].v) { showPatchNotes(seen); try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} }
 })();
+if (!save.artifacts) save.artifacts = {}; if (!save.equip) save.equip = {};
+function renderArtifacts() {
+  const el = document.getElementById('artPanel'); if (!el) return;
+  el.innerHTML = '<div style="color:#b0a0a8;margin-bottom:4px">아티팩트는 캐릭터에게 장착하는 장비예요. 하나의 아티팩트는 한 캐릭터만 장착할 수 있어요.</div>' + Object.keys(ARTIFACTS).map(id => {
+    const a = ARTIFACTS[id], have = !!save.artifacts[id];
+    const opts = ['<option value="">장착 안 함</option>'].concat(GACHA.filter(k => save.owned[k]).map(k => `<option value="${k}"${save.equip[id] === k ? ' selected' : ''}>${CHAR[k].name}</option>`)).join('');
+    return `<div class="art" style="opacity:${have ? 1 : 0.55}"><b style="color:${a.color}">${have ? '💍' : '🔒'} ${a.name}</b> <span style="color:#8a8aa8">(${a.how})</span><br>${a.desc}${have ? `<select data-art="${id}">${opts}</select>` : '<div style="color:#777">미획득</div>'}</div>`;
+  }).join('');
+}
+document.getElementById('artBtn').onclick = () => { document.getElementById('artPanel').classList.toggle('on'); renderArtifacts(); };
+document.getElementById('artPanel').addEventListener('change', e => {
+  const id = e.target.dataset.art; if (!id) return;
+  if (e.target.value) save.equip[id] = e.target.value; else delete save.equip[id];
+  persist(); toast(e.target.value ? `💍 ${ARTIFACTS[id].name} → ${CHAR[e.target.value].name} 장착` : `💍 ${ARTIFACTS[id].name} 장착 해제`);
+});
 if (!save.dungeon) save.dungeon = 0;
 renderDungeon();
 if (!save.stones) save.stones = {}; if (!save.upg) save.upg = {};
