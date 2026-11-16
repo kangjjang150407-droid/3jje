@@ -604,7 +604,11 @@ TEST_SERVER = !!window.BALLFIGHT_TEST_SITE; // 테스트 사이트(test/index.ht
 const GOOGLE_CLIENT_ID = '841206483785-aol8f081t3gr4d62okio61nomjp9kfnn.apps.googleusercontent.com';
 let account = null; // { sub, name, picture }
 try { account = JSON.parse(localStorage.getItem('ballfight-user') || 'null'); if (account && !account.sub) account = null; } catch (e) { account = null; }
-const SV = (TEST_SERVER ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
+// 테스트 서버에 로그인한 적 있는 계정(테스터)은 본 서버에서도 테스트 서버의 데이터·혜택이 그대로 적용됨
+let TESTER = false;
+try { if (account) { if (TEST_SERVER) localStorage.setItem('ballfight-tester-' + account.sub, '1'); TESTER = localStorage.getItem('ballfight-tester-' + account.sub) === '1'; } } catch (e) {}
+const PERK = TEST_SERVER || TESTER;
+const SV = (PERK ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
 function googleSignedIn(resp) {
   try {
     const b64 = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -3959,11 +3963,11 @@ if (!save.stones) save.stones = {}; if (!save.upg) save.upg = {};
 // 보유 캐릭터: 송재범·강주원은 기본, 나머지는 뽑기에서 획득 (이전에 영혼석을 모았거나 강화했다면 보유로 처리)
 if (!save.owned) save.owned = {};
 save.owned.song = save.owned.juwon = true;
-if (TEST_SERVER) { for (const k of GACHA) save.owned[k] = true; if (save.coins < 999999) save.coins = 999999; persist(); } // 테스트 서버: 전 캐릭터 보유 + 코인 무제한 충전
+if (PERK) { for (const k of GACHA) save.owned[k] = true; if (save.coins < 999999) save.coins = 999999; persist(); } // 테스트 서버: 전 캐릭터 보유 + 코인 무제한 충전
 (function () {
   const $i = id => document.getElementById(id);
   if (account) {
-    $i('accName').textContent = account.name; $i('accName').style.color = '#e8e8f0';
+    $i('accName').textContent = account.name + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : ''); $i('accName').style.color = '#e8e8f0';
     if (account.picture) { $i('accPic').src = account.picture; $i('accPic').referrerPolicy = 'no-referrer'; $i('accPic').style.display = ''; }
     $i('accLogin').style.display = 'none'; $i('accLogout').style.display = ''; $i('accLogout').onclick = googleSignOut;
     return;
