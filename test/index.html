@@ -2621,7 +2621,7 @@ function checkWin() {
   if (teams.size <= 1 && !ended) {
     ended = true;
     const w = [...teams][0];
-    const wasRaid = raidMode;
+    const wasRaid = raidMode, wasDungeon = dungeonFloor;
     questEvent('battle'); if (raidMode && !dungeonFloor && w === 0) questEvent('raidClear');
     if (dungeonFloor && w === 0) {
       // 던전 클리어 보상: 클리어 층 × 100 코인
@@ -2646,7 +2646,7 @@ function checkWin() {
     const endTime = simTime;
     setTimeout(() => {
       if (!ended) return;
-      winInfo = { team: w, time: endTime, t: 0, raid: wasRaid };
+      winInfo = { team: w, time: endTime, t: 0, raid: wasRaid, dungeon: wasDungeon };
       document.getElementById('overlay').classList.add('show');
       if (rec && rec.auto) setTimeout(() => { if (rec && rec.auto) stopRec(); }, 2200);
     }, 1600);
@@ -3443,7 +3443,7 @@ function drawWin() {
   const t = winInfo.t, k = Math.min(1, t / 0.5);
   ctx.fillStyle = `rgba(0,0,0,${0.55 * k})`; ctx.fillRect(0, 0, cw, ch);
   const w = winInfo.team, color = w === undefined ? '#dddddd' : TEAM[w].color;
-  const text = winInfo.raid ? (w === 0 ? '🏆 레이드 클리어!' : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
+  const text = winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? '🏆 레이드 클리어!' : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
   const p = Math.min(1, t / 0.45), ease = 1 + 2.2 * Math.pow(1 - p, 3);
   let size = 60; ctx.font = `900 ${size}px ${FONT}`;
   const mw = ctx.measureText(text).width; if (mw > cw * 0.88) size *= cw * 0.88 / mw;
