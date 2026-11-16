@@ -658,22 +658,23 @@ let raidMode = false;
 // 던전: 1~15층, 클리어 시 층 × 100 코인 (레이드와 같은 제한: 테스트 모드·적 편집 불가)
 let dungeonFloor = 0;
 const DUNGEON_MAX = 15;
+// 던전에는 과녁 소속(던전 과녁 · 과녁의 왕)만 등장
 const DUNGEON = [null,
   ['dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy'],
   ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
-  ['song'],
-  ['jiho'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
   ['targetking', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
-  ['juwon', 'wooju'],
-  ['doyun', 'song'],
-  ['gunmin', 'juwon'],
-  ['sunwoo', 'doyun'],
-  ['targetking', 'jiho', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
-  ['wooju', 'gunmin', 'juwon'],
-  ['sunwoo', 'doyun', 'jiho'],
-  ['kwak'],
-  ['kwak', 'sunwoo', 'doyun'],
-  ['kwak', 'gunmin', 'wooju', 'juwon', 'targetking'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['targetking', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
+  ['targetking', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
 ];
 const modeName = () => dungeonFloor ? '던전' : '레이드';
 // 영혼석 강화 여부 (2페이즈는 원래 캐릭터의 강화를 따름)
@@ -795,7 +796,7 @@ class Fighter {
     this.level = type === 'dummy' ? (dungeonFloor ? 30 + dungeonFloor * 4 : raidMode ? 55 : settings.dummyLv) : d.level;
     if (type === 'song' && up('song')) { this.maxHp += 30; this.level += 5; } // 강화: 체력 +30, 레벨 +5
     if (type === 'targetking' && dungeonFloor) this.maxHp = Math.round(d.maxHp * dungeonFloor / DUNGEON_MAX); // 던전의 과녁의 왕: 층에 비례한 체력
-    if (type === 'dgdummy') { const fl = dungeonFloor || 1; this.maxHp = 300 + fl * 40; this.level = 30 + fl * 4; }
+    if (type === 'dgdummy') { const fl = dungeonFloor || 1; this.maxHp = 300 + fl * 60; this.level = 30 + fl * 5; }
     this.hp = this.maxHp; this.dispHp = this.hp; this.lagHp = this.hp;
     this.static = type === 'dummy' && !settings.dummyMove;
     this.baseSpeed = d.speed;
@@ -3952,9 +3953,7 @@ document.getElementById('dungeonBtn').onclick = () => {
   const team = roster.filter(r => r.team === 0 && r.type !== 'dummy');
   if (!team.length) { toast('레드 팀에 던전에 도전할 캐릭터를 넣어주세요.'); return; }
   const fl = clamp(+document.getElementById('dgFloor').value || 1, 1, Math.min(DUNGEON_MAX, (save.dungeon || 0) + 1));
-  // 중복 캐릭터 금지: 내 팀에 있는 캐릭터는 과녁으로 대체
-  const mine = new Set(team.map(r => r.type));
-  roster = team.concat(DUNGEON[fl].map(k => ({ type: mine.has(k) ? 'dgdummy' : k, team: 1 })));
+  roster = team.concat(DUNGEON[fl].map(k => ({ type: k, team: 1 })));
   dungeonFloor = fl; raidMode = true; renderRoster(); setTestLock(true); start();
   showBig(`던전 ${fl}층`, '#7a5cff', 1.8);
   log(`🏰 <b style="color:#9a8cff">던전 ${fl}층</b> 시작! (클리어 보상 🪙 ${fl * 100})`, 'kill');
@@ -4046,6 +4045,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '1.7', date: '2026-11-16', items: ['던전에는 과녁 소속(던전 과녁 · 과녁의 왕)만 등장하도록 층 구성 변경', '던전 과녁이 층마다 더 강해짐 (LV 30 + 층×5 · 체력 300 + 층×60)'] },
   { v: '1.6', date: '2026-11-16', items: ['패치 노트 추가 (업데이트 후 처음 접속할 때 표시)', '던전 결과 화면이 "레이드 클리어"로 나오던 문제 수정'] },
   { v: '1.5', date: '2026-11-16', items: ['🏰 던전 추가: 1~15층, 클리어 시 층 × 100 코인', '던전 주간 추가 보상: 주 1회 보상 +100%', '던전의 과녁이 공격하고 합을 하는 던전 과녁으로 변경', '던전의 과녁의 왕 체력이 층에 비례'] },
   { v: '1.4', date: '2026-11-16', items: ['구글 로그인 추가 (계정마다 저장 데이터 분리)', '테스트 서버에 로그인한 계정은 본 서버에도 테스트 서버 스펙 적용'] },
