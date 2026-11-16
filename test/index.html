@@ -311,7 +311,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>짓밟기</b> 코인 2 · 공격 95 · 15 / +9 · [사용시] 대상 출혈+화상 3당 합 위력 +1 (최대 5) · 1코인 출혈 4 · 2코인(파괴불가) 흐트러짐 피해 10, 피해량의 5% 추가 물리 피해<br>
       <b>지랄 뚝배기</b> 코인 3 (파괴불가) · 공격 100 · 23 / +5 · [사용시] 대상 출혈+화상 5당 피해량 +5% (최대 50%), 화상 10당 합 위력 +1 · 1코인 화상 4 · 2코인 출혈 횟수 9 · 3코인 피해량 +100%<br>
       <b>쉽다</b> 코인 1 (파괴불가) · 공격 150 · 59 / +1 · 대상의 출혈+화상이 20 이상일 때만 발동 · 대상 출혈 1당 피해량 +1% · 송재범이 아군으로 생존 시 피해량 +100% · 코인 피해량의 50% 추가 물리 피해 · 코인 재사용<br>
-      <b>벌레 컷</b> 코인 1 · 공격 90 · 12 / +0 · 합 불가 · 패시브로만 사용 · 최대 체력 100% 고정 피해 (체력 관련 효과 무시) · 이 효과로 대상 사망 시 이번 전투 동안 피해량 +50%<br>
+      <b>벌레 컷</b> 코인 1 · 공격 90 · 12 / +0 · 합 불가 · 패시브로만 사용 · 수비 스킬을 발동시키지 않음 · 최대 체력 100% 고정 피해 (체력 관련 효과 무시) · 이 효과로 대상 사망 시 이번 전투 동안 피해량 +50%<br>
       <b>넌 나가라</b> (반격 · 강화 시 해금) 코인 2 · 공격 100 · 40 / +10<br>
       <b>패시브 최강</b> 체력이 1 미만으로 내려가지 않고 다음 턴에 체력 50% 회복 (전투당 1회) · 송재범이 전투에 참여하면 즉시 송재범 페이즈 변경<br>
       <b>패시브 방해 되네</b> 체력 10% 미만인 송재범이 합 패배 시 송재범에게 벌레 컷 사용<br><br>
@@ -583,7 +583,7 @@ const SKILLS = {
   stomp:     { name: '짓밟기',         color: '#ff6a7a', type: 'physical', lvMod: 5,  base: 15, coinPow: 9, coins: 2, ubIdx: [1], cast: 0.6 },
   ttuk:      { name: '지랄 뚝배기',     color: '#ff3a4a', type: 'physical', lvMod: 10, base: 23, coinPow: 5, coins: 3, unbreakable: true, cast: 0.7 },
   kwEasy:    { name: '쉽다',           color: '#ff1a3a', type: 'physical', lvMod: 60, base: 59, coinPow: 1, coins: 1, unbreakable: true, cast: 0.9 },
-  bugcut:    { name: '벌레 컷',         color: '#b0ff5a', type: 'physical', lvMod: 0,  base: 12, coinPow: 0, coins: 1, noClash: true },
+  bugcut:    { name: '벌레 컷',         color: '#b0ff5a', type: 'physical', lvMod: 0,  base: 12, coinPow: 0, coins: 1, noClash: true, noDefense: true },
   getout:    { name: '넌 나가라',       color: '#ff8a9a', type: 'physical', lvMod: 10, base: 40, coinPow: 10, coins: 2, defense: true, counter: true },
   myball:    { name: '마이볼',         color: '#7fe8d0', type: 'physical', lvMod: 3, base: 6, coinPow: 3, coins: 3, cast: 0.6 },
   hahaha:    { name: '하.하.하',       color: '#5fd0b8', type: 'physical', lvMod: 5, base: 4, coinPow: 6, coins: 2, cast: 0.6 },
@@ -1856,7 +1856,7 @@ function beginEngagement(f, key, t) {
   onUse(A);
   let B = null;
   // 수비 스킬(가드·회피·반격)끼리는 수비 스킬을 발동하지 않음
-  if (!S.defense && canRespond(t) && !(t.cast && t.cast.skill === 'ppung')) {
+  if (!S.defense && !S.noDefense && canRespond(t) && !(t.cast && t.cast.skill === 'ppung')) {
     let rk = null;
     if (t.cast && t.cast.target === f) { rk = t.cast.skill; t.cast = null; }
     else if (!t.cast) rk = CHAR[t.type].respond || t.ready;
@@ -1904,7 +1904,7 @@ function beginEngagement(f, key, t) {
     f.coinView = coinView(A, A.coins);
     // 합을 하지 않는 반격 (과녁의 왕): 공격을 받은 뒤 공격자에게 반격
     const hc = CHAR[t.type].hitCounter;
-    if (hc && !S.defense && t.alive && t.stagger <= 0) { const cu = makeUse(t, hc); cu.tgt = f; onUse(cu); e.queue.push({ use: cu, tgt: f, coins: cu.coins, counter: true }); }
+    if (hc && !S.defense && !S.noDefense && t.alive && t.stagger <= 0) { const cu = makeUse(t, hc); cu.tgt = f; onUse(cu); e.queue.push({ use: cu, tgt: f, coins: cu.coins, counter: true }); }
   }
   engagements.push(e);
   // 연: 해당하는 아군이 전장에 행동 가능한 상태로 생존해 있으면 함께 공격함
