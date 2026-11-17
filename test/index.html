@@ -4623,6 +4623,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.7', date: '2026-11-17', items: ['랭킹 서버 연결 (구글 로그인 후 랭킹에 올라가려면 한 번 로그아웃 → 다시 로그인)'] },
   { v: '3.6', date: '2026-11-17', items: ['랭킹이 매주 월요일 초기화 (그 주에 늘어난 점수로 순위)', '주간 랭킹 보상을 우편함으로 지급: 1~3등 800,000,000 · 4~10등 1,000,000 · 11~50등 10,000 · 51등 이상 1,000 코인'] },
   { v: '3.5', date: '2026-11-17', items: ['🏆 랭킹 추가 (구글 로그인한 사람만 · 테스터 제외) · 1등에게 👑 왕 칭호'] },
   { v: '3.4', date: '2026-11-17', items: ['32배속 추가'] },
@@ -4754,7 +4755,7 @@ if (gunminUnlocked) save.raidCleared['1-0'] = true; if (save.raid2) save.raidCle
 // ================== 랭킹 ==================
 // 구글 로그인한 사람만 올라감 (테스터·테스트 서버 제외) · Firebase Firestore에 저장
 // Firebase 콘솔의 웹 앱 설정값을 넣으면 켜짐 (공개돼도 되는 값)
-const FIREBASE_CONFIG = null; // 예: { apiKey: '...', authDomain: '...', projectId: '...', appId: '...' }
+const FIREBASE_CONFIG = { apiKey: 'AIzaSyC2Y1ggy3GnlB20Y39OqyTRnmBLeEUJ9Sg', authDomain: 'ballfight-6c90e.firebaseapp.com', projectId: 'ballfight-6c90e', storageBucket: 'ballfight-6c90e.firebasestorage.app', messagingSenderId: '841229855851', appId: '1:841229855851:web:2766570d783050a0e6152e' };
 const RAID_PTS = [10, 50, 100];
 function rankScore() {
   const b = {
