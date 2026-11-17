@@ -245,6 +245,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     </div>
 
     <button id="startBtn" class="big">▶ 전투 시작</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px"><b>레이드 난이도</b><select id="raidDiff" style="flex:1;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:13px"><option value="0">보통</option><option value="1">하드 (클리어 코인 ×10)</option><option value="2">익스트림 (클리어 코인 ×50)</option></select></div>
     <button id="raidBtn" class="big" style="background:linear-gradient(90deg,#ffcc33,#ff7a3a);border:none;color:#2a1600">🎯 레이드 1단계: 과녁의 왕</button>
     <div id="raidInfo" style="font-size:11px;color:var(--dim);margin-top:4px" title="레이드 중에는 테스트 모드를 쓸 수 없어요">레드 팀이 과녁의 왕 + 과녁 8개에 도전 · 승리 시 이건민 스킬 수호자·아지랑이 해금 + 아티팩트 깨진 왕관</div>
     <button id="raid2Btn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#ff4a8a,#8a2aff);border:none;color:#fff">🐺 레이드 2단계: 파멸의 케로베로스</button>
@@ -780,6 +781,23 @@ try { gunminUnlocked = localStorage.getItem('ballfight-unlock-gunmin' + SV) === 
 function applyUnlocks() { CHAR.gunmin.pool = gunminUnlocked ? ['haejwo', 'heuhahat', 'spit', 'ajirang'] : ['haejwo', 'heuhahat', 'spit']; }
 applyUnlocks();
 let raidMode = false;
+// 레이드 난이도: 보통(원본) / 하드 / 익스트림 — 적이 강해지고 클리어 코인이 늘어남
+const RAID_DIFF = [
+  { name: '보통', color: '#9fd8ff', coin: 1, hp: 1, lv: 0 },
+  { name: '하드', color: '#ffb84a', coin: 10, hp: 2.5, lv: 15 },
+  { name: '익스트림', color: '#ff3a5a', coin: 50, hp: 5, lv: 30 },
+];
+const RAID_COIN = { 1: 300, 2: 500 }; // 레이드 단계별 기본 클리어 코인 (보통)
+let raidDiff = 0;
+function applyRaidDiff() {
+  raidDiff = +document.getElementById('raidDiff').value || 0;
+  const d = RAID_DIFF[raidDiff]; if (!raidDiff) return;
+  for (const f of fighters) if (f.team === 1) {
+    f.maxHp = f.hp = f.dispHp = f.lagHp = Math.round(f.maxHp * d.hp); f.level += d.lv;
+    if (f.shield) { f.shield.v = Math.round(f.shield.v * d.hp); f.shield.max = f.shield.v; }
+  }
+  log(`⚠ 레이드 난이도 <b style="color:${d.color}">${d.name}</b>: 적 체력 ×${d.hp} · 레벨 +${d.lv} · 클리어 코인 ×${d.coin}`, 'kill');
+}
 let raidStage = 1; // 레이드 단계 (1: 과녁의 왕, 2: 파멸의 케로베로스)
 // 던전: 1~15층, 클리어 시 층 × 100 코인 (레이드와 같은 제한: 테스트 모드·적 편집 불가)
 let dungeonFloor = 0;
@@ -3140,6 +3158,12 @@ function checkWin() {
       log(`🏰 던전 ${fl}층 클리어! 🪙 코인 +${rw}${wk ? ' <b style="color:#ffcc33">(주간 추가 보상 +100%)</b>' : ''}${fl >= DUNGEON_MAX ? ' · 최고층 정복!' : ` · ${fl + 1}층 해금`}`, 'kill');
       renderDungeon(Math.min(DUNGEON_MAX, fl + 1));
     } else if (dungeonFloor) log(`🏰 던전 ${dungeonFloor}층 도전 실패`, 'kill');
+    if (raidMode && !dungeonFloor && w === 0) {
+      // 레이드 클리어 코인 (난이도 배수)
+      const d = RAID_DIFF[raidDiff], c = RAID_COIN[raidStage] * d.coin;
+      addCoins(c, `레이드 ${raidStage}단계 ${d.name} 클리어`);
+      log(`🪙 레이드 ${raidStage}단계 <b style="color:${d.color}">${d.name}</b> 클리어 코인 +${c.toLocaleString()}`, 'kill');
+    }
     if (raidMode && !dungeonFloor && raidStage === 2 && w === 0) {
       // 레이드 2단계 클리어 보상: 아티팩트 안지수의 말라붙은 영혼석
       const first = !save.artifacts.soulstone; save.artifacts.soulstone = true; save.raid2 = true; persist(); renderArtifacts(); updateRaidInfo();
@@ -3980,7 +4004,7 @@ function drawWin() {
   const t = winInfo.t, k = Math.min(1, t / 0.5);
   ctx.fillStyle = `rgba(0,0,0,${0.55 * k})`; ctx.fillRect(0, 0, cw, ch);
   const w = winInfo.team, color = w === undefined ? '#dddddd' : TEAM[w].color;
-  const text = winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
+  const text = winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 ${RAID_DIFF[raidDiff].name} 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
   const p = Math.min(1, t / 0.45), ease = 1 + 2.2 * Math.pow(1 - p, 3);
   let size = 60; ctx.font = `900 ${size}px ${FONT}`;
   const mw = ctx.measureText(text).width; if (mw > cw * 0.88) size *= cw * 0.88 / mw;
@@ -4441,7 +4465,7 @@ document.getElementById('startBtn').onclick = () => { dungeonFloor = 0; raidMode
 document.getElementById('raidBtn').onclick = () => {
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'targetking', team: 1 }], Array.from({ length: 8 }, () => ({ type: 'dummy', team: 1 })));
-  dungeonFloor = 0; raidMode = true; raidStage = 1; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
+  dungeonFloor = 0; raidMode = true; raidStage = 1; renderRoster(); setTestLock(true); start(); applyRaidDiff(); questEvent('raidTry');
   showBig('레이드 1단계: 과녁의 왕', '#ffcc33', 1.8);
   log('🎯 <b style="color:#ffcc33">레이드 — 과녁의 왕</b> 시작! (과녁의 왕 + 과녁 8)', 'kill');
 };
@@ -4451,7 +4475,9 @@ document.getElementById('raid2Btn').onclick = () => {
   roster = roster.filter(r => r.team === 0).concat([{ type: 'cerberus', team: 1 }]);
   dungeonFloor = 0; raidMode = true; raidStage = 2; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
   const c = fighters.find(f => f.type === 'cerberus');
-  if (c) { c.shield = { v: 1300, max: 1300, until: Infinity }; floatText(c.x, c.y - c.r - 46, '파멸 — 보호막 1300', '#ff9ac8', 22, { life: 1.6 }); } // 패시브 파멸: 전투 시작 시 보호막 1300
+  if (c) c.shield = { v: 1300, max: 1300, until: Infinity };
+  applyRaidDiff();
+  if (c) {  floatText(c.x, c.y - c.r - 46, `파멸 — 보호막 ${c.shield.v}`, '#ff9ac8', 22, { life: 1.6 }); } // 패시브 파멸: 전투 시작 시 보호막 1300
   showBig('레이드 2단계: 파멸의 케로베로스', '#ff4a8a', 2.0); doFlash('#ff4a8a', 0.5); shake = Math.max(shake, 20);
   log('🐺 <b style="color:#ff4a8a">레이드 2단계 — 파멸의 케로베로스</b> 시작! · 패시브 파멸: 보호막 1300', 'kill');
 };
@@ -4588,6 +4614,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.3', date: '2026-11-17', items: ['레이드 난이도 추가: 보통 · 하드(클리어 코인 ×10) · 익스트림(클리어 코인 ×50)', '레이드 클리어 코인 추가: 1단계 300 · 2단계 500 (보통 기준)'] },
   { v: '3.2', date: '2026-11-17', items: ['🐺 레이드 2단계: 파멸의 케로베로스 추가 (레이드 1단계 클리어 후 도전 가능)', '새 아티팩트: 안지수의 말라붙은 영혼석 (레이드 2단계 클리어 시 획득)'] },
   { v: '3.1', date: '2026-11-17', items: ['애플 로그인 버튼 제거'] },
   { v: '3.0', date: '2026-11-17', items: ['애플 로그인 버튼 추가 (설정 후 사용 가능)'] },
