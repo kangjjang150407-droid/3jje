@@ -4505,7 +4505,7 @@ document.getElementById('tbMute').onclick = () => {
 };
 document.getElementById('tbPause').onclick = () => document.getElementById('pauseBtn').click();
 // 이번 주(월요일 시작) 날짜 키
-function weekStr() { const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return dayStr(d); }
+function weekStr(t) { const d = t ? new Date(t) : new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return dayStr(d); }
 function renderDungeon(sel) {
   { const used = save.weekBonus === weekStr(), cb = document.getElementById('dgWeek');
     cb.disabled = used; if (used) cb.checked = false;
@@ -4622,6 +4622,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.6', date: '2026-11-17', items: ['랭킹이 매주 월요일 초기화 (그 주에 늘어난 점수로 순위)', '주간 랭킹 보상을 우편함으로 지급: 1~3등 800,000,000 · 4~10등 1,000,000 · 11~50등 10,000 · 51등 이상 1,000 코인'] },
   { v: '3.5', date: '2026-11-17', items: ['🏆 랭킹 추가 (구글 로그인한 사람만 · 테스터 제외) · 1등에게 👑 왕 칭호'] },
   { v: '3.4', date: '2026-11-17', items: ['32배속 추가'] },
   { v: '3.3', date: '2026-11-17', items: ['레이드 난이도 추가: 보통 · 하드(클리어 코인 ×10) · 익스트림(클리어 코인 ×50)', '레이드 클리어 코인 추가: 1단계 300 · 2단계 500 (보통 기준)'] },
@@ -4706,9 +4707,11 @@ const MAILS = [
   { id: 'gift-2611', title: '🎁 감사 선물', body: '플레이해 주셔서 감사해요!', coin: 3000, from: '2026-11-17', to: '2026-11-20' },
 ];
 if (!save.mail) save.mail = {};
+if (!save.inbox) save.inbox = []; // 개인 우편 (랭킹 보상 등)
+const allMails = () => MAILS.concat(save.inbox || []);
 const mailState = m => save.mail[m.id] ? 'claimed' : dayStr() < m.from ? 'soon' : dayStr() > m.to ? 'expired' : 'open';
 function renderMail() {
-  const list = MAILS.filter(m => mailState(m) !== 'soon' && !(mailState(m) === 'expired'));
+  const list = allMails().filter(m => mailState(m) !== 'soon' && !(mailState(m) === 'expired'));
   const n = list.filter(m => mailState(m) === 'open').length;
   document.getElementById('mailBtn').innerHTML = '📬 우편함' + (n ? ` <b style="color:#ff5a5a">●${n}</b>` : '');
   const md = d => `${+d.slice(5, 7)}월 ${+d.slice(8, 10)}일`;
@@ -4719,8 +4722,12 @@ function renderMail() {
 }
 document.getElementById('mailBtn').onclick = () => { document.getElementById('mailPanel').classList.toggle('on'); renderMail(); };
 document.getElementById('mailPanel').addEventListener('click', e => {
-  const m = MAILS.find(x => x.id === e.target.dataset.mail); if (!m || mailState(m) !== 'open') return;
-  save.mail[m.id] = true; addCoins(m.coin, `우편: ${m.title}`); renderMail();
+  const m = allMails().find(x => x.id === e.target.dataset.mail); if (!m || mailState(m) !== 'open') return;
+  // 우편으로 받은 코인은 이번 주 랭킹 점수에 넣지 않음
+  let before = 0; try { before = rankScore().total; } catch (e) {}
+  save.mail[m.id] = true; addCoins(m.coin, `우편: ${m.title}`);
+  try { if (save.rankBase && save.rankBase.week === weekStr()) { save.rankBase.total += rankScore().total - before; persist(); } } catch (e) {}
+  renderMail();
 });
 renderMail();
 if (!save.artifacts) save.artifacts = {}; if (!save.equip) save.equip = {};
@@ -4759,6 +4766,13 @@ function rankScore() {
   };
   return { total: Object.values(b).reduce((a, v) => a + v, 0), b };
 }
+// 주간 점수: 이번 주 월요일 이후 늘어난 점수 (랭킹은 매주 월요일 초기화)
+function weeklyScore() {
+  const tot = rankScore().total;
+  if (!save.rankBase || save.rankBase.week !== weekStr()) { save.rankBase = { week: weekStr(), total: tot }; try { localStorage.setItem('ballfight-save' + SV, JSON.stringify(save)); } catch (e) {} }
+  return Math.max(0, tot - save.rankBase.total);
+}
+const RANK_REWARD = r => r <= 3 ? 800000000 : r <= 10 ? 1000000 : r <= 50 ? 10000 : 1000;
 var rank = { ready: false, uid: null, db: null, list: null, err: '', timer: 0 };
 const rankEligible = () => !!account && !TEST_SERVER && !TESTER && !String(account.sub).startsWith('apple.');
 function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
@@ -4771,13 +4785,15 @@ async function rankInit() {
     rank.db = firebase.firestore();
     const cred = sessionStorage.getItem('ballfight-gcred');
     if (cred && account) { sessionStorage.removeItem('ballfight-gcred'); try { await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(cred)); } catch (e) { console.error(e); } }
-    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) rankUpload(); renderRank(); });
+    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); } renderRank(); });
   } catch (e) { console.error(e); rank.err = '랭킹 서버에 연결하지 못했어요'; renderRank(); }
 }
 const rankApi = {
-  put: (uid, d) => rank.db.collection('ranking').doc(uid).set(d),
-  del: uid => rank.db.collection('ranking').doc(uid).delete(),
-  top: n => rank.db.collection('ranking').orderBy('score', 'desc').limit(n).get().then(q => q.docs.map(x => ({ id: x.id, ...x.data() }))),
+  col: w => rank.db.collection('ranking').doc(w).collection('scores'),
+  put: (uid, d) => rankApi.col(weekStr()).doc(uid).set(d),
+  del: uid => rankApi.col(weekStr()).doc(uid).delete(),
+  has: (w, uid) => rankApi.col(w).doc(uid).get().then(x => x.exists),
+  top: (n, w) => rankApi.col(w || weekStr()).orderBy('score', 'desc').limit(n).get().then(q => q.docs.map(x => ({ id: x.id, ...x.data() }))),
 };
 async function rankUpload() {
   if (!rank.db || !rank.uid || !account) return;
@@ -4785,7 +4801,21 @@ async function rankUpload() {
     if (TESTER) { await rankApi.del(rank.uid); return; } // 테스터는 랭킹에서 제외
     if (TEST_SERVER) return;
     const sc = rankScore();
-    await rankApi.put(rank.uid, { name: account.name, picture: account.picture || '', score: sc.total, b: sc.b, t: Date.now() });
+    await rankApi.put(rank.uid, { name: account.name, picture: account.picture || '', score: weeklyScore(), total: sc.total, t: Date.now() });
+  } catch (e) { console.error(e); }
+}
+// 지난주 랭킹 보상: 지난주에 랭킹에 있었다면 순위에 맞는 코인을 우편으로 받음
+async function rankReward() {
+  if (!rank.db || !rank.uid || TESTER || TEST_SERVER) return;
+  const lw = weekStr(Date.now() - 7 * 864e5);
+  if (save.rankRewardWeek === lw) return;
+  try {
+    if (!(await rankApi.has(lw, rank.uid))) { save.rankRewardWeek = lw; persist(); return; }
+    const top = await rankApi.top(50, lw), i = top.findIndex(r => r.id === rank.uid), r = i >= 0 ? i + 1 : 51;
+    const coin = RANK_REWARD(r), end = new Date(); end.setDate(end.getDate() + 7);
+    save.inbox.push({ id: 'rank-' + lw, title: `🏆 주간 랭킹 ${r <= 50 ? r + '등' : '51등 이상'} 보상`, body: `${+lw.slice(5, 7)}월 ${+lw.slice(8, 10)}일 주 랭킹 결과`, coin, from: dayStr(), to: dayStr(end) });
+    save.rankRewardWeek = lw; persist(); renderMail();
+    toast(`📬 주간 랭킹 보상이 우편함에 도착했어요! (${r <= 50 ? r + '등' : '51등 이상'})`);
   } catch (e) { console.error(e); }
 }
 function scheduleRankUpload() { if (!rank.uid) return; clearTimeout(rank.timer); rank.timer = setTimeout(rankUpload, 3000); }
@@ -4798,7 +4828,11 @@ function renderRank() {
   const el = document.getElementById('rankPanel'); if (!el) return;
   const sc = rankScore(), b = sc.b;
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  let h = `<div style="margin-bottom:6px">내 점수 <b style="color:#ffcc33;font-size:15px">${sc.total.toLocaleString()}</b>점 <span style="color:#8a8aa8">(코인 ${b.coin} · 아티팩트 ${b.artifact} · 던전 ${b.dungeon} · 레이드 ${b.raid} · 캐릭터 ${b.chars} · 강화 ${b.upg})</span></div>`;
+  const ws = weeklyScore(), nx = new Date(weekStr()); nx.setDate(nx.getDate() + 7);
+  const left = Math.max(0, nx - Date.now()), dd = Math.floor(left / 864e5), hh = Math.floor(left % 864e5 / 36e5);
+  let h = `<div style="margin-bottom:4px">이번 주 점수 <b style="color:#ffcc33;font-size:15px">${ws.toLocaleString()}</b>점 <span style="color:#8a8aa8">· 초기화까지 ${dd}일 ${hh}시간</span></div>`;
+  h += `<div style="color:#8a8aa8;margin-bottom:4px">현재 총점 ${sc.total.toLocaleString()} (코인 ${b.coin} · 아티팩트 ${b.artifact} · 던전 ${b.dungeon} · 레이드 ${b.raid} · 캐릭터 ${b.chars} · 강화 ${b.upg}) − 이번 주 시작 ${save.rankBase.total.toLocaleString()}</div>`;
+  h += `<div style="color:#b0a080;margin-bottom:6px">주간 보상 (우편함): 1~3등 🪙 800,000,000 · 4~10등 1,000,000 · 11~50등 10,000 · 51등 이상 1,000</div>`;
   if (!account) h += '<div style="color:#aaa">구글로 로그인하면 랭킹에 올라가요.</div>';
   else if (TEST_SERVER || TESTER) h += '<div style="color:#aaa">🧪 테스터 계정은 랭킹에 올라가지 않아요.</div>';
   if (!FIREBASE_CONFIG) h += '<div style="color:#aaa;margin-top:4px">랭킹 서버 설정이 아직 안 됐어요.</div>';
