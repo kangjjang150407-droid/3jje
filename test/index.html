@@ -4635,6 +4635,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.9', date: '2026-11-17', items: ['테스터 계정도 PVP 방어 팀을 등록할 수 있음 (목록에 🧪 테스터 표시)'] },
   { v: '3.8', date: '2026-11-17', items: ['💬 채팅 추가 (구글 로그인한 사람만 보낼 수 있음)', '⚔ PVP 추가: 내 레드 팀을 방어 팀으로 등록하고, 다른 사람의 방어 팀(강화·아티팩트 포함)에 도전 · 승리 시 100 코인'] },
   { v: '3.7', date: '2026-11-17', items: ['랭킹 서버 연결 (구글 로그인 후 랭킹에 올라가려면 한 번 로그아웃 → 다시 로그인)'] },
   { v: '3.6', date: '2026-11-17', items: ['랭킹이 매주 월요일 초기화 (그 주에 늘어난 점수로 순위)', '주간 랭킹 보상을 우편함으로 지급: 1~3등 800,000,000 · 4~10등 1,000,000 · 11~50등 10,000 · 51등 이상 1,000 코인'] },
@@ -4905,10 +4906,9 @@ const pvpCol = () => rank.db.collection('pvp');
 function myPvpTeam() { return roster.filter(r => r.team === 0 && r.type !== 'dummy').map(r => r.type); }
 async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
-  if (TESTER || TEST_SERVER) return toast('🧪 테스터 계정은 방어 팀을 등록할 수 없어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
   try {
-    await pvpCol().doc(rank.uid).set({ name: account.name, picture: account.picture || '', team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
+    await pvpCol().doc(rank.uid).set({ name: account.name, tester: !!(TESTER || TEST_SERVER), picture: account.picture || '', team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
     toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
   } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
 }
@@ -4927,7 +4927,7 @@ function renderPvp() {
   else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
-    h += ops.length ? ops.map(o => `<div class="op"><b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+    h += ops.length ? ops.map(o => `<div class="op"><b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
   }
   el.innerHTML = h;
 }
@@ -4947,7 +4947,7 @@ function pvpResult(win) {
   if (win) { save.pvp.w++; addCoins(PVP_WIN_COIN, `PVP 승리 vs ${pvpOpp.name}`); } else save.pvp.l++;
   persist();
   log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패`, 'kill');
-  try { if (rank.uid && !TESTER && !TEST_SERVER) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l }).catch(() => {}); } catch (e) {}
+  try { if (rank.uid) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l }).catch(() => {}); } catch (e) {}
 }
 document.getElementById('pvpBtn').onclick = async () => { if (!document.getElementById('pvpPanel').classList.toggle('on')) return; renderPvp(); await rankInit(); pvpRefresh(); };
 renderDungeon();
