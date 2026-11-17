@@ -368,10 +368,10 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b style="color:#ff6ab0;font-size:12px">증오의 여왕</b> (절망의 기사전 조력자 · 2턴부터 아군으로 등장 · LV.60 · 체력 210 · 방어 레벨 60 · 흐트러짐 없음)<br>
       <b>사랑으로!</b> 마법 · 코인 2 · 공격 70 · 3 / +5 · 대상 파열+침잠 5당 기본 위력 +1 (최대 2) · 사랑/정의 횟수 +10 · 1코인 파열 1 · 2코인 파열 횟수 +1<br>
       <b>정의의 이름으로!</b> 마법 · 코인 1 · 공격 65 · 4 / +9 · 대상 파열+침잠 7당 코인 위력 +1 (최대 2) · 사랑/정의 횟수 +10 · 파열 횟수 +2 · 대상 파열+침잠 10 이상이면 사랑/정의 위력만큼 고정 피해<br>
-      <b>그 기술을 사용하는 수 밖에!</b> (가드) 15 / +7 · 영창 - 아르카나 슬레이브 1 · 보호막 50 · 다음 턴 도발치 20<br>
+      <b>그 기술을 사용하는 수 밖에!</b> (가드) 15 / +7 · 영창 - 아르카나 슬레이브 +1 · 보호막 50 · 다음 턴 도발치 20<br>
       <b>아르카나 슬레이브!</b> 마법 · 코인 1 · 공격 60 · 10 / +13 · 합 불가 · 코인 효과로만 피해: 무너져 내린 긍지 × 200 고정 피해 · 닳디 닳은 기사가 있는 체력 600 이하의 적 적중 시 턴 종료 · 턴 종료 시 힘을 너무 많이 썼나봐<br>
       <b>패시브</b> 등장 시 모든 아군 스킬 위력 +1 · 아르카나로 닳디 닳은 기사 + 체력 600 이하 적중 시 턴 종료 시 전투 승리 · 닳디 닳은 기사 없음 + 체력 600 초과 적중 시 모든 아군에게 내가… 무슨 쓸모…야? · 사랑/정의 횟수 10 이상이면 다음 턴에 횟수 -10, 위력 +1 · 위력 3이면 파열 부여 시 횟수 +1 (턴당 1회)<br>
-      <b style="color:#ff7ac8">사랑/정의</b> (특수 충전) 횟수 10마다 다음 턴에 위력 +1 (최대 3) · <b style="color:#7affb0">파열</b> 공격 스킬로 피격 시 위력만큼 고정 체력 피해, 피격 후 횟수 -1 · <b style="color:#ff9ad8">힘을 너무 많이 썼나봐</b> 최대 1 · 턴 종료 시 전투에서 이탈 · <b style="color:#8ab0ff">내가… 무슨 쓸모…야?</b> 최대 1 · 공격 레벨 -3 · 방어 레벨 -3<br><br>
+      <b style="color:#ff7ac8">사랑/정의</b> (특수 충전) 횟수 10마다 다음 턴에 위력 +1 (최대 3) · <b style="color:#7affb0">파열</b> 공격 스킬로 피격 시 위력만큼 고정 체력 피해, 피격 후 횟수 -1 · <b style="color:#ff4ad8">영창 - 아르카나 슬레이브</b> 최대 3 · 턴 종료 시 +1 · 3이 되면 아르카나 슬레이브! 사용 · 영창 중에는 수비 스킬만 사용 · <b style="color:#ff9ad8">힘을 너무 많이 썼나봐</b> 최대 1 · 턴 종료 시 전투에서 이탈 · <b style="color:#8ab0ff">내가… 무슨 쓸모…야?</b> 최대 1 · 공격 레벨 -3 · 방어 레벨 -3<br><br>
       <b style="color:#6a8cff;font-size:12px">절망의 기사</b> (던전 3~5층 히든 보스 · 등장 확률 30% · LV.60 · 체력 2268 · 방어 레벨 65 · 흐트러짐 90% / 10%)<br>
       <b>쏟아지는 절망</b> 마법 · 코인 3 · 공격 65 · 4 / +3 · 대상 침잠 4 이상이면 코인 위력 +1 · 합 승리 시 남은 코인만큼 차갑고 검은 눈물 · 코인마다 침잠 2<br>
       <b>날카로운 눈물</b> 마법 · 코인 3 · 공격 70 · 4 / +4 · 대상 침잠 4 이상이면 코인 위력 +1 · 대상 정신력 20 이상이면 기본 위력 +1 · 합 승리 시 남은 코인만큼 차갑고 검은 눈물 · 코인마다 침잠 1(3코인 2), 침잠 횟수 2<br>
@@ -1375,6 +1375,7 @@ function onTurnEnd() {
       for (const en of enemies(q)) kill(en, q, '모두들 너무 고마워!');
     }
     if (q.arcanaUsed) { q.arcanaUsed = false; q.exhausted = true; markPops.push({ x: q.x, y: q.y - q.r - 20, life: 1.0, max: 1.0, img: exhaustImg }); floatText(q.x, q.y - q.r - 46, '힘을 너무 많이 썼나봐', '#ff9ad8', 18, { life: 1.4 }); log(`${nm(q)} <b style="color:#ff9ad8">힘을 너무 많이 썼나봐</b> 얻음 (턴 종료 시 전투에서 이탈)`); }
+    if (q.chant > 0 && q.chant < 3) { q.chant++; markPops.push({ x: q.x, y: q.y - q.r - 20, life: 0.8, max: 0.8, img: chantImg }); floatText(q.x, q.y - q.r - 46, `영창 ${q.chant}/3`, '#ff4ad8', 16); log(`${nm(q)} 영창 - 아르카나 슬레이브 ${q.chant}/3`); }
     if (q.loveJ && q.loveJ.cnt >= 10) { q.loveJ.cnt -= 10; q.loveJ.pot = Math.min(3, q.loveJ.pot + 1); floatText(q.x, q.y - q.r - 30, `사랑/정의 위력 ${q.loveJ.pot}`, '#ff7ac8', 15); log(`${nm(q)} 사랑과 정의의 힘: 사랑/정의 횟수 -10 → 위력 ${q.loveJ.pot}`); }
     if (q.nextTaunt) { q.tauntUntil = simTime + TURN; q.nextTaunt = 0; floatText(q.x, q.y - q.r - 46, '도발치 20', '#ffd84a', 18); log(`${nm(q)} 도발치 20: 이번 턴 적의 공격 대상이 됨`); }
   }
@@ -1993,7 +1994,7 @@ function onUse(u) {
     if (!f.loveJ) f.loveJ = { pot: 0, cnt: 0 };
     f.loveJ.cnt = Math.min(99, f.loveJ.cnt + 10);
   } else if (u.sk === 'arcana') {
-    f.chant = Math.max(0, (f.chant || 0) - 1); f.arcanaUsed = true;
+    f.chant = 0; f.arcanaUsed = true;
     showBig('아르카나 슬레이브!', '#ff4ad8', 1.8); doFlash('#ff4ad8', 0.5); darkenT = 1.2; slowmo = 0.8;
   } else if ((u.sk === 'pourDespair' || u.sk === 'sharpTear') && u.tgt) {
     if (u.tgt.sinking && u.tgt.sinking.pot >= 4) { u.coinPow += 1; log(`${nm(f)} ${sk(u.sk)}: 대상 침잠 4 이상 → 코인 위력 +1`); }
@@ -2831,6 +2832,7 @@ function marksmanSign(f) {
   log(`🔴 ${nm(f)} → ${nm(c)} <b style="color:#ff4a2a">징표</b> 부여 (체력이 가장 낮은 대상)`);
 }
 function unitAI(f, dt) {
+  if (f.type === 'queen' && f.chant > 0 && f.chant < 3 && f.ready !== 'qGuard') { f.ready = 'qGuard'; f.ready2 = null; } // 영창 중에는 수비 스킬만 사용 가능
   if (f.type === 'marksman' && !f.msPhase2 && f.alive && f.hp <= f.maxHp * 0.75) marksmanPattern(f);
   // 요루: 분신이 이미 있으면 기만 대신 쉽다
   if (f.type === 'yoru' && hasClone(f)) { if (f.ready === 'gimman') f.ready = 'evade'; if (f.ready2 === 'gimman') f.ready2 = 'evade'; }
@@ -2865,16 +2867,17 @@ function unitAI(f, dt) {
     if (f.ready === 'evade') { log(`${nm(f)} ${sk('evade')} 대기 (공격받지 않음)`); nextReady(f); f.cd = turnCd(f); return; }
   }
   // 증오의 여왕: 영창이 있고 닳디 닳은 기사가 된 적이 있으면 아르카나 슬레이브
-  if (f.type === 'queen' && f.chant > 0 && !f.exhausted) {
-    const k = enemies(f).find(e => e.wornKnight);
-    if (k) { log(`${nm(f)} 영창 - 아르카나 슬레이브 → ${sk('arcana')}`, 'skill'); startCast(f, 'arcana', k); return; }
+  if (f.type === 'queen' && f.chant >= 3 && !f.exhausted) {
+    // 영창 3 → 아르카나 슬레이브! (닳디 닳은 기사 > 절망의 기사 > 가장 가까운 적 순으로 노림)
+    const en = enemies(f), k = en.find(e => e.wornKnight) || en.find(e => e.type === 'despair') || nearest(f, en);
+    if (k) { log(`${nm(f)} 영창 - 아르카나 슬레이브 3 → ${sk('arcana')}`, 'skill'); startCast(f, 'arcana', k); return; }
   }
   if (f.type === 'queen' && f.ready === 'qGuard') {
     // 가드 [전투 시작시]: 영창 - 아르카나 슬레이브 1 · 보호막 50 · 다음 턴 도발치 20
-    f.chant = Math.min(1, (f.chant || 0) + 1); f.shield = { v: shieldVal(f) + 50, max: 50, until: simTime + TURN }; f.nextTaunt = 20;
+    f.chant = Math.min(3, (f.chant || 0) + 1); f.shield = { v: shieldVal(f) + 50, max: 50, until: simTime + TURN }; f.nextTaunt = 20;
     markPops.push({ x: f.x, y: f.y - f.r - 20, life: 1.0, max: 1.0, img: chantImg });
     floatText(f.x, f.y - f.r - 46, '영창 - 아르카나 슬레이브', '#ff4ad8', 18, { life: 1.3 });
-    log(`${nm(f)} ${sk('qGuard')}: 영창 - 아르카나 슬레이브 1 · 보호막 50 · 다음 턴 도발치 20`, 'skill');
+    log(`${nm(f)} ${sk('qGuard')}: 영창 - 아르카나 슬레이브 +1 (${f.chant}/3) · 보호막 50 · 다음 턴 도발치 20`, 'skill');
   }
   if (f.ready && (SKILLS[f.ready].evade || SKILLS[f.ready].clashDefense || SKILLS[f.ready].needCover)) { log(`${nm(f)} ${sk(f.ready)} 대기 (공격받지 않음)`); nextReady(f); f.cd = turnCd(f); return; }
   // 혓바닥 효과: 수치가 30이면 머리 때리기 - [정오] 사용
@@ -3596,7 +3599,7 @@ function drawFighter(f) {
   if (f.sign) icons.push([signImg, '징표', '#ff4a2a']);
   if (f.rupture) icons.push([ruptureImg, `${f.rupture.pot}/${f.rupture.cnt}`, '#7affb0']);
   if (f.loveJ) icons.push([loveImg, `${f.loveJ.pot}/${f.loveJ.cnt}`, '#ff7ac8']);
-  if (f.chant) icons.push([chantImg, `${f.chant}`, '#ff4ad8']);
+  if (f.chant) icons.push([chantImg, `${f.chant}/3`, '#ff4ad8']);
   if (f.tauntUntil > simTime) icons.push([tauntImg, '20', '#ffd84a']);
   if (f.exhausted) icons.push([exhaustImg, '1', '#ff9ad8']);
   if (f.useless) icons.push([uselessImg, '1', '#8ab0ff']);
@@ -4511,6 +4514,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '2.8', date: '2026-11-17', items: ['영창 - 아르카나 슬레이브 변경: 최대 3 · 턴 종료 시 +1 · 3이 되면 아르카나 슬레이브! 사용 · 영창 중에는 수비 스킬만 사용'] },
   { v: '2.7', date: '2026-11-17', items: ['절망의 기사전 2턴부터 조력자 증오의 여왕이 아군으로 등장', '새 상태: 파열 · 사랑/정의 · 영창 - 아르카나 슬레이브 · 도발치 · 힘을 너무 많이 썼나봐 · 내가… 무슨 쓸모…야?'] },
   { v: '2.6', date: '2026-11-17', items: ['던전 3~5층에 히든 보스가 30% 확률로 등장', '새 상태: 차갑고 검은 눈물', '새 아티팩트: 잿빛 별자리의 가호'] },
   { v: '2.5', date: '2026-11-17', items: ['던전 11층 히든 보스 등장 확률 0.5% → 10%'] },
