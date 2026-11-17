@@ -260,7 +260,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 
     <h2>배속</h2>
     <div class="row" id="speeds">
-      <button data-s="0.5">0.5x</button><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button data-s="8">8x</button>
+      <button data-s="0.5">0.5x</button><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button data-s="8">8x</button><button data-s="32">32x</button>
     </div>
 
     <h2>녹화</h2>
@@ -4526,7 +4526,7 @@ document.getElementById('dungeonBtn').onclick = () => {
   if (hidden) { doFlash(CHAR[hidden].color, 0.6); log(`⚠ <b style="color:${CHAR[hidden].color}">히든 보스 — ${CHAR[hidden].name}</b> 등장!`, 'kill'); }
   log(`🏰 <b style="color:#9a8cff">던전 ${fl}층</b> 시작! (클리어 보상 🪙 ${fl * 100})`, 'kill');
 };
-document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4, 8]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
+document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4, 8, 32]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
 document.querySelectorAll('.recBtn').forEach(b => b.onclick = () => rec ? stopRec() : startRec(false));
 document.getElementById('againBtn').onclick = start;
 document.getElementById('resetBtn').onclick = () => { dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
@@ -4613,6 +4613,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.4', date: '2026-11-17', items: ['32배속 추가'] },
   { v: '3.3', date: '2026-11-17', items: ['레이드 난이도 추가: 보통 · 하드(클리어 코인 ×10) · 익스트림(클리어 코인 ×50)', '레이드 클리어 코인 추가: 1단계 300 · 2단계 500 (보통 기준)'] },
   { v: '3.2', date: '2026-11-17', items: ['🐺 레이드 2단계: 파멸의 케로베로스 추가 (레이드 1단계 클리어 후 도전 가능)', '새 아티팩트: 안지수의 말라붙은 영혼석 (레이드 2단계 클리어 시 획득)'] },
   { v: '3.1', date: '2026-11-17', items: ['애플 로그인 버튼 제거'] },
@@ -4657,7 +4658,7 @@ const TUTORIAL = [
   { sel: '#coinBar', t: '⑤ 코인 · 퀘스트 · 뽑기', d: '· <b>📋 퀘스트</b>: 출석 보상과 일일 퀘스트로 🪙 코인을 모아요.<br>· <b>🎰 뽑기</b>: 코인으로 캐릭터 <b>영혼석</b>을 뽑아요. 처음 뽑은 캐릭터는 바로 획득!<br>· <b>강화</b>: 영혼석 20개로 캐릭터를 강화해요. 송재범·강주원은 강화하면 <b>2페이즈</b>가 열려요.' },
   { sel: '#raidBtn', t: '⑥ 레이드', d: '레드 팀으로 <b>과녁의 왕 + 과녁 8개</b>에 도전해요. 이기면 이건민의 스킬 <b>수호자·아지랑이</b>가 해금돼요.<br>레이드 중에는 테스트 모드와 적 편집을 쓸 수 없어요.' },
   { sel: '#dungeonBtn', t: '⑦ 던전', d: '<b>1~15층</b>을 차례로 올라가요. 층을 고르고 <b>🏰 던전 입장</b>을 누르면 레드 팀이 도전해요.<br>· 클리어하면 <b>층 × 100 코인</b>을 받아요.<br>· <b>주간 추가 보상</b>을 체크하면 주 1회 보상이 2배가 돼요.' },
-  { t: '⑧ 그 밖의 기능', d: '· <b>배속</b>: 0.5x ~ 8x로 전투 속도를 바꿔요.<br>· <b>⏺ 녹화</b>: 전투를 영상으로 저장해요.<br>· <b>⚙ 그래픽 설정</b>: 렉이 걸리면 품질·해상도를 낮춰 보세요.<br>· <b>🧪 테스트 모드</b>: 체력·상태이상을 직접 바꾸고 스킬을 바로 써볼 수 있어요.<br>· 맨 아래 <b>캐릭터 정보</b>에서 모든 스킬과 효과 설명을 볼 수 있어요.' },
+  { t: '⑧ 그 밖의 기능', d: '· <b>배속</b>: 0.5x ~ 32x로 전투 속도를 바꿔요.<br>· <b>⏺ 녹화</b>: 전투를 영상으로 저장해요.<br>· <b>⚙ 그래픽 설정</b>: 렉이 걸리면 품질·해상도를 낮춰 보세요.<br>· <b>🧪 테스트 모드</b>: 체력·상태이상을 직접 바꾸고 스킬을 바로 써볼 수 있어요.<br>· 맨 아래 <b>캐릭터 정보</b>에서 모든 스킬과 효과 설명을 볼 수 있어요.' },
   { sel: '#tutBtn', t: '준비 끝!', d: '이제 팀을 짜고 <b>▶ 전투 시작</b>을 눌러 보세요.<br>이 튜토리얼은 <b>❓ 튜토리얼</b> 버튼으로 언제든 다시 볼 수 있고, 새로 바뀐 내용은 <b>📋 패치 노트</b>에서 확인할 수 있어요.' },
 ];
 let tutIdx = -1;
