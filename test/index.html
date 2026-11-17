@@ -48,6 +48,13 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #chatPanel,#pvpPanel{display:none;border:1px solid #3a5a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#0a0e18;font-size:12px;line-height:1.5}
+  #chatPanel.on,#pvpPanel.on{display:block}
+  #chatList{height:220px;overflow:auto;display:flex;flex-direction:column-reverse;gap:3px;margin-bottom:6px}
+  #chatList .cm{word-break:break-all}
+  #chatInput{flex:1;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px;min-width:0}
+  #pvpPanel .op{padding:6px 0;border-bottom:1px solid #1a2238}
+  #pvpPanel .op button{margin-top:4px;width:100%;padding:6px;font-weight:700}
   #rankPanel{display:none;border:1px solid #8a6a1a;border-radius:10px;padding:8px;margin-bottom:10px;background:#16120a;font-size:12px;line-height:1.5}
   #rankPanel.on{display:block}
   #rankPanel .rk{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #2a2414}
@@ -216,8 +223,10 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
     <div id="rankPanel"></div>
+    <div id="chatPanel"><div id="chatList"></div><div style="display:flex;gap:6px"><input id="chatInput" maxlength="200" placeholder="메시지 입력 (최대 200자)"><button id="chatSend">보내기</button></div><div id="chatNote" style="color:#8a8aa8;margin-top:4px"></div></div>
+    <div id="pvpPanel"></div>
     <div id="mailPanel"></div>
     <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
@@ -789,6 +798,7 @@ try { gunminUnlocked = localStorage.getItem('ballfight-unlock-gunmin' + SV) === 
 function applyUnlocks() { CHAR.gunmin.pool = gunminUnlocked ? ['haejwo', 'heuhahat', 'spit', 'ajirang'] : ['haejwo', 'heuhahat', 'spit']; }
 applyUnlocks();
 let raidMode = false;
+var pvpOpp = null; // PVP 상대 정보 { uid, name, upg, artifacts, equip }
 // 레이드 난이도: 보통(원본) / 하드 / 익스트림 — 적이 강해지고 클리어 코인이 늘어남
 const RAID_DIFF = [
   { name: '보통', color: '#9fd8ff', coin: 1, hp: 1, lv: 0 },
@@ -828,11 +838,12 @@ const DUNGEON = [null,
   ['dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
   ['targetking', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy', 'dgdummy'],
 ];
-const modeName = () => dungeonFloor ? '던전' : '레이드';
+const modeName = () => pvpOpp ? 'PVP' : dungeonFloor ? '던전' : '레이드';
 // 영혼석 강화 여부 (2페이즈는 원래 캐릭터의 강화를 따름)
 const UP_KEY = { yoru: 'song', juwon2: 'juwon' };
 const owned = type => { try { return type === 'dummy' || !!save.owned[type]; } catch (e) { return type === 'dummy' || type === 'song' || type === 'juwon'; } };
-const up = type => { try { return !!save.upg[UP_KEY[type] || type]; } catch (e) { return false; } };
+// PVP: 상대 팀(블루 팀)은 상대의 강화·아티팩트를 씀
+const up = (type, f) => { try { const u = (pvpOpp && f && f.team === 1) ? pvpOpp.upg : save.upg; return !!(u || {})[UP_KEY[type] || type]; } catch (e) { return false; } };
 const turnCd = f => TURN / (CHAR[f.type].slots || 1);
 // 아티팩트: 캐릭터에게 장착하는 장비 (save.artifacts = 보유, save.equip = { 아티팩트: 캐릭터 })
 const ARTIFACTS = {
@@ -843,9 +854,9 @@ const ARTIFACTS = {
   pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
 };
 const isTargetRace = f => !!f && (f.type === 'dummy' || f.type === 'dgdummy' || f.type === 'targetking'); // 종족: 과녁
-const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; return !!save.artifacts[id] && save.equip[id] === b; } catch (e) { return false; } };
+const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; const o = pvpOpp && f.team === 1 ? pvpOpp : save; return !!(o.artifacts || {})[id] && (o.equip || {})[id] === b; } catch (e) { return false; } };
 // 반격 스킬 (곽시율의 넌 나가라는 강화 시 해금)
-const counterOf = f => f.type === 'kwak' ? (up('kwak') ? 'getout' : null) : CHAR[f.type].counter;
+const counterOf = f => f.type === 'kwak' ? (up('kwak', f) ? 'getout' : null) : CHAR[f.type].counter;
 const bbSum = t => (t.bleed ? t.bleed.pot : 0) + burnPot(t); // 출혈 + 화상 위력 합
 const isSong = f => f.type === 'song' || f.type === 'yoru';
 const pickReady = f => { const p = CHAR[f.type].pool; return p.length ? p[(Math.random() * p.length) | 0] : null; };
@@ -956,7 +967,7 @@ class Fighter {
     // 레이드 과녁은 설정과 상관없이 LV.55 · 체력 500
     this.maxHp = type === 'dummy' ? (dungeonFloor ? 300 + dungeonFloor * 40 : raidMode ? 500 : settings.dummyHp) : d.maxHp;
     this.level = type === 'dummy' ? (dungeonFloor ? 30 + dungeonFloor * 4 : raidMode ? 55 : settings.dummyLv) : d.level;
-    if (type === 'song' && up('song')) { this.maxHp += 30; this.level += 5; } // 강화: 체력 +30, 레벨 +5
+    if (type === 'song' && up('song', this)) { this.maxHp += 30; this.level += 5; } // 강화: 체력 +30, 레벨 +5
     if (type === 'targetking' && dungeonFloor) this.maxHp = Math.round(d.maxHp * dungeonFloor / DUNGEON_MAX); // 던전의 과녁의 왕: 층에 비례한 체력
     if (type === 'dgdummy') { const fl = dungeonFloor || 1; this.maxHp = 300 + fl * 60; this.level = 30 + fl * 5; }
     this.hp = this.maxHp; this.dispHp = this.hp; this.lagHp = this.hp;
@@ -1028,9 +1039,9 @@ function addDawnfire(f, v) {
   dawnfirePops.push({ x: f.x + 34, y: f.y - f.r - 12, life: 0.6, max: 0.6 });
 }
 // 새벽불 10 이상: 기본 스킬로 부여하는 화상 위력 +1 · 20 이상: 화상 횟수 +1
-function gTrem(f, t, pot, cnt) { if (pot && up('gunmin')) pot += 5; addTremorBase(t, pot, cnt); } // 강화: 진동 부여량 +5
+function gTrem(f, t, pot, cnt) { if (pot && up('gunmin', f)) pot += 5; addTremorBase(t, pot, cnt); } // 강화: 진동 부여량 +5
 function gBurn(f, t, pot, cnt) {
-  if (pot && up('gunmin')) pot += 5; // 강화: 화상 부여량 +5
+  if (pot && up('gunmin', f)) pot += 5; // 강화: 화상 부여량 +5
   if (pot && f.dawnfire >= 10) pot += 1;
   if (cnt && f.dawnfire >= 20) cnt += 1;
   if (pot) addStack(t, 'burn', pot, 0, '화상', '#ff8a3a');
@@ -1191,7 +1202,7 @@ function checkStagger(f) {
 function enterStagger(f, th) {
   questEvent('stagger');
   // 정선우 강화 패시브 호위: 이도윤 흐트러짐 시 원호방어 1 얻음
-  if (f.type === 'doyun' && up('sunwoo')) for (const a of fighters) if (a.alive && a.type === 'sunwoo' && a.team === f.team) {
+  if (f.type === 'doyun' && up('sunwoo', f)) for (const a of fighters) if (a.alive && a.type === 'sunwoo' && a.team === f.team) {
     a.coverDef = Math.min(3, (a.coverDef || 0) + 1); floatText(a.x, a.y - a.r - 30, '호위 — 원호방어 +1', '#9ff0dc', 16);
     log(`${nm(a)} <b style="color:#9ff0dc">호위</b>: 이도윤 흐트러짐 → 원호방어 1 얻음`, 'skill');
   }
@@ -1617,7 +1628,7 @@ function returnField(f) {
 // 페이즈 변경: 강주원 → 강주원 [불타는 울음] (붉은 날개 · 이미지 변경 · 붉은 아우라)
 function transformJuwon2(f, force) {
   if (f.type !== 'juwon' || !f.alive) return;
-  if (!force && !up('juwon')) return; // 2페이즈는 강주원 강화 시 해금
+  if (!force && !up('juwon', f)) return; // 2페이즈는 강주원 강화 시 해금
   f.away = false; f.leaving = false; f.returned = true;
   const num = f.label.replace('강주원', '');
   f.type = 'juwon2'; f.label = '강주원 [불타는 울음]' + num; f.phase = 2;
@@ -1755,12 +1766,12 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     log(`🌘 ${nm(t)} <b style="color:#c8a040">고독한 정오</b>: 치명적인 피해를 버팀 · 흐트러짐 해제 · 이번 턴 동안 체력 1 미만으로 감소하지 않음 (전투당 1회)`, 'kill');
     return dmg;
   }
-  if (t.type === 'song' && up('song') && t.hp <= 10) { log(`${nm(t)} 체력 10 이하 → 페이즈 변경 (강화)`, 'kill'); transformYoru(t); return dmg; } // 강화: 요루 조건 체력 10 이하
+  if (t.type === 'song' && up('song', t) && t.hp <= 10) { log(`${nm(t)} 체력 10 이하 → 페이즈 변경 (강화)`, 'kill'); transformYoru(t); return dmg; } // 강화: 요루 조건 체력 10 이하
   if (t.hp > 0 && !t.noStagger) checkStagger(t);
   if (t.hp <= 0) {
     t.hp = 0;
     // 송재범: 체력이 0이 되면 요루로 페이즈 변경
-    if (t.type === 'song' && up('song')) { log(`${nm(t)} 체력 0 → 페이즈 변경`, 'kill'); transformYoru(t); }
+    if (t.type === 'song' && up('song', t)) { log(`${nm(t)} 체력 0 → 페이즈 변경`, 'kill'); transformYoru(t); }
     else kill(t, src, srcName);
   }
   return dmg;
@@ -1867,7 +1878,7 @@ function progressCast(f, dt) {
 function makeUse(f, key) {
   const S = SKILLS[key];
   return { f, sk: key, lost: false, base: S.base + (f.qBoost || 0), coinPow: S.coinPow + buffVal(f, 'coinPowUp'), coins: S.coins, ub: !!S.unbreakable,
-    minus: !!S.minus || (f.type === 'jiho' && up('jiho')), clashBonus: 0, pct: 0, notes: [], cola30: false, reuse: 0, ubStart: S.ubIdx ? S.ubIdx[0] : null };
+    minus: !!S.minus || (f.type === 'jiho' && up('jiho', f)), clashBonus: 0, pct: 0, notes: [], cola30: false, reuse: 0, ubStart: S.ubIdx ? S.ubIdx[0] : null };
 }
 
 // 송재범 - [요루]의 모든 스킬: [사용시] 충전 3 얻음
@@ -1883,8 +1894,8 @@ function onUse(u) {
   const f = u.f;
   gainCharge(f, 3);
   if (f.type === 'kwak' && f.bugBonus) u.pct += 50; // 벌레 컷으로 대상 사망 시 이번 전투 동안 피해량 +50%
-  if (f.type === 'doyun' && up('doyun') && SKILLS[u.sk].link) u.pct += 10;                          // 강화: 연 스킬 피해량 +10%
-  if (f.type === 'sunwoo' && up('sunwoo') && (SKILLS[u.sk].link || SKILLS[u.sk].coinLink)) u.pct += 50; // 강화: 연 스킬 피해량 +50%
+  if (f.type === 'doyun' && up('doyun', f) && SKILLS[u.sk].link) u.pct += 10;                          // 강화: 연 스킬 피해량 +10%
+  if (f.type === 'sunwoo' && up('sunwoo', f) && (SKILLS[u.sk].link || SKILLS[u.sk].coinLink)) u.pct += 50; // 강화: 연 스킬 피해량 +50%
   // 새벽맞이: 화상 위력·화상 횟수·특수 화상을 부여하는 기본 스킬 → 피해량 +10% (진동도 부여하면 +15% 추가), 합 위력 +1
   if (f.dawnGreet > 0 && CHAR[f.type].pool.includes(u.sk) && SKILLS[u.sk].burnSkill) {
     const add = 10 + (SKILLS[u.sk].tremorSkill ? 15 : 0);
@@ -2130,7 +2141,7 @@ function useGimman(f) {
 // 페이즈 변경: 송재범 → 송재범 - [요루]
 function transformYoru(f, force) {
   if (f.type !== 'song' || !f.alive) return;
-  if (!force && !up('song')) return; // 2페이즈는 송재범 강화 시 해금
+  if (!force && !up('song', f)) return; // 2페이즈는 송재범 강화 시 해금
   const num = f.label.replace('송재범', '');
   f.type = 'yoru'; f.label = '송재범 - [요루]' + num;
   const d = CHAR.yoru;
@@ -2312,7 +2323,7 @@ function stepEngagement(e) {
         floatText(Wn.f.x, Wn.f.y - Wn.f.r - 60, '방어 성공!', SKILLS[Wn.sk].color, 26, { life: 1.2 });
         ring(Wn.f.x, Wn.f.y, SKILLS[Wn.sk].color, Wn.f.r * 4, 0.6, 8);
         log(`🛡 ${nm(Wn.f)} ${sk(Wn.sk)} 방어 성공`, 'skill');
-        changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho') ? -10 : 10, '합 승리');
+        changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho', Wn.f) ? -10 : 10, '합 승리');
         e.mode = 'attack'; e.t = 0.4;
         return;
       }
@@ -2323,7 +2334,7 @@ function stepEngagement(e) {
         ring(Wn.f.x, Wn.f.y, ES.color, Wn.f.r * 4, 0.6, 8);
         burst(Wn.f.x, Wn.f.y, ES.color, 30, 400, 9, 0.6, { kind: 'spark' });
         log(`💨 ${nm(Wn.f)} ${sk(Wn.sk)} 회피 성공`, 'skill');
-        changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho') ? -10 : 10, '합 승리');
+        changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho', Wn.f) ? -10 : 10, '합 승리');
         if (Wn.sk === 'evade') addStack(Wn.f, 'poise', 9, 0, '호흡', '#9fe8ff'); // 쉽다: 호흡 9
         else if (Wn.sk === 'juEvade') heal(Wn.f, Wn.f.maxHp * 0.15, '터헣 회피 성공'); // 체력 15% 회복
         e.mode = 'attack'; e.t = 0.4;
@@ -2333,7 +2344,7 @@ function stepEngagement(e) {
       ring(Wn.f.x, Wn.f.y, '#fff27a', Wn.f.r * 4, 0.6, 8);
       log(`🏅 ${nm(Wn.f)} 합 승리 (${e.round}합)`, 'skill');
       questEvent('clash');
-      changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho') ? -10 : 10, '합 승리');
+      changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho', Wn.f) ? -10 : 10, '합 승리');
       // 절망의 기사 [합 승리시]: 남은 코인 갯수만큼 차갑고 검은 눈물 부여
       if ((Wn.sk === 'pourDespair' || Wn.sk === 'sharpTear') && L.f.alive) addBlackTear(L.f, winA ? e.ca : e.cb, Wn.f);
       // 쐐기 [합 승리시]: 진동 - 붕괴로 진폭 얽힘
@@ -2551,7 +2562,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'teoheong' && u.lost) t.nonLethal = true;
   if ((u.sk === 'pwe' || u.sk === 'noon') && u.lost) t.noStagger = true; // 이 스킬로 흐트러지지 않음
   const dealt = dealDamage(f, t, pow * lm * dm, S.type, `${S.name} ${(u.rawCoin ?? i) + 1}번째 코인${crit ? ' (크리티컬)' : ''}`, extra);
-  if (f.type === 'wooju' && up('wooju') && dealt > 0 && f.alive && f.hp < f.maxHp) { f.hp = Math.min(f.maxHp, f.hp + dealt * 0.05); floatText(f.x + 20, f.y - f.r - 4, `+${Math.round(dealt * 5) / 100}`, '#7dff9a', 13, { life: 0.6 }); } // 강화: 피해량의 5% 회복
+  if (f.type === 'wooju' && up('wooju', f) && dealt > 0 && f.alive && f.hp < f.maxHp) { f.hp = Math.min(f.maxHp, f.hp + dealt * 0.05); floatText(f.x + 20, f.y - f.r - 4, `+${Math.round(dealt * 5) / 100}`, '#7dff9a', 13, { life: 0.6 }); } // 강화: 피해량의 5% 회복
   t.nonLethal = false; t.noStagger = false;
   if (CHAR[f.type].pool.includes(u.sk) && f.type === 'jiho') addCola(f, 1); // 기본 스킬 적중 시 코카콜라 1
   if (f.type === 'sunwoo') addMomentum(f, 1); // 공격 적중 시 승기 1
@@ -3152,8 +3163,9 @@ function checkWin() {
   if (teams.size <= 1 && !ended) {
     ended = true;
     const w = [...teams][0];
-    const wasRaid = raidMode, wasDungeon = dungeonFloor;
-    questEvent('battle'); if (raidMode && !dungeonFloor && w === 0) questEvent('raidClear');
+    const wasRaid = raidMode, wasDungeon = dungeonFloor, wasPvp = pvpOpp;
+    if (pvpOpp && w !== undefined) pvpResult(w === 0);
+    questEvent('battle'); if (raidMode && !dungeonFloor && !pvpOpp && w === 0) questEvent('raidClear');
     if (dungeonFloor && w === 0) {
       // 던전 클리어 보상: 클리어 층 × 100 코인
       const fl = dungeonFloor;
@@ -3166,20 +3178,20 @@ function checkWin() {
       log(`🏰 던전 ${fl}층 클리어! 🪙 코인 +${rw}${wk ? ' <b style="color:#ffcc33">(주간 추가 보상 +100%)</b>' : ''}${fl >= DUNGEON_MAX ? ' · 최고층 정복!' : ` · ${fl + 1}층 해금`}`, 'kill');
       renderDungeon(Math.min(DUNGEON_MAX, fl + 1));
     } else if (dungeonFloor) log(`🏰 던전 ${dungeonFloor}층 도전 실패`, 'kill');
-    if (raidMode && !dungeonFloor && w === 0) {
+    if (raidMode && !dungeonFloor && !pvpOpp && w === 0) {
       if (!save.raidCleared) save.raidCleared = {}; save.raidCleared[`${raidStage}-${raidDiff}`] = true; // 랭킹 점수용 클리어 기록
       // 레이드 클리어 코인 (난이도 배수)
       const d = RAID_DIFF[raidDiff], c = RAID_COIN[raidStage] * d.coin;
       addCoins(c, `레이드 ${raidStage}단계 ${d.name} 클리어`);
       log(`🪙 레이드 ${raidStage}단계 <b style="color:${d.color}">${d.name}</b> 클리어 코인 +${c.toLocaleString()}`, 'kill');
     }
-    if (raidMode && !dungeonFloor && raidStage === 2 && w === 0) {
+    if (raidMode && !dungeonFloor && !pvpOpp && raidStage === 2 && w === 0) {
       // 레이드 2단계 클리어 보상: 아티팩트 안지수의 말라붙은 영혼석
       const first = !save.artifacts.soulstone; save.artifacts.soulstone = true; save.raid2 = true; persist(); renderArtifacts(); updateRaidInfo();
       log(`💍 레이드 2단계 클리어 보상: 아티팩트 <b style="color:#c8a0ff">안지수의 말라붙은 영혼석</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
       if (first) toast('💍 아티팩트 안지수의 말라붙은 영혼석 획득!');
     }
-    if (raidMode && !dungeonFloor && raidStage === 1 && w === 0) {
+    if (raidMode && !dungeonFloor && !pvpOpp && raidStage === 1 && w === 0) {
       // 레이드 승리 보상: 이건민 스킬 수호자·아지랑이 추가
       const first = !gunminUnlocked;
       gunminUnlocked = true; try { localStorage.setItem('ballfight-unlock-gunmin' + SV, '1'); } catch (e) {}
@@ -3194,7 +3206,7 @@ function checkWin() {
     const endTime = simTime;
     setTimeout(() => {
       if (!ended) return;
-      winInfo = { team: w, time: endTime, t: 0, raid: wasRaid, dungeon: wasDungeon };
+      winInfo = { team: w, time: endTime, t: 0, raid: wasRaid, dungeon: wasDungeon, pvp: wasPvp };
       document.getElementById('overlay').classList.add('show');
       if (rec && rec.auto) setTimeout(() => { if (rec && rec.auto) stopRec(); }, 2200);
     }, 1600);
@@ -4013,7 +4025,7 @@ function drawWin() {
   const t = winInfo.t, k = Math.min(1, t / 0.5);
   ctx.fillStyle = `rgba(0,0,0,${0.55 * k})`; ctx.fillRect(0, 0, cw, ch);
   const w = winInfo.team, color = w === undefined ? '#dddddd' : TEAM[w].color;
-  const text = winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 ${RAID_DIFF[raidDiff].name} 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
+  const text = winInfo.pvp ? (w === 0 ? `⚔ PVP 승리! vs ${winInfo.pvp.name}` : `PVP 패배 — ${winInfo.pvp.name}`) : winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 ${RAID_DIFF[raidDiff].name} 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
   const p = Math.min(1, t / 0.45), ease = 1 + 2.2 * Math.pow(1 - p, 3);
   let size = 60; ctx.font = `900 ${size}px ${FONT}`;
   const mw = ctx.measureText(text).width; if (mw > cw * 0.88) size *= cw * 0.88 / mw;
@@ -4470,11 +4482,11 @@ function setTestLock(lock) {
   cb.parentElement.title = lock ? `${modeName()} 중에는 테스트 모드를 쓸 수 없어요` : '';
   cb.parentElement.style.opacity = lock ? 0.45 : 1;
 }
-document.getElementById('startBtn').onclick = () => { dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); start(); };
+document.getElementById('startBtn').onclick = () => { pvpOpp = null; dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); start(); };
 document.getElementById('raidBtn').onclick = () => {
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'targetking', team: 1 }], Array.from({ length: 8 }, () => ({ type: 'dummy', team: 1 })));
-  dungeonFloor = 0; raidMode = true; raidStage = 1; renderRoster(); setTestLock(true); start(); applyRaidDiff(); questEvent('raidTry');
+  pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 1; renderRoster(); setTestLock(true); start(); applyRaidDiff(); questEvent('raidTry');
   showBig('레이드 1단계: 과녁의 왕', '#ffcc33', 1.8);
   log('🎯 <b style="color:#ffcc33">레이드 — 과녁의 왕</b> 시작! (과녁의 왕 + 과녁 8)', 'kill');
 };
@@ -4482,7 +4494,7 @@ document.getElementById('raid2Btn').onclick = () => {
   if (!gunminUnlocked && !PERK) { toast('레이드 1단계(과녁의 왕)를 먼저 클리어해 주세요.'); return; }
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'cerberus', team: 1 }]);
-  dungeonFloor = 0; raidMode = true; raidStage = 2; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
+  pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 2; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
   const c = fighters.find(f => f.type === 'cerberus');
   if (c) c.shield = { v: 1300, max: 1300, until: Infinity };
   applyRaidDiff();
@@ -4531,7 +4543,7 @@ document.getElementById('dungeonBtn').onclick = () => {
   const force = TEST_SERVER && document.getElementById('dgHidden').checked;
   const hidden = fl === 11 ? ((Math.random() < 0.1 || force) ? 'marksman' : null) : (fl >= 3 && fl <= 5) ? ((Math.random() < 0.3 || force) ? 'despair' : null) : null;
   roster = team.concat((hidden ? [hidden] : DUNGEON[fl]).map(k => ({ type: k, team: 1 })));
-  dungeonFloor = fl; raidMode = true; renderRoster(); setTestLock(true); start();
+  pvpOpp = null; dungeonFloor = fl; raidMode = true; renderRoster(); setTestLock(true); start();
   showBig(hidden ? `히든 보스 — ${CHAR[hidden].name}` : `던전 ${fl}층`, hidden ? CHAR[hidden].color : '#7a5cff', hidden ? 2.4 : 1.8);
   if (hidden) { doFlash(CHAR[hidden].color, 0.6); log(`⚠ <b style="color:${CHAR[hidden].color}">히든 보스 — ${CHAR[hidden].name}</b> 등장!`, 'kill'); }
   log(`🏰 <b style="color:#9a8cff">던전 ${fl}층</b> 시작! (클리어 보상 🪙 ${fl * 100})`, 'kill');
@@ -4539,7 +4551,7 @@ document.getElementById('dungeonBtn').onclick = () => {
 document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4, 8, 32]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
 document.querySelectorAll('.recBtn').forEach(b => b.onclick = () => rec ? stopRec() : startRec(false));
 document.getElementById('againBtn').onclick = start;
-document.getElementById('resetBtn').onclick = () => { dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
+document.getElementById('resetBtn').onclick = () => { pvpOpp = null; dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
 document.getElementById('pauseBtn').onclick = () => {
   if (simTime === 0 && !running) { start(); return; }
   running = !running; updatePauseBtn();
@@ -4623,6 +4635,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.8', date: '2026-11-17', items: ['💬 채팅 추가 (구글 로그인한 사람만 보낼 수 있음)', '⚔ PVP 추가: 내 레드 팀을 방어 팀으로 등록하고, 다른 사람의 방어 팀(강화·아티팩트 포함)에 도전 · 승리 시 100 코인'] },
   { v: '3.7', date: '2026-11-17', items: ['랭킹 서버 연결 (구글 로그인 후 랭킹에 올라가려면 한 번 로그아웃 → 다시 로그인)'] },
   { v: '3.6', date: '2026-11-17', items: ['랭킹이 매주 월요일 초기화 (그 주에 늘어난 점수로 순위)', '주간 랭킹 보상을 우편함으로 지급: 1~3등 800,000,000 · 4~10등 1,000,000 · 11~50등 10,000 · 51등 이상 1,000 코인'] },
   { v: '3.5', date: '2026-11-17', items: ['🏆 랭킹 추가 (구글 로그인한 사람만 · 테스터 제외) · 1등에게 👑 왕 칭호'] },
@@ -4780,6 +4793,8 @@ const rankEligible = () => !!account && !TEST_SERVER && !TESTER && !String(accou
 function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
 async function rankInit() {
   if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol) || rank.db) return;
+  if (rank.loading) return rank.loading;
+  rank.loading = (async () => {
   try {
     const v = 'https://www.gstatic.com/firebasejs/10.12.2/';
     await loadScript(v + 'firebase-app-compat.js'); await loadScript(v + 'firebase-auth-compat.js'); await loadScript(v + 'firebase-firestore-compat.js');
@@ -4789,6 +4804,8 @@ async function rankInit() {
     if (cred && account) { sessionStorage.removeItem('ballfight-gcred'); try { await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(cred)); } catch (e) { console.error(e); } }
     firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); } renderRank(); });
   } catch (e) { console.error(e); rank.err = '랭킹 서버에 연결하지 못했어요'; renderRank(); }
+  })();
+  return rank.loading;
 }
 const rankApi = {
   col: w => rank.db.collection('ranking').doc(w).collection('scores'),
@@ -4852,6 +4869,87 @@ function renderRank() {
 }
 document.getElementById('rankBtn').onclick = () => { const on = document.getElementById('rankPanel').classList.toggle('on'); renderRank(); if (on) rankRefresh(); };
 if (FIREBASE_CONFIG && account) rankInit().then(rankRefresh);
+// ================== 채팅 ==================
+var chat = { unsub: null, last: 0 };
+const escH = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function chatNote(t) { document.getElementById('chatNote').textContent = t; }
+async function chatOpen() {
+  if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) { chatNote('채팅은 웹 주소(GitHub Pages)에서만 돼요.'); return; }
+  await rankInit();
+  if (!rank.db) { chatNote('채팅 서버에 연결하지 못했어요.'); return; }
+  chatNote(account ? (rank.uid ? '' : '채팅하려면 로그아웃 후 구글로 다시 로그인해 주세요.') : '구글로 로그인하면 채팅할 수 있어요. (읽기만 가능)');
+  if (chat.unsub) return;
+  chat.unsub = rank.db.collection('chat').orderBy('ms', 'desc').limit(50).onSnapshot(q => {
+    const king = rank.list && rank.list[0] ? rank.list[0].id : null;
+    document.getElementById('chatList').innerHTML = q.docs.map(d => { const m = d.data(), tm = new Date(m.ms || 0);
+      return `<div class="cm"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b style="color:${m.uid === rank.uid ? '#ffcc33' : '#9fd8ff'}">${escH(m.name || '익명')}${m.uid === king ? ' 👑' : ''}</b> ${escH(m.text || '')}</div>`; }).join('') || '<div style="color:#777">아직 메시지가 없어요.</div>';
+  }, e => { console.error(e); chatNote('채팅을 불러오지 못했어요.'); });
+}
+async function chatSend() {
+  const inp = document.getElementById('chatInput'), text = inp.value.trim().slice(0, 200);
+  if (!text) return;
+  if (!account || !rank.uid) { toast('구글로 로그인해야 채팅할 수 있어요'); return; }
+  if (Date.now() - chat.last < 3000) { toast('잠시 후에 다시 보내주세요'); return; }
+  chat.last = Date.now(); inp.value = '';
+  try { await rank.db.collection('chat').add({ uid: rank.uid, name: account.name + (TESTER || TEST_SERVER ? ' 🧪' : ''), text, ms: Date.now() }); } catch (e) { console.error(e); toast('메시지를 보내지 못했어요'); }
+}
+document.getElementById('chatBtn').onclick = () => { if (document.getElementById('chatPanel').classList.toggle('on')) chatOpen(); };
+document.getElementById('chatSend').onclick = chatSend;
+document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend(); });
+// ================== PVP ==================
+// 내 레드 팀을 방어 팀으로 등록하면, 다른 사람들이 그 팀(강화·아티팩트 포함)과 싸울 수 있음
+if (!save.pvp) save.pvp = { w: 0, l: 0 };
+var pvp = { list: null, err: '' };
+const PVP_WIN_COIN = 100;
+const pvpCol = () => rank.db.collection('pvp');
+function myPvpTeam() { return roster.filter(r => r.team === 0 && r.type !== 'dummy').map(r => r.type); }
+async function pvpRegister() {
+  if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
+  if (TESTER || TEST_SERVER) return toast('🧪 테스터 계정은 방어 팀을 등록할 수 없어요');
+  const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
+  try {
+    await pvpCol().doc(rank.uid).set({ name: account.name, picture: account.picture || '', team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
+    toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
+  } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
+}
+async function pvpRefresh() {
+  if (!rank.db) return renderPvp();
+  try { pvp.list = (await pvpCol().orderBy('t', 'desc').limit(30).get()).docs.map(d => ({ id: d.id, ...d.data() })); pvp.err = ''; } catch (e) { console.error(e); pvp.err = 'PVP 목록을 불러오지 못했어요'; }
+  renderPvp();
+}
+function renderPvp() {
+  const el = document.getElementById('pvpPanel'); if (!el) return;
+  const nmT = t => (t || []).map(k => CHAR[k] ? CHAR[k].name : k).join(', ');
+  let h = `<div style="margin-bottom:6px">내 전적 <b style="color:#7dffb0">${save.pvp.w}승</b> <b style="color:#ff8080">${save.pvp.l}패</b> · 승리 시 🪙 ${PVP_WIN_COIN}</div>`;
+  h += `<button id="pvpReg" style="width:100%;padding:7px;font-weight:700;margin-bottom:6px">🛡 지금 레드 팀을 방어 팀으로 등록 (${nmT(myPvpTeam()) || '비어 있음'})</button>`;
+  if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) h += '<div style="color:#aaa">PVP는 웹 주소(GitHub Pages)에서만 돼요.</div>';
+  else if (pvp.err) h += `<div style="color:#ff8080">${pvp.err}</div>`;
+  else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
+  else {
+    const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
+    h += ops.length ? ops.map(o => `<div class="op"><b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+  }
+  el.innerHTML = h;
+}
+document.getElementById('pvpPanel').addEventListener('click', e => {
+  if (e.target.id === 'pvpReg') return pvpRegister();
+  const id = e.target.dataset.pvp; if (!id || !pvp.list) return;
+  const o = pvp.list.find(x => x.id === id); if (!o) return;
+  const mine = roster.filter(r => r.team === 0 && r.type !== 'dummy');
+  if (!mine.length) return toast('레드 팀에 PVP에 나갈 캐릭터를 넣어주세요');
+  pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, equip: o.equip || {} };
+  roster = mine.concat((o.team || []).filter(k => CHAR[k]).map(k => ({ type: k, team: 1 })));
+  dungeonFloor = 0; raidMode = true; renderRoster(); setTestLock(true); start();
+  showBig(`PVP — vs ${pvpOpp.name}`, '#9fd8ff', 1.8);
+  log(`⚔ <b style="color:#9fd8ff">PVP</b> 시작! vs ${escH(pvpOpp.name)}`, 'kill');
+});
+function pvpResult(win) {
+  if (win) { save.pvp.w++; addCoins(PVP_WIN_COIN, `PVP 승리 vs ${pvpOpp.name}`); } else save.pvp.l++;
+  persist();
+  log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패`, 'kill');
+  try { if (rank.uid && !TESTER && !TEST_SERVER) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l }).catch(() => {}); } catch (e) {}
+}
+document.getElementById('pvpBtn').onclick = async () => { if (!document.getElementById('pvpPanel').classList.toggle('on')) return; renderPvp(); await rankInit(); pvpRefresh(); };
 renderDungeon();
 if (!save.stones) save.stones = {}; if (!save.upg) save.upg = {};
 // 보유 캐릭터: 송재범·강주원은 기본, 나머지는 뽑기에서 획득 (이전에 영혼석을 모았거나 강화했다면 보유로 처리)
