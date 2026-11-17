@@ -352,7 +352,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>눈물을 글썽이며</b> 코인 2 · 공격 70 · 4 / +5 · 대상이 화상이면 피해량 +10% · 1코인 화상 4 · 2코인 대상 화상만큼 침잠<br>
       <b>터진 분노와 울음</b> 파괴불가 1 · 공격 80 · 35 / +55 · 대상 화상만큼 최종 위력 + · 정신력 × 10 피해량 % · [공격 종료시] 이번 턴 종료 · 울음 10 부여<br>
       <b>울음</b> 최댓값 99 · 수치당 화상으로 받는 피해량 1% 증가<br><br>
-      <b style="color:#ff2a2a;font-size:12px">흉탄의 사수</b> (던전 11층 히든 보스 · 등장 확률 0.5% · LV.90 · 체력 2241 · 방어 레벨 90 · 흐트러짐 30%)<br>
+      <b style="color:#ff2a2a;font-size:12px">흉탄의 사수</b> (던전 11층 히든 보스 · 등장 확률 10% · LV.90 · 체력 2241 · 방어 레벨 90 · 흐트러짐 30%)<br>
       <b>후방 사격</b> 마법 · 코인 1 · 공격 92 · 5 / +3 · 크리티컬 피해량 +10% · 호흡 10 이상이면 기본 위력 +1 · 호흡 2 얻음 · 침잠 4 · 크리티컬 시 출혈 4<br>
       <b>전방 사격</b> 마법 · 코인 1 · 공격 92 · 5 / +6 · 크리티컬 피해량 +10% · 호흡 10 이상이면 기본 위력 +1 · 호흡 2 얻음 · 침잠 횟수 4 · 크리티컬 시 출혈 횟수 4<br>
       <b>흉탄</b> 마법 · 코인 2 (파괴불가) · 공격 100 · 5 / +5 · [피아식별불가] 아군 둘과 적 다섯 지정 · 아군이 없으면 취소 · 호흡 5당 코인 위력 +1 (최대 2), 호흡 횟수 3당 기본 위력 +1 (최대 3) · 1코인: 메인 타겟만 피해, 아군이면 사망, 다음 턴 호흡 10 · 대상 사망 시 호흡 10, 모든 적 정신력 -15 · 2코인: 서브 타겟만 피해 (처치 실패 시 무작위 1명), 침잠 5 · 출혈 5<br>
@@ -590,7 +590,7 @@ const CHAR = {
     name: '과녁의 왕', maxHp: 7000, radius: 62, color: '#ffcc33', speed: 40, mass: 8,
     resist: { physical: 0.5, magic: 0.5, true: 1 }, ai: false, hitCounter: 'kingcounter', level: 50, defMod: 100, pool: [], staggerAt: [0.5],
   },
-  // 던전 11층 히든 보스 (등장 확률 0.5%)
+  // 던전 11층 히든 보스 (등장 확률 10%)
   marksman: {
     name: '흉탄의 사수', maxHp: 2241, radius: 50, color: '#ff2a2a', speed: 160, mass: 2.4,
     resist: { physical: 1, magic: 1, true: 1 }, ai: true, level: 90, defMod: 0, pool: ['rearShot', 'frontShot'], staggerAt: [0.3],
@@ -4116,8 +4116,8 @@ document.getElementById('dungeonBtn').onclick = () => {
   const team = roster.filter(r => r.team === 0 && r.type !== 'dummy');
   if (!team.length) { toast('레드 팀에 던전에 도전할 캐릭터를 넣어주세요.'); return; }
   const fl = clamp(+document.getElementById('dgFloor').value || 1, 1, Math.min(DUNGEON_MAX, (save.dungeon || 0) + 1));
-  // 11층 히든 보스: 0.5% 확률로 흉탄의 사수 등장
-  const hidden = fl === 11 && (Math.random() < 0.005 || (TEST_SERVER && document.getElementById('dgHidden').checked));
+  // 11층 히든 보스: 10% 확률로 흉탄의 사수 등장
+  const hidden = fl === 11 && (Math.random() < 0.1 || (TEST_SERVER && document.getElementById('dgHidden').checked));
   roster = team.concat((hidden ? ['marksman'] : DUNGEON[fl]).map(k => ({ type: k, team: 1 })));
   dungeonFloor = fl; raidMode = true; renderRoster(); setTestLock(true); start();
   showBig(hidden ? '히든 보스 — 흉탄의 사수' : `던전 ${fl}층`, hidden ? '#ff2a2a' : '#7a5cff', hidden ? 2.4 : 1.8);
@@ -4211,6 +4211,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '2.5', date: '2026-11-17', items: ['던전 11층 히든 보스 등장 확률 0.5% → 10%'] },
   { v: '2.4', date: '2026-11-17', items: ['8배속 추가'] },
   { v: '2.3', date: '2026-11-17', items: ['📬 우편함 추가 (제목 아래 버튼)', '11월 17일 ~ 11월 20일 접속 선물: 3000 코인'] },
   { v: '2.2', date: '2026-11-17', items: ['뽑기 비용 인하: 1회 300 → 200 코인 · 10회 3000 → 2000 코인'] },
