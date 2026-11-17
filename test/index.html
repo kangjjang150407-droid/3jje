@@ -794,6 +794,7 @@ const up = type => { try { return !!save.upg[UP_KEY[type] || type]; } catch (e) 
 const turnCd = f => TURN / (CHAR[f.type].slots || 1);
 // 아티팩트: 캐릭터에게 장착하는 장비 (save.artifacts = 보유, save.equip = { 아티팩트: 캐릭터 })
 const ARTIFACTS = {
+  hatred: { name: '다한 쓸모, 맺힌 증오', color: '#ff6ab0', how: '절망의 기사 클리어 시 획득', desc: '공격 스킬로 충전 횟수를 소모하면 다음 턴에 (소모한 충전 횟수 / 2)만큼 공격 레벨 증가 (턴당 최대 10 · 특수 충전 포함) · 턴 종료 시 이번 턴에 정신력이 감소한 아군은 다음 턴에 공격 위력 +1, 받는 피해량 +10%' },
   ashstar: { name: '잿빛 별자리의 가호', color: '#8ab0ff', how: '절망의 기사 클리어 시 획득', desc: '1을 초과하는 내성이 1로 조정됨 (흐트러짐 상태 제외)' },
   crown: { name: '깨진 왕관', color: '#ffcc33', how: '레이드 1단계 - 과녁의 왕 클리어 시 획득', desc: '종족이 과녁인 적(과녁 · 던전 과녁 · 과녁의 왕)을 상대로 가하는 피해량 +40% · 받는 피해량 -10% · 합 위력 +3' },
   pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
@@ -1122,7 +1123,7 @@ function chooseTarget(f, key) {
 // ---- 레벨 / 버프 / 정신력 ----
 function buffVal(f, key) { const b = f.buffs[key]; return b && b.until > simTime ? b.v : 0; }
 function addBuff(f, key, v) { f.buffs[key] = { v: buffVal(f, key) + v, until: simTime + TURN }; }
-function offLv(f, sk) { return f.level + (SKILLS[sk].lvMod || 0) - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0); } // 쐐기의 창: 수치 1당 공격 레벨 +1
+function offLv(f, sk) { return f.level + (SKILLS[sk].lvMod || 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0); } // 쐐기의 창: 수치 1당 공격 레벨 +1
 function defLv(f) { return f.level + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
 function headsChance(f) { return clamp(0.5 + f.sp / 100, 0, 1); }
 function flip(f) { return Math.random() < headsChance(f); }
@@ -1167,6 +1168,7 @@ function resetStagger(f) { f.stagger = 0; f.staggerHit = []; f.staggerTh = (CHAR
 function changeSp(f, v, why) {
   if (!f.alive || !CHAR[f.type].ai || f.panic > 0 || !v) return;
   const old = f.sp; f.sp = clamp(f.sp + v, minSp(f), 45);
+  if (f.sp < old) f.spDropped = true; // 이번 턴에 정신력이 감소함 (다한 쓸모, 맺힌 증오)
   if (f.sunset && v < 0 && f.sp < 25) f.sp = Math.max(f.sp, Math.min(old, 25)); // 노을: 외부 효과로 정신력이 25 미만으로 감소하지 않음
   // 정신력 하한이 0인 캐릭터(강주원 [불타는 울음])는 정신력 0이 되면 패닉
   if (minSp(f) === 0 && v < 0 && f.sp <= 0) {
@@ -1363,6 +1365,17 @@ function forceTurnEnd(by) {
 // 턴 종료 시 처리 (1턴 = 5초 구간)
 function onTurnEnd() {
   for (const f of fighters) { if (f.sign) f.sign = false; } // 징표: 턴 종료 시 제거
+  // 다한 쓸모, 맺힌 증오
+  for (const w of fighters) {
+    if (!w.alive || !hasArt(w, 'hatred')) continue;
+    if (w.chargeSpent) { const v = Math.min(10, Math.floor(w.chargeSpent / 2)); w.chargeSpent = 0; if (v) { addBuff(w, 'offUp', v); floatText(w.x, w.y - w.r - 30, `공격 레벨 +${v}`, '#ff6ab0', 15); log(`💍 ${nm(w)} <b style="color:#ff6ab0">다한 쓸모, 맺힌 증오</b>: 소모한 충전 → 이번 턴 공격 레벨 +${v}`); } }
+    for (const a of fighters) if (a.alive && a.team === w.team && a.spDropped && !a.hatredMark) {
+      a.hatredMark = true; addBuff(a, 'powerUp', 1); a.hatredUntil = simTime + TURN;
+      floatText(a.x, a.y - a.r - 46, '맺힌 증오: 위력 +1 · 받는 피해 +10%', '#ff6ab0', 14, { life: 1.2 });
+      log(`💍 ${nm(w)} <b style="color:#ff6ab0">다한 쓸모, 맺힌 증오</b>: 정신력이 감소한 ${nm(a)} → 이번 턴 공격 위력 +1 · 받는 피해량 +10%`);
+    }
+  }
+  for (const f of fighters) { f.spDropped = false; f.hatredMark = false; }
   // 증오의 여왕: 아르카나 슬레이브 결과 처리 · 힘을 너무 많이 썼나봐 · 사랑/정의 · 도발치
   for (const q of fighters.slice()) if (q.type === 'queen' && q.alive) {
     if (q.exhausted) { queenLeave(q); continue; }
@@ -1376,7 +1389,7 @@ function onTurnEnd() {
     }
     if (q.arcanaUsed) { q.arcanaUsed = false; q.exhausted = true; markPops.push({ x: q.x, y: q.y - q.r - 20, life: 1.0, max: 1.0, img: exhaustImg }); floatText(q.x, q.y - q.r - 46, '힘을 너무 많이 썼나봐', '#ff9ad8', 18, { life: 1.4 }); log(`${nm(q)} <b style="color:#ff9ad8">힘을 너무 많이 썼나봐</b> 얻음 (턴 종료 시 전투에서 이탈)`); }
     if (q.chant > 0 && q.chant < 3) { q.chant++; markPops.push({ x: q.x, y: q.y - q.r - 20, life: 0.8, max: 0.8, img: chantImg }); floatText(q.x, q.y - q.r - 46, `영창 ${q.chant}/3`, '#ff4ad8', 16); log(`${nm(q)} 영창 - 아르카나 슬레이브 ${q.chant}/3`); }
-    if (q.loveJ && q.loveJ.cnt >= 10) { q.loveJ.cnt -= 10; q.loveJ.pot = Math.min(3, q.loveJ.pot + 1); floatText(q.x, q.y - q.r - 30, `사랑/정의 위력 ${q.loveJ.pot}`, '#ff7ac8', 15); log(`${nm(q)} 사랑과 정의의 힘: 사랑/정의 횟수 -10 → 위력 ${q.loveJ.pot}`); }
+    if (q.loveJ && q.loveJ.cnt >= 10) { spendCharge(q, 10); q.loveJ.cnt -= 10; q.loveJ.pot = Math.min(3, q.loveJ.pot + 1); floatText(q.x, q.y - q.r - 30, `사랑/정의 위력 ${q.loveJ.pot}`, '#ff7ac8', 15); log(`${nm(q)} 사랑과 정의의 힘: 사랑/정의 횟수 -10 → 위력 ${q.loveJ.pot}`); }
     if (q.nextTaunt) { q.tauntUntil = simTime + TURN; q.nextTaunt = 0; floatText(q.x, q.y - q.r - 46, '도발치 20', '#ffd84a', 18); log(`${nm(q)} 도발치 20: 이번 턴 적의 공격 대상이 됨`); }
   }
   for (const f of fighters.slice()) if (f.type === 'despair') { if (f.alive && dungeonFloor && !f.queenSpawned) { f.qTurns = (f.qTurns || 0) + 1; if (f.qTurns >= 1) spawnQueen(f); } despairTurn(f); }
@@ -1623,6 +1636,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (kind === 'physical' && buffVal(src, 'physUp')) mods.push(1 + buffVal(src, 'physUp') / 100); // 물리 피해량 증가
     if (isRedGlow(t)) mods.push(0.9);     // 붉은 노을: 보호 10
     if (src && isTargetRace(src) && hasArt(t, 'crown')) mods.push(0.9); // 깨진 왕관: 과녁에게 받는 피해량 -10%
+    if (t.hatredUntil > simTime) mods.push(1.1);         // 맺힌 증오: 받는 피해량 +10%
     if (t.pride) mods.push(1 + 0.05 * t.pride);          // 무너져 내린 긍지: 받는 피해량 +5%
     if (t.wornUntil > simTime) mods.push(2);               // 닳디 닳은 기사: 이번 턴 받는 피해량 +100%
     if (t.indomUsed) mods.push(0.8);      // 불굴의 정선우: 받는 피해량 -20%
@@ -1734,9 +1748,12 @@ function kill(t, src, reason) {
   if (t.type !== 'clone' && src && src.team !== t.team) questEvent('kill');
   // 절망의 기사 클리어 시 아티팩트 '잿빛 별자리의 가호' 획득 (자결 포함)
   if (t.type === 'despair' && dungeonFloor) {
-    const first = !save.artifacts.ashstar; save.artifacts.ashstar = true; persist(); renderArtifacts();
-    log(`💍 아티팩트 <b style="color:#8ab0ff">잿빛 별자리의 가호</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
-    if (first) toast('💍 아티팩트 잿빛 별자리의 가호 획득!');
+    for (const [id, col] of [['ashstar', '#8ab0ff'], ['hatred', '#ff6ab0']]) {
+      const first = !save.artifacts[id]; save.artifacts[id] = true;
+      log(`💍 아티팩트 <b style="color:${col}">${ARTIFACTS[id].name}</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
+      if (first) toast(`💍 아티팩트 ${ARTIFACTS[id].name} 획득!`);
+    }
+    persist(); renderArtifacts();
   }
   // 흉탄의 사수 처치 시 아티팩트 '찢어진 펜던트' 획득
   if (t.type === 'marksman' && src && src.team !== t.team) {
@@ -1976,11 +1993,11 @@ function onUse(u) {
   } else if (u.sk === 'gwanmun') {
     if (f.charge >= 15) {
       log(`${nm(f)} ${sk('gwanmun')}: 충전 ${f.charge} 모두 소모 → 피해량 +40% · 합 위력 +5%`);
-      f.charge = 0; u.pct += 40; u.clashMul = 1.05;
+      spendCharge(f, f.charge); f.charge = 0; u.pct += 40; u.clashMul = 1.05;
     }
   } else if (u.sk === 'drift') {
     const c = f.charge + stackSum(f.sinking) + stackSum(f.poise);
-    f.charge = 0; f.sinking = null; f.poise = null;
+    spendCharge(f, f.charge); f.charge = 0; f.sinking = null; f.poise = null;
     u.pct += c;
     log(`${nm(f)} ${sk('drift')}: 충전·침잠·호흡 ${c} 모두 소모 → 피해량 +${c}%`);
     showBig('차원 표류', SKILLS.drift.color, 1.4); doFlash('#bfefff', 0.5); darkenT = 1.0;
@@ -2754,6 +2771,8 @@ function queenLeave(q) {
   floatText(q.x, q.y - q.r - 30, '힘을 너무 많이 썼나봐…', '#ff9ad8', 20, { life: 1.6 });
   log(`💤 ${nm(q)} <b style="color:#ff9ad8">힘을 너무 많이 썼나봐</b>: 전투에서 이탈`, 'kill');
 }
+// 다한 쓸모, 맺힌 증오: 공격 스킬로 소모한 충전(특수 충전 포함) 횟수 기록
+function spendCharge(f, n) { if (n > 0 && hasArt(f, 'hatred')) f.chargeSpent = (f.chargeSpent || 0) + n; }
 // 차갑고 검은 눈물 (최대 5)
 function addBlackTear(t, v, src) {
   if (!t.alive || v <= 0) return;
@@ -4515,6 +4534,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '2.9', date: '2026-11-17', items: ['새 아티팩트: 다한 쓸모, 맺힌 증오 (절망의 기사 클리어 시 획득)'] },
   { v: '2.8', date: '2026-11-17', items: ['영창 - 아르카나 슬레이브 변경: 최대 3 · 턴 종료 시 +1 · 3이 되면 아르카나 슬레이브! 사용 · 영창 중에는 수비 스킬만 사용', '가드로는 영창을 시작만 함 (영창 중에는 가드로 늘지 않음)'] },
   { v: '2.7', date: '2026-11-17', items: ['절망의 기사전 2턴부터 조력자 증오의 여왕이 아군으로 등장', '새 상태: 파열 · 사랑/정의 · 영창 - 아르카나 슬레이브 · 도발치 · 힘을 너무 많이 썼나봐 · 내가… 무슨 쓸모…야?'] },
   { v: '2.6', date: '2026-11-17', items: ['던전 3~5층에 히든 보스가 30% 확률로 등장', '새 상태: 차갑고 검은 눈물', '새 아티팩트: 잿빛 별자리의 가호'] },
