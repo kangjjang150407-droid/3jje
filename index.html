@@ -212,10 +212,10 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
     <div id="mailPanel"></div>
     <div id="artPanel"></div>
-    <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
+    <div id="accountBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
       <b id="accName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9aa0b0">게스트</b>
-      <div id="gBtn"></div><button id="accLogin">구글로 로그인</button><button id="accLogout" style="display:none">로그아웃</button>
+      <div id="gBtn"></div><button id="accLogin">구글로 로그인</button><button id="appleLogin" style="background:#000;color:#fff;border:1px solid #555"> 애플로 로그인</button><button id="accLogout" style="display:none">로그아웃</button>
     </div>
     <div id="serverBar" style="display:flex;gap:6px;align-items:center;margin:4px 0 8px;font-size:12px"><b id="serverName"></b><button id="serverBtn" style="flex:1"></button><button id="serverReset" style="display:none">초기화</button></div>
     <div id="coinBar"><img src="data:image/png;base64,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" alt=""><b id="coinNum">0</b><span>코인</span><button id="questToggle">📋 퀘스트</button><button id="gachaToggle" style="margin-left:0">🎰 뽑기</button></div>
@@ -740,18 +740,37 @@ let TESTER = false;
 try { if (account) { if (TEST_SERVER) localStorage.setItem('ballfight-tester-' + account.sub, '1'); TESTER = localStorage.getItem('ballfight-tester-' + account.sub) === '1'; } } catch (e) {}
 const PERK = TEST_SERVER || TESTER;
 const SV = (PERK ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
+// 애플 로그인: Apple Developer에서 만든 Services ID를 넣으면 켜짐 (Return URL에 사이트 주소 등록 필요)
+const APPLE_CLIENT_ID = '';
+const jwtPayload = t => JSON.parse(decodeURIComponent(escape(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))));
 function googleSignedIn(resp) {
+  try { const d = jwtPayload(resp.credential); if (d.sub) accountSignedIn(d.sub, d.name || d.email || '구글 계정', d.picture || ''); } catch (e) { console.error(e); }
+}
+async function appleSignIn() {
+  if (!APPLE_CLIENT_ID) return toast('애플 로그인 설정(Services ID)이 아직 안 됐어요');
+  if (!/^https?:$/.test(location.protocol)) return toast('애플 로그인은 웹 주소(GitHub Pages)에서만 돼요');
   try {
-    const b64 = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    const d = JSON.parse(decodeURIComponent(escape(atob(b64))));
-    if (!d.sub) return;
+    if (!window.AppleID) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/ko_KR/appleid.auth.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+    AppleID.auth.init({ clientId: APPLE_CLIENT_ID, scope: 'name email', redirectURI: location.origin + location.pathname, usePopup: true });
+    const r = await AppleID.auth.signIn();
+    const d = jwtPayload(r.authorization.id_token); if (!d.sub) return;
+    const sub = 'apple.' + d.sub;
+    // 애플은 이름을 처음 로그인할 때만 알려줌 → 기억해 둠
+    const nmv = r.user && r.user.name ? `${r.user.name.lastName || ''}${r.user.name.firstName || ''}`.trim() : '';
+    if (nmv) localStorage.setItem('ballfight-name-' + sub, nmv);
+    accountSignedIn(sub, localStorage.getItem('ballfight-name-' + sub) || d.email || '애플 계정', '');
+  } catch (e) { if (e && e.error === 'popup_closed_by_user') return; console.error(e); toast('애플 로그인에 실패했어요'); }
+}
+function accountSignedIn(sub, name, picture) {
+  try {
+    const d = { sub };
     const base = TEST_SERVER ? '-test' : '', nk = 'ballfight-save' + base + '-u' + d.sub;
     // 처음 로그인한 계정이면 게스트 진행 상황을 그대로 가져옴
     if (localStorage.getItem(nk) === null) {
       const g = localStorage.getItem('ballfight-save' + base); if (g !== null) localStorage.setItem(nk, g);
       const u = localStorage.getItem('ballfight-unlock-gunmin' + base); if (u !== null) localStorage.setItem('ballfight-unlock-gunmin' + base + '-u' + d.sub, u);
     }
-    localStorage.setItem('ballfight-user', JSON.stringify({ sub: d.sub, name: d.name || d.email || '구글 계정', picture: d.picture || '' }));
+    localStorage.setItem('ballfight-user', JSON.stringify({ sub, name, picture }));
     location.reload();
   } catch (e) { console.error(e); }
 }
@@ -4533,6 +4552,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.0', date: '2026-11-17', items: ['애플 로그인 버튼 추가 (설정 후 사용 가능)'] },
   { v: '2.9', date: '2026-11-17', items: ['새 아티팩트: 다한 쓸모, 맺힌 증오 (절망의 기사 클리어 시 획득)', '증오의 여왕: 가드로는 영창을 시작만 함 (영창 중에는 가드로 늘지 않음)'] },
   { v: '2.8', date: '2026-11-17', items: ['영창 - 아르카나 슬레이브 변경: 최대 3 · 턴 종료 시 +1 · 3이 되면 아르카나 슬레이브! 사용 · 영창 중에는 수비 스킬만 사용'] },
   { v: '2.7', date: '2026-11-17', items: ['절망의 기사전 2턴부터 조력자 증오의 여왕이 아군으로 등장', '새 상태: 파열 · 사랑/정의 · 영창 - 아르카나 슬레이브 · 도발치 · 힘을 너무 많이 썼나봐 · 내가… 무슨 쓸모…야?'] },
@@ -4656,10 +4676,11 @@ if (PERK) { for (const k of GACHA) save.owned[k] = true; if (save.coins < 999999
   if (account) {
     $i('accName').textContent = account.name + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : ''); $i('accName').style.color = '#e8e8f0';
     if (account.picture) { $i('accPic').src = account.picture; $i('accPic').referrerPolicy = 'no-referrer'; $i('accPic').style.display = ''; }
-    $i('accLogin').style.display = 'none'; $i('accLogout').style.display = ''; $i('accLogout').onclick = googleSignOut;
+    $i('accLogin').style.display = 'none'; $i('appleLogin').style.display = 'none'; $i('accLogout').style.display = ''; $i('accLogout').onclick = googleSignOut;
     return;
   }
   const web = location.protocol === 'https:' || location.protocol === 'http:';
+  $i('appleLogin').onclick = appleSignIn;
   $i('accLogin').onclick = () => toast(!GOOGLE_CLIENT_ID ? '구글 로그인 설정(클라이언트 ID)이 아직 안 됐어요' : !web ? '구글 로그인은 웹 주소(GitHub Pages)에서만 돼요' : '구글 로그인을 불러오지 못했어요');
   if (!GOOGLE_CLIENT_ID || !web) return;
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
