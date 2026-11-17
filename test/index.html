@@ -48,6 +48,11 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #mailPanel{display:none;border:1px solid #3a6a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#0a1218;font-size:12px;line-height:1.5}
+  #mailPanel.on{display:block}
+  #mailPanel .mail{padding:6px 0;border-bottom:1px solid #14242e}
+  #mailPanel .mail:last-child{border-bottom:none}
+  #mailPanel button{margin-top:4px;width:100%;padding:7px;font-weight:700}
   #artPanel{display:none;border:1px solid #8a3a3a;border-radius:10px;padding:8px;margin-bottom:10px;background:#180a0c;font-size:12px;line-height:1.5}
   #artPanel.on{display:block}
   #artPanel .art{padding:6px 0;border-bottom:1px solid #2a1418}
@@ -193,7 +198,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;gap:6px;margin:2px 0 6px"><button id="patchBtn" style="flex:1;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div id="mailPanel"></div>
     <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
@@ -4206,6 +4212,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '2.3', date: '2026-11-17', items: ['📬 우편함 추가 (제목 아래 버튼)', '11월 17일 ~ 11월 20일 접속 선물: 3000 코인'] },
   { v: '2.2', date: '2026-11-17', items: ['뽑기 비용 인하: 1회 300 → 200 코인 · 10회 3000 → 2000 코인'] },
   { v: '2.1', date: '2026-11-17', items: ['아티팩트 깨진 왕관 추가: 레이드 1단계 - 과녁의 왕 클리어 시 획득 (이미 클리어했다면 바로 지급)'] },
   { v: '2.0', date: '2026-11-17', items: ['💍 아티팩트 추가: 캐릭터에게 장착하는 장비 (제목 아래 아티팩트 버튼)', '찢어진 펜던트 추가: 흉탄의 사수 처치 시 획득'] },
@@ -4271,6 +4278,29 @@ document.getElementById('tutSkip').onclick = () => tutShow(-1);
   if (seen === null && !tutDone) { try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} tutShow(0); return; }
   if (seen !== PATCH_NOTES[0].v) { showPatchNotes(seen); try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} }
 })();
+// ================== 우편함 ==================
+// from ~ to (포함) 기간에 접속하면 한 번 받을 수 있는 우편
+const MAILS = [
+  { id: 'gift-2611', title: '🎁 감사 선물', body: '플레이해 주셔서 감사해요!', coin: 3000, from: '2026-11-17', to: '2026-11-20' },
+];
+if (!save.mail) save.mail = {};
+const mailState = m => save.mail[m.id] ? 'claimed' : dayStr() < m.from ? 'soon' : dayStr() > m.to ? 'expired' : 'open';
+function renderMail() {
+  const list = MAILS.filter(m => mailState(m) !== 'soon' && !(mailState(m) === 'expired'));
+  const n = list.filter(m => mailState(m) === 'open').length;
+  document.getElementById('mailBtn').innerHTML = '📬 우편함' + (n ? ` <b style="color:#ff5a5a">●${n}</b>` : '');
+  const md = d => `${+d.slice(5, 7)}월 ${+d.slice(8, 10)}일`;
+  document.getElementById('mailPanel').innerHTML = list.length ? list.map(m => {
+    const st = mailState(m);
+    return `<div class="mail" style="opacity:${st === 'open' ? 1 : 0.55}"><b style="color:#9fd8ff">${m.title}</b> <span style="color:#8a8aa8">(${md(m.from)} ~ ${md(m.to)})</span><br>${m.body} · 🪙 <b style="color:#ffcc33">${m.coin.toLocaleString()}</b> 코인<button data-mail="${m.id}" ${st === 'open' ? '' : 'disabled'}>${st === 'open' ? '받기' : '받음 ✔'}</button></div>`;
+  }).join('') : '<div style="color:#777">받을 우편이 없어요.</div>';
+}
+document.getElementById('mailBtn').onclick = () => { document.getElementById('mailPanel').classList.toggle('on'); renderMail(); };
+document.getElementById('mailPanel').addEventListener('click', e => {
+  const m = MAILS.find(x => x.id === e.target.dataset.mail); if (!m || mailState(m) !== 'open') return;
+  save.mail[m.id] = true; addCoins(m.coin, `우편: ${m.title}`); renderMail();
+});
+renderMail();
 if (!save.artifacts) save.artifacts = {}; if (!save.equip) save.equip = {};
 if (gunminUnlocked && !save.artifacts.crown) { save.artifacts.crown = true; persist(); } // 이미 레이드를 클리어한 사람에게도 지급
 function renderArtifacts() {
