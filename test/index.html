@@ -48,6 +48,11 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #rankPanel{display:none;border:1px solid #8a6a1a;border-radius:10px;padding:8px;margin-bottom:10px;background:#16120a;font-size:12px;line-height:1.5}
+  #rankPanel.on{display:block}
+  #rankPanel .rk{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #2a2414}
+  #rankPanel .rk.me{background:#2a2210;border-radius:6px}
+  #rankPanel .rk img{width:22px;height:22px;border-radius:50%}
   #mailPanel{display:none;border:1px solid #3a6a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#0a1218;font-size:12px;line-height:1.5}
   #mailPanel.on{display:block}
   #mailPanel .mail{padding:6px 0;border-bottom:1px solid #14242e}
@@ -211,7 +216,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div id="rankPanel"></div>
     <div id="mailPanel"></div>
     <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
@@ -769,10 +775,12 @@ function googleSignedIn(resp) {
       const u = localStorage.getItem('ballfight-unlock-gunmin' + base); if (u !== null) localStorage.setItem('ballfight-unlock-gunmin' + base + '-u' + d.sub, u);
     }
     localStorage.setItem('ballfight-user', JSON.stringify({ sub: d.sub, name: d.name || d.email || '구글 계정', picture: d.picture || '' }));
+    try { sessionStorage.setItem('ballfight-gcred', resp.credential); } catch (e) {} // 랭킹 서버(Firebase) 로그인용
     location.reload();
   } catch (e) { console.error(e); }
 }
 function googleSignOut() {
+  try { if (window.firebase && firebase.apps && firebase.apps.length) firebase.auth().signOut(); } catch (e) {}
   try { localStorage.removeItem('ballfight-user'); if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) {}
   location.reload();
 }
@@ -3159,6 +3167,7 @@ function checkWin() {
       renderDungeon(Math.min(DUNGEON_MAX, fl + 1));
     } else if (dungeonFloor) log(`🏰 던전 ${dungeonFloor}층 도전 실패`, 'kill');
     if (raidMode && !dungeonFloor && w === 0) {
+      if (!save.raidCleared) save.raidCleared = {}; save.raidCleared[`${raidStage}-${raidDiff}`] = true; // 랭킹 점수용 클리어 기록
       // 레이드 클리어 코인 (난이도 배수)
       const d = RAID_DIFF[raidDiff], c = RAID_COIN[raidStage] * d.coin;
       addCoins(c, `레이드 ${raidStage}단계 ${d.name} 클리어`);
@@ -4555,7 +4564,7 @@ const QUESTS = [
 const dayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const save = { coins: 0, lastAttend: '', streak: 0, questDay: '', prog: {}, claimed: {}, stones: {}, upg: {}, owned: { song: true, juwon: true } };
 try { Object.assign(save, JSON.parse(localStorage.getItem('ballfight-save' + SV) || '{}')); } catch (e) {}
-function persist() { try { localStorage.setItem('ballfight-save' + SV, JSON.stringify(save)); } catch (e) {} }
+function persist() { try { localStorage.setItem('ballfight-save' + SV, JSON.stringify(save)); } catch (e) {} try { scheduleRankUpload(); } catch (e) {} }
 function questDayCheck() { if (save.questDay !== dayStr()) { save.questDay = dayStr(); save.prog = {}; save.claimed = {}; persist(); } }
 function addCoins(v, why) {
   save.coins += v; persist(); renderQuests(); if (typeof renderStones === 'function') renderStones();
@@ -4614,6 +4623,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '3.5', date: '2026-11-17', items: ['🏆 랭킹 추가 (구글 로그인한 사람만 · 테스터 제외) · 1등에게 👑 왕 칭호'] },
   { v: '3.4', date: '2026-11-17', items: ['32배속 추가'] },
   { v: '3.3', date: '2026-11-17', items: ['레이드 난이도 추가: 보통 · 하드(클리어 코인 ×10) · 익스트림(클리어 코인 ×50)', '레이드 클리어 코인 추가: 1단계 300 · 2단계 500 (보통 기준)'] },
   { v: '3.2', date: '2026-11-17', items: ['🐺 레이드 2단계: 파멸의 케로베로스 추가 (레이드 1단계 클리어 후 도전 가능)', '새 아티팩트: 안지수의 말라붙은 영혼석 (레이드 2단계 클리어 시 획득)'] },
@@ -4732,6 +4742,81 @@ document.getElementById('artPanel').addEventListener('change', e => {
   persist(); toast(e.target.value ? `💍 ${ARTIFACTS[id].name} → ${CHAR[e.target.value].name} 장착` : `💍 ${ARTIFACTS[id].name} 장착 해제`);
 });
 if (!save.dungeon) save.dungeon = 0;
+if (!save.raidCleared) save.raidCleared = {};
+if (gunminUnlocked) save.raidCleared['1-0'] = true; if (save.raid2) save.raidCleared['2-0'] = true; // 이전 클리어 기록 반영
+// ================== 랭킹 ==================
+// 구글 로그인한 사람만 올라감 (테스터·테스트 서버 제외) · Firebase Firestore에 저장
+// Firebase 콘솔의 웹 앱 설정값을 넣으면 켜짐 (공개돼도 되는 값)
+const FIREBASE_CONFIG = null; // 예: { apiKey: '...', authDomain: '...', projectId: '...', appId: '...' }
+const RAID_PTS = [10, 50, 100];
+function rankScore() {
+  const b = {
+    coin: Math.floor((save.coins || 0) / 100),
+    artifact: Object.keys(save.artifacts || {}).filter(k => save.artifacts[k]).length * 100,
+    dungeon: (save.dungeon || 0) * 10,
+    raid: Object.keys(save.raidCleared || {}).filter(k => save.raidCleared[k]).reduce((a, k) => a + (RAID_PTS[+k.split('-')[1]] || 0), 0),
+    chars: GACHA.filter(k => save.owned && save.owned[k]).length * 10,
+    upg: GACHA.filter(k => save.upg && save.upg[k]).length * 100,
+  };
+  return { total: Object.values(b).reduce((a, v) => a + v, 0), b };
+}
+var rank = { ready: false, uid: null, db: null, list: null, err: '', timer: 0 };
+const rankEligible = () => !!account && !TEST_SERVER && !TESTER && !String(account.sub).startsWith('apple.');
+function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
+async function rankInit() {
+  if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol) || rank.db) return;
+  try {
+    const v = 'https://www.gstatic.com/firebasejs/10.12.2/';
+    await loadScript(v + 'firebase-app-compat.js'); await loadScript(v + 'firebase-auth-compat.js'); await loadScript(v + 'firebase-firestore-compat.js');
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    rank.db = firebase.firestore();
+    const cred = sessionStorage.getItem('ballfight-gcred');
+    if (cred && account) { sessionStorage.removeItem('ballfight-gcred'); try { await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(cred)); } catch (e) { console.error(e); } }
+    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) rankUpload(); renderRank(); });
+  } catch (e) { console.error(e); rank.err = '랭킹 서버에 연결하지 못했어요'; renderRank(); }
+}
+const rankApi = {
+  put: (uid, d) => rank.db.collection('ranking').doc(uid).set(d),
+  del: uid => rank.db.collection('ranking').doc(uid).delete(),
+  top: n => rank.db.collection('ranking').orderBy('score', 'desc').limit(n).get().then(q => q.docs.map(x => ({ id: x.id, ...x.data() }))),
+};
+async function rankUpload() {
+  if (!rank.db || !rank.uid || !account) return;
+  try {
+    if (TESTER) { await rankApi.del(rank.uid); return; } // 테스터는 랭킹에서 제외
+    if (TEST_SERVER) return;
+    const sc = rankScore();
+    await rankApi.put(rank.uid, { name: account.name, picture: account.picture || '', score: sc.total, b: sc.b, t: Date.now() });
+  } catch (e) { console.error(e); }
+}
+function scheduleRankUpload() { if (!rank.uid) return; clearTimeout(rank.timer); rank.timer = setTimeout(rankUpload, 3000); }
+async function rankRefresh() {
+  if (!rank.db) return renderRank();
+  try { await rankUpload(); rank.list = await rankApi.top(50); rank.err = ''; } catch (e) { console.error(e); rank.err = '랭킹을 불러오지 못했어요'; }
+  renderRank();
+}
+function renderRank() {
+  const el = document.getElementById('rankPanel'); if (!el) return;
+  const sc = rankScore(), b = sc.b;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let h = `<div style="margin-bottom:6px">내 점수 <b style="color:#ffcc33;font-size:15px">${sc.total.toLocaleString()}</b>점 <span style="color:#8a8aa8">(코인 ${b.coin} · 아티팩트 ${b.artifact} · 던전 ${b.dungeon} · 레이드 ${b.raid} · 캐릭터 ${b.chars} · 강화 ${b.upg})</span></div>`;
+  if (!account) h += '<div style="color:#aaa">구글로 로그인하면 랭킹에 올라가요.</div>';
+  else if (TEST_SERVER || TESTER) h += '<div style="color:#aaa">🧪 테스터 계정은 랭킹에 올라가지 않아요.</div>';
+  if (!FIREBASE_CONFIG) h += '<div style="color:#aaa;margin-top:4px">랭킹 서버 설정이 아직 안 됐어요.</div>';
+  else if (!/^https?:$/.test(location.protocol)) h += '<div style="color:#aaa;margin-top:4px">랭킹은 웹 주소(GitHub Pages)에서만 볼 수 있어요.</div>';
+  else if (rank.err) h += `<div style="color:#ff8080;margin-top:4px">${rank.err}</div>`;
+  else if (account && rankEligible() && rank.ready && !rank.uid) h += '<div style="color:#ffcc33;margin-top:4px">랭킹에 올리려면 로그아웃 후 구글로 다시 로그인해 주세요.</div>';
+  if (rank.list) {
+    h += rank.list.length ? rank.list.map((r, i) => `<div class="rk${r.id === rank.uid ? ' me' : ''}"><b style="width:26px;text-align:right;color:${i === 0 ? '#ffcc33' : i < 3 ? '#e0e0f0' : '#8a8aa8'}">${i + 1}</b>${r.picture ? `<img src="${esc(r.picture)}" referrerpolicy="no-referrer" alt="">` : ''}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name || '이름 없음')}${i === 0 ? ' <b style="color:#ffcc33">👑 왕</b>' : ''}</span><b style="color:#ffcc33">${(r.score || 0).toLocaleString()}</b></div>`).join('') : '<div style="color:#777">아직 랭킹에 아무도 없어요.</div>';
+    // 랭킹 1등에게 '왕' 칭호
+    const king = rank.list[0] && rank.list[0].id === rank.uid;
+    const an = document.getElementById('accName');
+    if (an && account) an.innerHTML = esc(account.name) + (king ? ' <b style="color:#ffcc33">👑 왕</b>' : '') + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : '');
+  } else if (rank.db) h += '<div style="color:#777;margin-top:4px">불러오는 중…</div>';
+  el.innerHTML = h;
+}
+document.getElementById('rankBtn').onclick = () => { const on = document.getElementById('rankPanel').classList.toggle('on'); renderRank(); if (on) rankRefresh(); };
+if (FIREBASE_CONFIG && account) rankInit().then(rankRefresh);
 renderDungeon();
 if (!save.stones) save.stones = {}; if (!save.upg) save.upg = {};
 // 보유 캐릭터: 송재범·강주원은 기본, 나머지는 뽑기에서 획득 (이전에 영혼석을 모았거나 강화했다면 보유로 처리)
