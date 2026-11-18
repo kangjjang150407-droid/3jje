@@ -1907,8 +1907,18 @@ function progressCast(f, dt) {
 // 스킬 1회 사용 정보 (코카콜라 등에 따라 바뀌는 수치 포함)
 function makeUse(f, key) {
   const S = SKILLS[key];
-  return { f, sk: key, lost: false, base: S.base + (f.qBoost || 0), coinPow: S.coinPow + buffVal(f, 'coinPowUp'), coins: S.coins, ub: !!S.unbreakable,
+  const u = { f, sk: key, lost: false, base: S.base + (f.qBoost || 0), coinPow: S.coinPow + buffVal(f, 'coinPowUp'), coins: S.coins, ub: !!S.unbreakable,
     minus: !!S.minus || (f.type === 'jiho' && up('jiho', f)), clashBonus: 0, pct: 0, notes: [], cola30: false, reuse: 0, ubStart: S.ubIdx ? S.ubIdx[0] : null };
+  // 가능성: 충전을 얻거나 소모하는 스킬 피해량 +10% (반격 포함 모든 스킬 사용에 적용)
+  if (hasArt(f, 'potential')) {
+    if (f.type === 'wooju') { // 강우주 전용: 충전을 얻는 공 · 모든 스킬이 충전 스킬 · 사용 시 충전 3, 횟수 +5
+      f.charge = Math.min(99, f.charge + 3); f.chargeCnt = Math.min(99, (f.chargeCnt || 0) + 5);
+      chargePops.push({ x: f.x - 34, y: f.y - f.r - 12, life: 0.5, max: 0.5 });
+      floatText(f.x - 34, f.y - f.r, '충전 +3', '#7fe0ff', 14, { vy: -30, life: 0.8 });
+    }
+    if (f.type === 'yoru' || f.type === 'wooju' || key === 'gwanmun' || key === 'drift') u.pct += 10;
+  }
+  return u;
 }
 
 // 송재범 - [요루]의 모든 스킬: [사용시] 충전 3 얻음
@@ -1924,11 +1934,7 @@ function onUse(u) {
   const f = u.f;
   gainCharge(f, 3);
   if (f.type === 'kwak' && f.bugBonus) u.pct += 50;
-  // 가능성: 충전을 소모하거나 얻는 스킬 피해량 +10% (강우주: 모든 스킬, 사용 시 충전 3 · 횟수 +5)
-  if (hasArt(f, 'potential')) {
-    if (f.type === 'wooju') { f.charge = Math.min(99, f.charge + 3); f.chargeCnt = Math.min(99, (f.chargeCnt || 0) + 5); }
-    if (f.type === 'yoru' || f.type === 'wooju' || u.sk === 'gwanmun' || u.sk === 'drift') u.pct += 10;
-  } // 벌레 컷으로 대상 사망 시 이번 전투 동안 피해량 +50%
+  // 벌레 컷으로 대상 사망 시 이번 전투 동안 피해량 +50%
   if (f.type === 'doyun' && up('doyun', f) && SKILLS[u.sk].link) u.pct += 10;                          // 강화: 연 스킬 피해량 +10%
   if (f.type === 'sunwoo' && up('sunwoo', f) && (SKILLS[u.sk].link || SKILLS[u.sk].coinLink)) u.pct += 50; // 강화: 연 스킬 피해량 +50%
   // 새벽맞이: 화상 위력·화상 횟수·특수 화상을 부여하는 기본 스킬 → 피해량 +10% (진동도 부여하면 +15% 추가), 합 위력 +1
@@ -4740,6 +4746,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '4.1', date: '2026-11-18', items: ['가능성: 강우주의 반격(낙인)도 충전 스킬로 취급 (충전 3 · 횟수 +5 · 피해량 +10%)', '강우주의 충전이 쌓일 때 표시'] },
   { v: '4.0', date: '2026-11-18', items: ['🌑 레이드 3단계: 강우주 - 암흑진화 추가 (레이드 2단계 클리어 후 · 5반만 편성 · 강우주 편성 불가)', '새 아티팩트: 가능성 (레이드 3단계 클리어 시 획득)', '도발치 변경: 적에게 지정될 확률이 수치(%)만큼 증가'] },
   { v: '3.9', date: '2026-11-17', items: ['테스터 계정도 PVP 방어 팀을 등록할 수 있음 (목록에 🧪 테스터 표시)'] },
   { v: '3.8', date: '2026-11-17', items: ['💬 채팅 추가 (구글 로그인한 사람만 보낼 수 있음)', '⚔ PVP 추가: 내 레드 팀을 방어 팀으로 등록하고, 다른 사람의 방어 팀(강화·아티팩트 포함)에 도전 · 승리 시 100 코인'] },
