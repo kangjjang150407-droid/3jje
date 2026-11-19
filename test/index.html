@@ -929,7 +929,56 @@ const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; const o = 
 const counterOf = f => f.type === 'kwak' ? (up('kwak', f) ? 'getout' : null) : CHAR[f.type].counter;
 const bbSum = t => (t.bleed ? t.bleed.pot : 0) + burnPot(t); // 출혈 + 화상 위력 합
 const isSong = f => f.type === 'song' || f.type === 'yoru';
+// 과거의 강주원 연출: 타임머신 시계 (kind 'release' 노란 글리치 / 'rewind' 시간 되돌리기)
+var timeFx = [];
+function drawClock(x, y, R, t, color, alpha, dir) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.shadowColor = color; ctx.shadowBlur = 18;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, R * 0.82, 0, TAU); ctx.stroke();
+  for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + dir * t * 0.6; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * 0.86, y + Math.sin(a) * R * 0.86); ctx.lineTo(x + Math.cos(a) * R * (k % 3 ? 0.95 : 1.05), y + Math.sin(a) * R * (k % 3 ? 0.95 : 1.05)); ctx.stroke(); }
+  const h = dir * t * 3, m = dir * t * 14;
+  ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(h - 1.57) * R * 0.45, y + Math.sin(h - 1.57) * R * 0.45); ctx.stroke();
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(m - 1.57) * R * 0.72, y + Math.sin(m - 1.57) * R * 0.72); ctx.stroke();
+  ctx.restore();
+}
+function drawTimeFx() {
+  for (const e of timeFx) {
+    const k = e.life / e.max, p = 1 - k, f = e.f, x = f ? f.x : e.x, y = f ? f.y : e.y;
+    if (e.kind === 'release') {
+      // 타임머신이 돌아가듯 노란 글리치
+      drawClock(x, y, e.r * (1 + p * 0.6), p * 6, '#ffe14d', k, 1);
+      drawClock(x + rand(-6, 6), y, e.r * 1.35 * (1 + p * 0.4), p * 9, '#fff8b0', k * 0.5, -1);
+      ctx.save(); ctx.globalAlpha = k * 0.85;
+      for (let i = 0; i < 6; i++) { const yy = y + rand(-e.r * 1.6, e.r * 1.6), w = rand(e.r * 1.2, e.r * 3.4); ctx.fillStyle = Math.random() < 0.6 ? '#ffe14d' : (Math.random() < 0.5 ? 'rgba(0,255,255,0.7)' : 'rgba(255,0,120,0.7)'); ctx.fillRect(x - w / 2 + rand(-20, 20), yy, w, rand(2, 7)); }
+      ctx.restore();
+    } else if (e.kind === 'rewind') {
+      // 시간을 되돌리는 시계 (반시계 방향으로 빠르게)
+      drawClock(x, y, 150 + Math.sin(p * 12) * 6, p * 20, '#9ff0ff', Math.min(1, k * 3), -1);
+      drawClock(x, y, 220, p * 9, '#ff6a9a', Math.min(1, k * 3) * 0.5, -1);
+    }
+  }
+}
 // 과거의 강주원: 턴마다 레벨 · 방어 레벨 · 공격 레벨 무작위
+function pjReleaseFx(f) {
+  timeFx.push({ f, r: f.r * 1.6, life: 1.4, max: 1.4, kind: 'release' });
+  doFlash('#ffe14d', 0.3); shake = Math.max(shake, 14);
+  for (let k = 0; k < 40; k++) { const a = Math.random() * TAU, sp = rand(200, 600); particles.push({ x: f.x, y: f.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6, max: 0.6, size: rand(3, 7), color: Math.random() < 0.7 ? '#ffe14d' : '#ffffff', drag: 0.92, g: 0, kind: 'spark', rot: 0 }); }
+  floatText(f.x, f.y - f.r - 60, '⏩ 시간 재가동', '#ffe14d', 22, { life: 1.3 });
+}
+// 부활 연출: 쓰러진 뒤 시간을 되돌려 다시 돌아옴
+function rewindStep(f, dt) {
+  const left = f.rewindUntil - simTime, total = 2.6, p = Math.min(1, 1 - left / total);
+  f.dispHp = f.lagHp = f.maxHp * p; // 체력바가 거꾸로 차오름
+  if (Math.random() < dt * 60 * 3) { const a = Math.random() * TAU, d = rand(150, 320), sp = d / 0.45; particles.push({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d, vx: -Math.cos(a) * sp, vy: -Math.sin(a) * sp, life: 0.45, max: 0.45, size: rand(4, 9), color: ['#ff2a6a', '#00ffff', '#ffe14d', '#ffffff'][(Math.random() * 4) | 0], drag: 1, g: 0, kind: 'glow', rot: 0 }); }
+  if (left <= 0) {
+    f.rewindUntil = 0; f.hp = f.maxHp; f.dispHp = f.lagHp = f.maxHp; f.cd = 0.8;
+    showBig('불완전한 시간 구현', '#ff6a9a', 2.0); doFlash('#ffffff', 0.8); shake = Math.max(shake, 28);
+    for (let k = 0; k < 5; k++) ring(f.x, f.y, k % 2 ? '#00ffff' : '#ff2a6a', 140 + k * 130, 0.7 + k * 0.2, 14);
+    burst(f.x, f.y, '#ffffff', 80, 800, 12, 0.9, { kind: 'spark' });
+    floatText(f.x, f.y - f.r - 60, '⏪ 되돌아옴', '#9ff0ff', 26, { life: 1.6 });
+    log(`⏪ ${nm(f)} 시간을 되돌려 다시 돌아옴 — 체력 최대 회복`, 'kill');
+  }
+}
 function pjGlitch(f) {
   const L = [30, 60, 80, 100], D = [40, 80, 100, 190];
   f.level = L[(Math.random() * 4) | 0]; f.glDef = D[(Math.random() * 4) | 0]; f.glIdx = (Math.random() * 4) | 0;
@@ -1770,6 +1819,7 @@ function bleedCount(t, d) {
 // ================== 데미지 / 사망 ==================
 function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (!t.alive) return 0;
+  if (t.rewindUntil > simTime) return 0; // 시간을 되돌리는 중에는 피해를 받지 않음
   // 절망의 기사: 화상·출혈·진동·파열·침잠으로 받는 피해량 -50% (소수점 버림)
   if (t.type === 'despair' && /화상|출혈|진동|파열|침잠/.test(srcName || '')) amount = Math.floor(amount * 0.5);
   let mult = kind === 'true' ? 1 : (t.stagger > 0 ? 2 : CHAR[t.type].resist[kind]);
@@ -1836,12 +1886,17 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   if (t.indomUntil > simTime && t.hp < 1) t.hp = 1;
   // 과거의 강주원 패시브 불완전한 시간 구현: 체력 0이 되는 피해를 받지 않고 체력 최대 회복, 부정적인 효과 해제 (전투당 1회)
   if (t.type === 'pastjuwon' && !t.timeUsed && t.hp <= 0) {
-    t.timeUsed = true; t.hp = t.maxHp;
+    t.timeUsed = true; t.hp = 1; t.stagger = 0; t.cast = null;
     for (const k of ['burn', 'bleed', 'rupture', 'sinking', 'tremor', 'tremorOB', 'tremorBase', 'tremorScorch']) t[k] = null;
     t.blackTear = 0; t.useless = false;
-    showBig('불완전한 시간 구현', '#ff6a9a', 2.0); doFlash('#ffffff', 0.7); darkenT = 1.2; shake = Math.max(shake, 26);
-    for (let k = 0; k < 4; k++) ring(t.x, t.y, k % 2 ? '#00ffff' : '#ff2a6a', 160 + k * 140, 0.8 + k * 0.2, 12);
-    log(`⏪ ${nm(t)} 패시브 <b style="color:#ff6a9a">불완전한 시간 구현</b>: 피해를 받지 않고 체력 최대 회복 · 부정적인 효과 해제`, 'kill');
+    // 먼저 쓰러지는 연출 → 시간을 되돌려 다시 돌아옴
+    burst(t.x, t.y, t.color, 110, 750, 22, 1.4, { drag: 0.93 }); burst(t.x, t.y, '#333344', 25, 160, 46, 2.2, { kind: 'smoke', drag: 0.96, g: -25 });
+    ring(t.x, t.y, '#ffffff', 260, 0.6, 14); floatText(t.x, t.y - 10, 'K.O.', '#ffffff', 54, { vy: -40, life: 1.0 });
+    doFlash('#ffffff', 0.6); shake = Math.max(shake, 24); slowmo = 1.0; darkenT = 2.6;
+    t.rewindUntil = simTime + 2.6; t.dispHp = t.lagHp = 0;
+    timeFx.push({ f: t, r: 150, life: 2.6, max: 2.6, kind: 'rewind' });
+    setTimeout(() => { if (t.rewindUntil) showBig('⏪ REWIND', '#9ff0ff', 1.4); }, 900);
+    log(`☠ ${nm(t)} 쓰러짐… ⏪ 패시브 <b style="color:#ff6a9a">불완전한 시간 구현</b>: 시간을 되돌림 · 부정적인 효과 해제`, 'kill');
     return 0;
   }
   // 유환 패시브 버텨냄: 체력이 10 미만으로 내려가는 피해를 받으면 피해를 받지 않고 다음 턴 체력 10% 회복 (전투당 1회)
@@ -3162,6 +3217,7 @@ function marksmanSign(f) {
   log(`🔴 ${nm(f)} → ${nm(c)} <b style="color:#ff4a2a">징표</b> 부여 (체력이 가장 낮은 대상)`);
 }
 function unitAI(f, dt) {
+  if (f.rewindUntil > simTime) { f.cast = null; return; } // 시간을 되돌리는 중
   if (uguLow(f)) { f.cast = null; if (!f.uguLog) { f.uguLog = true; floatText(f.x, f.y - f.r - 46, '나를 우구라 불러주어서 고마워', '#c8a0ff', 20, { life: 2 }); log(`${nm(f)} 패시브 <b style="color:#c8a0ff">나를 우구라 불러주어서 고마워</b>: 행동하지 않음 · 받는 피해량 +100% · 공격·방어 레벨 -50`, 'kill'); } return; }
   if (f.type === 'queen' && f.chant > 0 && f.chant < 3 && f.ready !== 'qGuard') { f.ready = 'qGuard'; f.ready2 = null; } // 영창 중에는 수비 스킬만 사용 가능
   if (f.type === 'marksman' && !f.msPhase2 && f.alive && f.hp <= f.maxHp * 0.75) marksmanPattern(f);
@@ -3286,7 +3342,7 @@ function updateFighter(f, dt) {
   if (f.shield && f.shield.until <= simTime) f.shield = null;
   if (f.stagger > 0) {
     f.stagger -= dt;
-    if (f.stagger <= 0) { f.stagger = 0; f.cd = Math.min(f.cd, 1); floatText(f.x, f.y - f.r - 40, '흐트러짐 회복', '#fff3a0', 20); log(`${nm(f)} 흐트러짐 회복`); }
+    if (f.stagger <= 0) { f.stagger = 0; f.cd = Math.min(f.cd, 1); floatText(f.x, f.y - f.r - 40, '흐트러짐 회복', '#fff3a0', 20); log(`${nm(f)} 흐트러짐 회복`); if (f.type === 'pastjuwon') pjReleaseFx(f); }
     else { if (f.leaving && !f.busy) leaveField(f); return; }
   }
   if (f.panic > 0) {
@@ -3409,6 +3465,8 @@ function update(dt) {
     if (t.life <= 0) texts.splice(i, 1);
   }
   if (bigText) { bigText.life -= dt; if (bigText.life <= 0) bigText = null; }
+  for (const e of timeFx) e.life -= dt; timeFx = timeFx.filter(e => e.life > 0);
+  for (const f of fighters) if (f.rewindUntil) rewindStep(f, dt);
   darkenT -= dt;
   flushLog();
 }
@@ -3759,6 +3817,7 @@ function drawFighter(f) {
   if (pimg) {
     if (pimg.complete && pimg.naturalWidth) {
       if (f.type === 'pastjuwon') {
+        if (f.rewindUntil > simTime) { const pr = 1 - (f.rewindUntil - simTime) / 2.6; ctx.globalAlpha *= 0.15 + pr * 0.85; ctx.filter = pr < 0.9 ? 'grayscale(1) contrast(1.4)' : 'none'; }
         // 글리치 효과: 색 분리 + 가로로 찢어지는 조각
         const jx = Math.random() < 0.15 ? rand(-8, 8) : 0;
         ctx.drawImage(pimg, x - r + jx, y - r, r * 2, r * 2);
@@ -3768,6 +3827,7 @@ function drawFighter(f) {
         const n = Math.random() < 0.35 ? 1 + ((Math.random() * 3) | 0) : 0, iw = pimg.naturalWidth, ih = pimg.naturalHeight;
         for (let k = 0; k < n; k++) { const sy = Math.random(), sh = rand(0.04, 0.14), dx = rand(-14, 14); ctx.drawImage(pimg, 0, sy * ih, iw, sh * ih, x - r + dx, y - r + sy * r * 2, r * 2, sh * r * 2); }
         if (Math.random() < 0.2) { ctx.fillStyle = Math.random() < 0.5 ? 'rgba(0,255,255,0.25)' : 'rgba(255,0,120,0.25)'; ctx.fillRect(x - r, y - r + Math.random() * r * 2, r * 2, rand(2, 8)); }
+        ctx.filter = 'none';
       } else ctx.drawImage(pimg, x - r, y - r, r * 2, r * 2);
     }
     else { ctx.fillStyle = f.color; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
@@ -4164,6 +4224,7 @@ function render() {
   drawRings();
   drawTrails();
   for (const f of fighters) if (f.alive && !f.away) drawFighter(f);
+  drawTimeFx();
   drawBeams();
   drawProjectiles();
   drawParticles();
@@ -4946,6 +5007,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.3', date: '2026-11-19', items: ['과거의 강주원 흐트러짐 해제 연출: 타임머신이 돌아가듯 노란 글리치', '과거의 강주원 부활 연출: 쓰러진 뒤 시간을 되돌려 다시 돌아옴'] },
   { v: '5.2', date: '2026-11-19', items: ['과거의 강주원: 호흡 획득량 3배 (코인마다 1 → 3, 담배연기 2 → 6, 일방 공격 5 → 15)'] },
   { v: '5.1', date: '2026-11-19', items: ['과거의 강주원: 침대를 부수던 그날의 호흡 소모 기준 20 → 99', '과거의 강주원: 호흡 횟수가 0이 돼도 호흡 위력이 사라지지 않음 (호흡 99를 모아 슈뻘맨펀치를 쓸 수 있게)'] },
   { v: '5.0', date: '2026-11-19', items: ['과거의 강주원: 모든게다모였다초울트라슈뻘맨펀치는 호흡 99일 때만 사용'] },
