@@ -393,7 +393,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>눈물을 글썽이며</b> 코인 2 · 공격 70 · 4 / +5 · 대상이 화상이면 피해량 +10% · 1코인 화상 4 · 2코인 대상 화상만큼 침잠<br>
       <b>터진 분노와 울음</b> 파괴불가 1 · 공격 80 · 35 / +55 · 대상 화상만큼 최종 위력 + · 정신력 × 10 피해량 % · [공격 종료시] 이번 턴 종료 · 울음 10 부여<br>
       <b>울음</b> 최댓값 99 · 수치당 화상으로 받는 피해량 1% 증가<br><br>
-      <b style="color:#ff6a9a;font-size:12px">레이드 4단계 — 과거의 강주원</b> (체력 10000 · 내성 전부 1.3배 절감 · 흐트러짐 80% / 60% / 30% · 턴마다 레벨 30·60·80·100, 방어 레벨 40·80·100·190, 공격 레벨 40·80·100·190 (펀치 60·100·190·220) 무작위)<br>
+      <b style="color:#ff6a9a;font-size:12px">레이드 4단계 — 과거의 강주원</b> (강주원 편성 불가 · 체력 10000 · 내성 전부 1.3배 절감 · 흐트러짐 80% / 60% / 30% · 턴마다 레벨 30·60·80·100, 방어 레벨 40·80·100·190, 공격 레벨 40·80·100·190 (펀치 60·100·190·220) 무작위)<br>
       <b>도리수니백앤아말량홍차</b> 마법 · 코인 2 · 7 / +3 · 코인마다 호흡 1 · <b>프나펑가셀로애니레츠고</b> 마법 · 코인 3 · 7 / +2 · 코인마다 호흡 1<br>
       <b>가셀로의담배연기</b> 마법 · 코인 1 (파괴불가) · 10 / +6 · 가중치 3 · 일방 공격 시 호흡 5 · 합 패배 시 가중치 -2 · 크리티컬 피해량 +30% · 호흡 2 · 출혈 4 · 파괴되지 않고 적중 시 체력 10% 소모해 피해량 +25%<br>
       <b>애니의음료수벌컥벌컥</b> 마법 · 코인 2 · 9 / +5 · 수비 스킬 발동 안 함 · 체력 비율이 가장 낮은 대상 · 1코인 잃은 체력 1%당 출혈 1 · 2코인 출혈 모두 소모해 최대 체력의 (출혈)% 마법 피해<br>
@@ -4779,8 +4779,10 @@ document.getElementById('raid2Btn').onclick = () => {
 document.getElementById('raid4Btn').onclick = () => {
   let done3 = false; try { done3 = !!save.raid3; } catch (e) {}
   if (!done3 && !PERK) { toast('레이드 3단계(강우주 - 암흑진화)를 먼저 클리어해 주세요.'); return; }
-  const team = roster.filter(r => r.team === 0 && r.type !== 'dummy');
-  if (!team.length) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
+  // 강주원 편성 불가
+  if (roster.some(r => r.team === 0 && r.type === 'juwon')) toast('레이드 4단계에는 강주원을 편성할 수 없어요 — 빼고 시작할게요');
+  const team = roster.filter(r => r.team === 0 && r.type !== 'dummy' && r.type !== 'juwon');
+  if (!team.length) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요 (강주원 · 과녁 제외)'); return; }
   roster = team.concat([{ type: 'pastjuwon', team: 1 }]);
   pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 4; renderRoster(); setTestLock(true); start(); applyRaidDiff(); questEvent('raidTry');
   const b = fighters.find(f => f.type === 'pastjuwon'); if (b) pjGlitch(b);
@@ -4804,7 +4806,7 @@ document.getElementById('raid3Btn').onclick = () => {
 function updateRaidInfo() {
   { let d2 = false, d3 = false; try { d2 = !!save.raid2; d3 = !!save.raid3; } catch (e) {}
     let d4 = false; try { d4 = !!save.raid4; } catch (e) {}
-    const r4 = document.getElementById('raid4Info'); if (r4) r4.innerHTML = d4 ? '과거의 강주원에 도전 · <b style="color:#ff9a6a">보상 획득함</b> (아티팩트 날이 무뎌진 레이지블레이드)' : (d3 || PERK) ? '과거의 강주원에 도전 · 승리 시 아티팩트 날이 무뎌진 레이지블레이드' : '🔒 레이드 3단계를 클리어하면 열려요';
+    const r4 = document.getElementById('raid4Info'); if (r4) r4.innerHTML = d4 ? '강주원 편성 불가 · <b style="color:#ff9a6a">보상 획득함</b> (아티팩트 날이 무뎌진 레이지블레이드)' : (d3 || PERK) ? '강주원 편성 불가 · 승리 시 아티팩트 날이 무뎌진 레이지블레이드' : '🔒 레이드 3단계를 클리어하면 열려요';
     const r3 = document.getElementById('raid3Info'); if (r3) r3.innerHTML = d3 ? '5반만 편성 (강우주 불가) · <b style="color:#b8a0ff">보상 획득함</b> (아티팩트 가능성)' : (d2 || PERK) ? '5반만 편성 (강우주 · 과녁 불가) · 승리 시 아티팩트 가능성' : '🔒 레이드 2단계를 클리어하면 열려요'; }
   let done2 = false; try { done2 = !!save.raid2; } catch (e) {} // save가 아직 준비되지 않았을 수 있음
   const r2 = document.getElementById('raid2Info'); if (r2) r2.innerHTML = done2 ? '파멸의 케로베로스에 도전 · <b style="color:#ff9ac8">보상 획득함</b> (아티팩트 안지수의 말라붙은 영혼석)' : (gunminUnlocked || PERK) ? '파멸의 케로베로스에 도전 · 승리 시 아티팩트 안지수의 말라붙은 영혼석' : '🔒 레이드 1단계를 클리어하면 열려요'; document.getElementById('raidInfo').innerHTML = gunminUnlocked ? '레드 팀이 과녁의 왕 + 과녁 8개에 도전 · <b style="color:#ffcc33">보상 해금됨</b> (이건민: 수호자·아지랑이 · 아티팩트 깨진 왕관)' : '레드 팀이 과녁의 왕 + 과녁 8개에 도전 · 승리 시 이건민 스킬 수호자·아지랑이 해금 + 아티팩트 깨진 왕관'; }
@@ -4939,6 +4941,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '4.8', date: '2026-11-19', items: ['레이드 4단계는 강주원 편성 불가'] },
   { v: '4.7', date: '2026-11-19', items: ['📼 레이드 4단계: 과거의 강주원 추가 (레이드 3단계 클리어 후)', '새 아티팩트: 날이 무뎌진 레이지블레이드 (강주원 전용 효과)'] },
   { v: '4.6', date: '2026-11-19', items: ['🎉 유환 - 픽업 뽑기 (11.19 ~ 11.27): 유환 등장 확률 20%', '유환 강화 효과: 흐트러짐 선 제거'] },
   { v: '4.5', date: '2026-11-19', items: ['신규 캐릭터 유환 추가 (4반 · 뽑기에서 획득)', '레이드 3단계는 5반만 편성 가능 (유환 불가)'] },
