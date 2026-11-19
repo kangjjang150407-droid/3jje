@@ -229,7 +229,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="chatPanel"><div id="chatList"></div><div style="display:flex;gap:6px"><input id="chatInput" maxlength="200" placeholder="메시지 입력 (최대 200자)"><button id="chatSend">보내기</button></div><div id="chatNote" style="color:#8a8aa8;margin-top:4px"></div></div>
     <div id="pvpPanel"></div>
     <div id="mailPanel"></div>
-    <div id="couponBox" style="display:none;gap:6px;margin:-4px 0 10px"><input id="couponInput" maxlength="20" placeholder="🎟 쿠폰 코드 입력" style="flex:1;min-width:0;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px;text-transform:uppercase"><button id="couponUse">사용</button></div>
+    <div id="couponBox" style="display:none;gap:6px;margin:-4px 0 10px"><input id="couponInput" maxlength="20" placeholder="🎟 쿠폰 코드 입력" style="flex:1;min-width:0;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px"><button id="couponUse">사용</button></div>
     <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
@@ -4747,6 +4747,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '4.3', date: '2026-11-19', items: ['쿠폰 코드가 대소문자를 구분함'] },
   { v: '4.2', date: '2026-11-19', items: ['🎟 쿠폰 코드 입력 추가 (우편함을 열면 아래에 입력칸)'] },
   { v: '4.1', date: '2026-11-18', items: ['가능성: 강우주의 반격(낙인)도 충전 스킬로 취급 (충전 3 · 횟수 +5 · 피해량 +10%)', '강우주의 충전이 쌓일 때 표시'] },
   { v: '4.0', date: '2026-11-18', items: ['🌑 레이드 3단계: 강우주 - 암흑진화 추가 (레이드 2단계 클리어 후 · 5반만 편성 · 강우주 편성 불가)', '새 아티팩트: 가능성 (레이드 3단계 클리어 시 획득)', '도발치 변경: 적에게 지정될 확률이 수치(%)만큼 증가'] },
@@ -4853,13 +4854,13 @@ function renderMail() {
 }
 document.getElementById('mailBtn').onclick = () => { const on = document.getElementById('mailPanel').classList.toggle('on'); document.getElementById('couponBox').style.display = on ? 'flex' : 'none'; renderMail(); };
 // ================== 쿠폰 ==================
-// 코드는 대소문자 구분 없음 · 기간(from ~ to, 포함) 안에 계정(저장 데이터)당 한 번
+// 코드는 대소문자 구분 · 기간(from ~ to, 포함) 안에 계정(저장 데이터)당 한 번
 const COUPONS = [
   { code: 'MEMB', coin: 1000, from: '2026-11-19', to: '2026-11-23' },
 ];
 if (!save.coupons) save.coupons = {};
 function useCoupon() {
-  const inp = document.getElementById('couponInput'), code = inp.value.trim().toUpperCase();
+  const inp = document.getElementById('couponInput'), code = inp.value.trim(); // 대소문자 구분
   if (!code) return;
   const c = COUPONS.find(x => x.code === code), d = dayStr();
   if (!c) return toast('🎟 없는 쿠폰 코드예요');
