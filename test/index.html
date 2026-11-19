@@ -229,6 +229,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="chatPanel"><div id="chatList"></div><div style="display:flex;gap:6px"><input id="chatInput" maxlength="200" placeholder="메시지 입력 (최대 200자)"><button id="chatSend">보내기</button></div><div id="chatNote" style="color:#8a8aa8;margin-top:4px"></div></div>
     <div id="pvpPanel"></div>
     <div id="mailPanel"></div>
+    <div id="couponBox" style="display:none;gap:6px;margin:-4px 0 10px"><input id="couponInput" maxlength="20" placeholder="🎟 쿠폰 코드 입력" style="flex:1;min-width:0;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px;text-transform:uppercase"><button id="couponUse">사용</button></div>
     <div id="artPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
@@ -4746,6 +4747,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '4.2', date: '2026-11-19', items: ['🎟 쿠폰 코드 입력 추가 (우편함을 열면 아래에 입력칸)'] },
   { v: '4.1', date: '2026-11-18', items: ['가능성: 강우주의 반격(낙인)도 충전 스킬로 취급 (충전 3 · 횟수 +5 · 피해량 +10%)', '강우주의 충전이 쌓일 때 표시'] },
   { v: '4.0', date: '2026-11-18', items: ['🌑 레이드 3단계: 강우주 - 암흑진화 추가 (레이드 2단계 클리어 후 · 5반만 편성 · 강우주 편성 불가)', '새 아티팩트: 가능성 (레이드 3단계 클리어 시 획득)', '도발치 변경: 적에게 지정될 확률이 수치(%)만큼 증가'] },
   { v: '3.9', date: '2026-11-17', items: ['테스터 계정도 PVP 방어 팀을 등록할 수 있음 (목록에 🧪 테스터 표시)'] },
@@ -4849,7 +4851,29 @@ function renderMail() {
     return `<div class="mail" style="opacity:${st === 'open' ? 1 : 0.55}"><b style="color:#9fd8ff">${m.title}</b> <span style="color:#8a8aa8">(${md(m.from)} ~ ${md(m.to)})</span><br>${m.body} · 🪙 <b style="color:#ffcc33">${m.coin.toLocaleString()}</b> 코인<button data-mail="${m.id}" ${st === 'open' ? '' : 'disabled'}>${st === 'open' ? '받기' : '받음 ✔'}</button></div>`;
   }).join('') : '<div style="color:#777">받을 우편이 없어요.</div>';
 }
-document.getElementById('mailBtn').onclick = () => { document.getElementById('mailPanel').classList.toggle('on'); renderMail(); };
+document.getElementById('mailBtn').onclick = () => { const on = document.getElementById('mailPanel').classList.toggle('on'); document.getElementById('couponBox').style.display = on ? 'flex' : 'none'; renderMail(); };
+// ================== 쿠폰 ==================
+// 코드는 대소문자 구분 없음 · 기간(from ~ to, 포함) 안에 계정(저장 데이터)당 한 번
+const COUPONS = [
+  { code: 'MEMB', coin: 1000, from: '2026-11-19', to: '2026-11-23' },
+];
+if (!save.coupons) save.coupons = {};
+function useCoupon() {
+  const inp = document.getElementById('couponInput'), code = inp.value.trim().toUpperCase();
+  if (!code) return;
+  const c = COUPONS.find(x => x.code === code), d = dayStr();
+  if (!c) return toast('🎟 없는 쿠폰 코드예요');
+  if (d < c.from) return toast(`🎟 아직 사용할 수 없는 쿠폰이에요 (${+c.from.slice(5, 7)}월 ${+c.from.slice(8, 10)}일부터)`);
+  if (d > c.to) return toast('🎟 기간이 지난 쿠폰이에요');
+  if (save.coupons[code]) return toast('🎟 이미 사용한 쿠폰이에요');
+  // 쿠폰 코인은 이번 주 랭킹 점수에 넣지 않음
+  let before = 0; try { before = rankScore().total; } catch (e) {}
+  save.coupons[code] = true; addCoins(c.coin, `쿠폰 ${code}`);
+  try { if (save.rankBase && save.rankBase.week === weekStr()) { save.rankBase.total += rankScore().total - before; persist(); } } catch (e) {}
+  inp.value = '';
+}
+document.getElementById('couponUse').onclick = useCoupon;
+document.getElementById('couponInput').addEventListener('keydown', e => { if (e.key === 'Enter') useCoupon(); });
 document.getElementById('mailPanel').addEventListener('click', e => {
   const m = allMails().find(x => x.id === e.target.dataset.mail); if (!m || mailState(m) !== 'open') return;
   // 우편으로 받은 코인은 이번 주 랭킹 점수에 넣지 않음
