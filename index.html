@@ -397,7 +397,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>가셀로의담배연기</b> 마법 · 코인 1 (파괴불가) · 10 / +6 · 가중치 3 · 일방 공격 시 호흡 5 · 합 패배 시 가중치 -2 · 크리티컬 피해량 +30% · 호흡 2 · 출혈 4 · 파괴되지 않고 적중 시 체력 10% 소모해 피해량 +25%<br>
       <b>애니의음료수벌컥벌컥</b> 마법 · 코인 2 · 9 / +5 · 수비 스킬 발동 안 함 · 체력 비율이 가장 낮은 대상 · 1코인 잃은 체력 1%당 출혈 1 · 2코인 출혈 모두 소모해 최대 체력의 (출혈)% 마법 피해<br>
       <b>모든게다모였다초울트라슈뻘맨펀치</b> 마법 · 코인 1 (파괴불가) · 14 / +10 · 호흡 99일 때만 사용 · 스킬이 끝날 때까지 흐트러지지 않음 · 정신력 20 이상이면 호흡 모두 소모, 30당 최종 위력 +10 (끝나면 30당 정신력 -10) · 합 승리 시 이번 전투 마법 피해량 +10% · 합 패배 시 피해량 -80%, 흐트러뜨리지 않음 · 크리티컬 피해량 +100% · 출혈 모두 소모해 최대 체력의 (출혈)% 체력 피해<br>
-      <b>패시브 불완전한 시간 구현</b> 체력이 0이 되는 피해를 받지 않고 체력 최대 회복, 부정적인 효과 해제 (전투당 1회) · <b>침대를 부수던 그날</b> 공격 종료 시 크리티컬 코인 × 10 마법 피해 (흐트러뜨리지 않음), 20을 초과하는 호흡을 소모해 그만큼 출혈<br><br>
+      <b>패시브 불완전한 시간 구현</b> 체력이 0이 되는 피해를 받지 않고 체력 최대 회복, 부정적인 효과 해제 (전투당 1회) · <b>침대를 부수던 그날</b> 공격 종료 시 크리티컬 코인 × 10 마법 피해 (흐트러뜨리지 않음), 99를 초과하는 호흡을 소모해 그만큼 출혈 · 호흡 횟수가 0이 돼도 위력은 남음<br><br>
       <b style="color:#8a5aff;font-size:12px">레이드 3단계 — 강우주 - 암흑진화</b> (5반만 편성 · 강우주 편성 불가 · LV.85 · 체력 4375 · 방어 레벨 90 · 물리 2배 절감 · 마법 1.2배)<br>
       <b>니 애비 차에 치여 뒤짐</b> 마법 · 코인 4 · 공격 100 · 10 / +5 · 강주원에게만 사용 · 강주원 피해량 +100% · 도발치 +10 · 1코인 대상 진동+횟수만큼 고정 피해 · 2코인 진동 3 · 3코인 진동 8 · 4코인 진동 횟수 9<br>
       <b>연</b> 마법 · 코인 1 (파괴불가) · 공격 85 · 100 / +100 · 이건민 우선 · 이건민이 아니면 피해량 +1000% · 이건민이면 적중하지 않고 합 위력 -200, 이건민 이번 전투 합 위력 +5 · 흐트러짐 피해 100<br>
@@ -1664,7 +1664,7 @@ const stackSum = b => b ? b.pot + b.cnt : 0;
 function rollCrit(f) {
   const p = f.poise; if (!p || p.cnt <= 0) return false;
   if (Math.random() >= Math.min(1, p.pot * 0.05)) return false;
-  p.cnt--; if (p.cnt <= 0) f.poise = null;
+  p.cnt--; if (p.cnt <= 0 && f.type !== 'pastjuwon') f.poise = null; // 과거의 강주원: 횟수가 0이 돼도 호흡 위력은 남음 (호흡 99를 모으기 위해)
   return true;
 }
 // 침잠: 피격 시 위력만큼 정신력 감소 (정신력이 없으면 고정 피해), 횟수 -1
@@ -2618,7 +2618,7 @@ function stepEngagement(e) {
     if (u.f.type === 'pastjuwon' && u.f.alive) {
       // 침대를 부수던 그날: 크리티컬로 적중한 코인 × 10 마법 피해 (흐트러지지 않음) · 20을 초과하는 호흡을 소모해 출혈
       if (u.pjCrit && u.pjHit) for (const tg of u.pjHit) if (tg.alive) { tg.noStagger = true; dealDamage(u.f, tg, u.pjCrit * 10, 'magic', '침대를 부수던 그날', `크리티컬 코인 ${u.pjCrit} × 10 → `); tg.noStagger = false; }
-      if (u.f.poise && u.f.poise.pot > 20 && q.tgt.alive) { const ex = u.f.poise.pot - 20; u.f.poise.pot = 20; addStack(q.tgt, 'bleed', ex, 0, '출혈', '#ff4060'); log(`${nm(u.f)} 침대를 부수던 그날: 호흡 ${ex} 소모 → ${nm(q.tgt)} 출혈 ${ex}`); }
+      if (u.f.poise && u.f.poise.pot > 99 && q.tgt.alive) { const ex = u.f.poise.pot - 99; u.f.poise.pot = 99; addStack(q.tgt, 'bleed', ex, 0, '출혈', '#ff4060'); log(`${nm(u.f)} 침대를 부수던 그날: 호흡 ${ex} 소모 → ${nm(q.tgt)} 출혈 ${ex}`); }
       if (u.sk === 'pjPunch') { if (u.pjPoise >= 30) changeSp(u.f, -Math.floor(u.pjPoise / 30) * 10, '슈뻘맨펀치'); u.f.noStaggerSkill = false; checkStagger(u.f); }
     }
     if (u.sk === 'yeah' && u.yhCrit && u.f.alive && !u.f.gambleUsed) { // 크리티컬 적중 시 공격 종료 후 도박수 (전투당 1회)
@@ -4945,6 +4945,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.1', date: '2026-11-19', items: ['과거의 강주원: 침대를 부수던 그날의 호흡 소모 기준 20 → 99', '과거의 강주원: 호흡 횟수가 0이 돼도 호흡 위력이 사라지지 않음 (호흡 99를 모아 슈뻘맨펀치를 쓸 수 있게)'] },
   { v: '5.0', date: '2026-11-19', items: ['과거의 강주원: 모든게다모였다초울트라슈뻘맨펀치는 호흡 99일 때만 사용'] },
   { v: '4.9', date: '2026-11-19', items: ['레이드 4단계 과거의 강주원 이미지 변경'] },
   { v: '4.8', date: '2026-11-19', items: ['레이드 4단계는 강주원 편성 불가'] },
