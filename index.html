@@ -822,7 +822,13 @@ try { gunminUnlocked = localStorage.getItem('ballfight-unlock-gunmin' + SV) === 
 function applyUnlocks() { CHAR.gunmin.pool = gunminUnlocked ? ['haejwo', 'heuhahat', 'spit', 'ajirang'] : ['haejwo', 'heuhahat', 'spit']; }
 applyUnlocks();
 let raidMode = false;
-var pvpOpp = null; // PVP 상대 정보 { uid, name, upg, artifacts, equip }
+var pvpOpp = null;
+// 중복 캐릭터 정리: 같은 캐릭터는 한 전투에 한 명만 (과녁 제외) — PVP에서만 상대 팀과의 중복을 허용
+function dedupeRoster() {
+  const seen = new Set(), before = roster.length;
+  roster = roster.filter(r => { if (r.type === 'dummy') return true; if (seen.has(r.type)) return false; seen.add(r.type); return true; });
+  if (roster.length !== before && typeof renderRoster === 'function') renderRoster();
+} // PVP 상대 정보 { uid, name, upg, artifacts, equip }
 // 레이드 난이도: 보통(원본) / 하드 / 익스트림 — 적이 강해지고 클리어 코인이 늘어남
 const RAID_DIFF = [
   { name: '보통', color: '#9fd8ff', coin: 1, hp: 1, lv: 0 },
@@ -4578,7 +4584,7 @@ function setTestLock(lock) {
   cb.parentElement.title = lock ? `${modeName()} 중에는 테스트 모드를 쓸 수 없어요` : '';
   cb.parentElement.style.opacity = lock ? 0.45 : 1;
 }
-document.getElementById('startBtn').onclick = () => { pvpOpp = null; dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); start(); };
+document.getElementById('startBtn').onclick = () => { pvpOpp = null; dedupeRoster(); dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); start(); };
 document.getElementById('raidBtn').onclick = () => {
   if (!roster.some(r => r.team === 0)) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
   roster = roster.filter(r => r.team === 0).concat([{ type: 'targetking', team: 1 }], Array.from({ length: 8 }, () => ({ type: 'dummy', team: 1 })));
@@ -4662,7 +4668,7 @@ document.getElementById('dungeonBtn').onclick = () => {
 document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4, 8, 32]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
 document.querySelectorAll('.recBtn').forEach(b => b.onclick = () => rec ? stopRec() : startRec(false));
 document.getElementById('againBtn').onclick = start;
-document.getElementById('resetBtn').onclick = () => { pvpOpp = null; dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
+document.getElementById('resetBtn').onclick = () => { pvpOpp = null; dedupeRoster(); dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
 document.getElementById('pauseBtn').onclick = () => {
   if (simTime === 0 && !running) { start(); return; }
   running = !running; updatePauseBtn();
@@ -4746,6 +4752,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '4.4', date: '2026-11-19', items: ['PVP: 같은 캐릭터는 상대 팀과 겹치는 것만 허용 (같은 팀 안에서는 중복 불가)', 'PVP가 끝난 뒤 일반 전투를 시작하면 겹치는 캐릭터를 자동으로 정리'] },
   { v: '4.3', date: '2026-11-19', items: ['쿠폰 코드가 대소문자를 구분함'] },
   { v: '4.2', date: '2026-11-19', items: ['🎟 쿠폰 코드 입력 추가 (우편함을 열면 아래에 입력칸)'] },
   { v: '4.1', date: '2026-11-18', items: ['가능성: 강우주의 반격(낙인)도 충전 스킬로 취급 (충전 3 · 횟수 +5 · 피해량 +10%)', '강우주의 충전이 쌓일 때 표시'] },
@@ -5040,7 +5047,7 @@ if (!save.pvp) save.pvp = { w: 0, l: 0 };
 var pvp = { list: null, err: '' };
 const PVP_WIN_COIN = 100;
 const pvpCol = () => rank.db.collection('pvp');
-function myPvpTeam() { return roster.filter(r => r.team === 0 && r.type !== 'dummy').map(r => r.type); }
+function myPvpTeam() { return [...new Set(roster.filter(r => r.team === 0 && r.type !== 'dummy').map(r => r.type))]; }
 async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
@@ -5072,10 +5079,11 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
   if (e.target.id === 'pvpReg') return pvpRegister();
   const id = e.target.dataset.pvp; if (!id || !pvp.list) return;
   const o = pvp.list.find(x => x.id === id); if (!o) return;
-  const mine = roster.filter(r => r.team === 0 && r.type !== 'dummy');
+  const mine = myPvpTeam().map(type => ({ type, team: 0 }));
   if (!mine.length) return toast('레드 팀에 PVP에 나갈 캐릭터를 넣어주세요');
   pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, equip: o.equip || {} };
-  roster = mine.concat((o.team || []).filter(k => CHAR[k]).map(k => ({ type: k, team: 1 })));
+  // 같은 팀 안에서는 중복 불가, 상대 팀과 겹치는 캐릭터만 허용
+  roster = mine.concat([...new Set((o.team || []).filter(k => CHAR[k] && k !== 'dummy'))].map(k => ({ type: k, team: 1 })));
   dungeonFloor = 0; raidMode = true; renderRoster(); setTestLock(true); start();
   showBig(`PVP — vs ${pvpOpp.name}`, '#9fd8ff', 1.8);
   log(`⚔ <b style="color:#9fd8ff">PVP</b> 시작! vs ${escH(pvpOpp.name)}`, 'kill');
