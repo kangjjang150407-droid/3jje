@@ -48,6 +48,9 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #profPanel{display:none;border:1px solid #6a4a9a;border-radius:10px;padding:10px;margin-bottom:10px;background:#120c1a;font-size:12px;line-height:1.6}
+  #profPanel.on{display:block}
+  #profPanel input[type=text],#profPanel select{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:13px;min-width:0}
   #chatPanel,#pvpPanel{display:none;border:1px solid #3a5a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#0a0e18;font-size:12px;line-height:1.5}
   #chatPanel.on,#pvpPanel.on{display:block}
   #chatList{height:220px;overflow:auto;display:flex;flex-direction:column-reverse;gap:3px;margin-bottom:6px}
@@ -225,7 +228,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="profBtn" style="flex:1 1 40%;font-size:12px">👤 프로필</button><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div id="profPanel"></div>
     <div id="rankPanel"></div>
     <div id="chatPanel"><div id="chatList"></div><div style="display:flex;gap:6px"><input id="chatInput" maxlength="200" placeholder="메시지 입력 (최대 200자)"><button id="chatSend">보내기</button></div><div id="chatNote" style="color:#8a8aa8;margin-top:4px"></div></div>
     <div id="pvpPanel"></div>
@@ -5040,6 +5044,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.6', date: '2026-11-20', items: ['👤 프로필 추가 (구글 로그인 시): 닉네임(7일마다 변경) · 칭호 · 프로필 사진', '랭킹 · 채팅 · PVP에 닉네임과 칭호가 표시됨'] },
   { v: '5.5', date: '2026-11-19', items: ['레이드에 실패하면 결과 화면에 전투 팁 표시'] },
   { v: '5.4', date: '2026-11-19', items: ['과거의 강주원 되감기 중 체력 숫자도 함께 차오름'] },
   { v: '5.3', date: '2026-11-19', items: ['과거의 강주원 흐트러짐 해제 연출: 타임머신이 돌아가듯 노란 글리치', '과거의 강주원 부활 연출: 쓰러진 뒤 시간을 되돌려 다시 돌아옴'] },
@@ -5209,6 +5214,78 @@ document.getElementById('artPanel').addEventListener('change', e => {
 if (!save.dungeon) save.dungeon = 0;
 if (!save.raidCleared) save.raidCleared = {};
 if (gunminUnlocked) save.raidCleared['1-0'] = true; if (save.raid2) save.raidCleared['2-0'] = true; // 이전 클리어 기록 반영
+// ================== 프로필 ==================
+// 구글 로그인한 계정만 · 닉네임(7일마다 변경) · 칭호 · 프로필 사진 (계정별로 이 기기에 저장)
+const TITLES = [
+  { id: 'rookie', name: '초보 파이터', how: '기본', ok: () => true },
+  { id: 'raid1', name: '과녁 사냥꾼', how: '레이드 1단계 클리어', ok: () => !!gunminUnlocked },
+  { id: 'raid2', name: '지옥견 조련사', how: '레이드 2단계 클리어', ok: () => !!save.raid2 },
+  { id: 'raid3', name: '암흑을 본 자', how: '레이드 3단계 클리어', ok: () => !!save.raid3 },
+  { id: 'raid4', name: '시간을 되돌린 자', how: '레이드 4단계 클리어', ok: () => !!save.raid4 },
+  { id: 'extreme', name: '익스트림 정복자', how: '레이드를 익스트림으로 클리어', ok: () => Object.keys(save.raidCleared || {}).some(k => k.endsWith('-2')) },
+  { id: 'dungeon', name: '던전 정복자', how: '던전 15층 클리어', ok: () => (save.dungeon || 0) >= 15 },
+  { id: 'hidden', name: '히든 헌터', how: '히든 보스 처치 (찢어진 펜던트 또는 잿빛 별자리의 가호 보유)', ok: () => !!(save.artifacts && (save.artifacts.pendant || save.artifacts.ashstar)) },
+  { id: 'collector', name: '수집가', how: '모든 캐릭터 보유', ok: () => GACHA.every(k => save.owned && save.owned[k]) },
+  { id: 'upgrader', name: '강화의 달인', how: '캐릭터 5명 강화', ok: () => GACHA.filter(k => save.upg && save.upg[k]).length >= 5 },
+  { id: 'pvp', name: 'PVP 투사', how: 'PVP 10승', ok: () => ((save.pvp || {}).w || 0) >= 10 },
+];
+const NICK_DAYS = 7;
+var prof = {};
+try { if (account) prof = JSON.parse(localStorage.getItem('ballfight-profile-' + account.sub) || '{}') || {}; } catch (e) { prof = {}; }
+function saveProf() { try { localStorage.setItem('ballfight-profile-' + account.sub, JSON.stringify(prof)); } catch (e) { toast('저장 공간이 부족해요'); } }
+const dispName = () => account ? (prof.nick || account.name) : '게스트';
+const dispPic = () => account ? (prof.pic || account.picture || '') : '';
+const titleName = () => { const t = TITLES.find(x => x.id === prof.title); return t && t.ok() ? t.name : ''; };
+function applyProfileUI(king) {
+  if (!account) return;
+  const an = document.getElementById('accName'), ap = document.getElementById('accPic');
+  const t = titleName(), esc2 = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  if (an) an.innerHTML = (t ? `<span style="color:#d8b8ff">[${esc2(t)}]</span> ` : '') + esc2(dispName()) + (king ? ' <b style="color:#ffcc33">👑 왕</b>' : '') + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : '');
+  const pic = dispPic(); if (ap && pic) { ap.src = pic; ap.referrerPolicy = 'no-referrer'; ap.style.display = ''; }
+}
+function renderProfile() {
+  const el = document.getElementById('profPanel'); if (!el) return;
+  if (!account) { el.innerHTML = '<div style="color:#aaa">구글로 로그인하면 프로필을 설정할 수 있어요.</div>'; return; }
+  const esc2 = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const left = prof.nickAt ? prof.nickAt + NICK_DAYS * 864e5 - Date.now() : 0, can = left <= 0;
+  const pic = dispPic();
+  el.innerHTML = `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      ${pic ? `<img src="${esc2(pic)}" referrerpolicy="no-referrer" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #8a6aff">` : '<div style="width:56px;height:56px;border-radius:50%;background:#2a2a4a"></div>'}
+      <div>${titleName() ? `<div style="color:#d8b8ff">[${esc2(titleName())}]</div>` : ''}<b style="font-size:15px">${esc2(dispName())}</b></div></div>
+    <div><b>닉네임</b> <span style="color:#8a8aa8">(2~12자 · ${NICK_DAYS}일마다 변경 가능)</span></div>
+    <div style="display:flex;gap:6px;margin:4px 0 8px"><input type="text" id="profNick" maxlength="12" placeholder="${esc2(dispName())}" style="flex:1" ${can ? '' : 'disabled'}><button id="profNickSave" ${can ? '' : 'disabled'}>변경</button></div>
+    ${can ? '' : `<div style="color:#ffb84a;margin:-4px 0 8px">다음 변경까지 ${Math.floor(left / 864e5)}일 ${Math.floor(left % 864e5 / 36e5)}시간</div>`}
+    <div><b>칭호</b></div>
+    <select id="profTitle" style="width:100%;margin:4px 0 4px"><option value="">칭호 없음</option>${TITLES.map(t => `<option value="${t.id}" ${t.ok() ? '' : 'disabled'} ${prof.title === t.id ? 'selected' : ''}>${t.ok() ? '' : '🔒 '}${t.name} — ${t.how}</option>`).join('')}</select>
+    <div style="color:#8a8aa8;margin-bottom:8px">주간 랭킹 1등은 자동으로 👑 왕이 붙어요.</div>
+    <div><b>프로필 사진</b></div>
+    <div style="display:flex;gap:6px;margin-top:4px"><label style="flex:1;text-align:center;padding:7px;border:1px solid #33335a;border-radius:8px;cursor:pointer;background:#1a1a30">📷 사진 고르기<input type="file" id="profPicIn" accept="image/*" style="display:none"></label><button id="profPicReset">구글 사진으로</button></div>`;
+}
+function profSync() { try { scheduleRankUpload(); if (rank.uid && rank.db) pvpCol().doc(rank.uid).update({ name: dispName(), picture: dispPic(), title: titleName() }).catch(() => {}); } catch (e) {} applyProfileUI(); }
+document.getElementById('profBtn').onclick = () => { if (document.getElementById('profPanel').classList.toggle('on')) renderProfile(); };
+document.getElementById('profPanel').addEventListener('click', e => {
+  if (e.target.id === 'profNickSave') {
+    const v = document.getElementById('profNick').value.trim();
+    if (v.length < 2 || v.length > 12) return toast('닉네임은 2~12자로 써주세요');
+    if (/[<>]/.test(v)) return toast('닉네임에 < > 는 쓸 수 없어요');
+    if (prof.nickAt && Date.now() - prof.nickAt < NICK_DAYS * 864e5) return toast(`닉네임은 ${NICK_DAYS}일마다 바꿀 수 있어요`);
+    prof.nick = v; prof.nickAt = Date.now(); saveProf(); renderProfile(); profSync(); toast(`👤 닉네임을 "${v}"(으)로 바꿨어요`);
+  } else if (e.target.id === 'profPicReset') { delete prof.pic; saveProf(); renderProfile(); profSync(); toast('👤 구글 프로필 사진으로 되돌렸어요'); }
+});
+document.getElementById('profPanel').addEventListener('change', e => {
+  if (e.target.id === 'profTitle') { prof.title = e.target.value || ''; saveProf(); renderProfile(); profSync(); toast(prof.title ? `👤 칭호: ${titleName()}` : '👤 칭호를 뺐어요'); }
+  else if (e.target.id === 'profPicIn' && e.target.files && e.target.files[0]) {
+    const img = new Image(), url = URL.createObjectURL(e.target.files[0]);
+    img.onload = () => {
+      // 가운데를 정사각형으로 잘라 96×96으로 줄임
+      const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), m = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, 96, 96);
+      prof.pic = c.toDataURL('image/jpeg', 0.82); URL.revokeObjectURL(url); saveProf(); renderProfile(); profSync(); toast('👤 프로필 사진을 바꿨어요');
+    };
+    img.onerror = () => toast('사진을 불러오지 못했어요');
+    img.src = url;
+  }
+});
 // ================== 랭킹 ==================
 // 구글 로그인한 사람만 올라감 (테스터·테스트 서버 제외) · Firebase Firestore에 저장
 // Firebase 콘솔의 웹 앱 설정값을 넣으면 켜짐 (공개돼도 되는 값)
@@ -5264,7 +5341,7 @@ async function rankUpload() {
     if (TESTER) { await rankApi.del(rank.uid); return; } // 테스터는 랭킹에서 제외
     if (TEST_SERVER) return;
     const sc = rankScore();
-    await rankApi.put(rank.uid, { name: account.name, picture: account.picture || '', score: weeklyScore(), total: sc.total, t: Date.now() });
+    await rankApi.put(rank.uid, { name: dispName(), picture: dispPic(), title: titleName(), score: weeklyScore(), total: sc.total, t: Date.now() });
   } catch (e) { console.error(e); }
 }
 // 지난주 랭킹 보상: 지난주에 랭킹에 있었다면 순위에 맞는 코인을 우편으로 받음
@@ -5303,11 +5380,11 @@ function renderRank() {
   else if (rank.err) h += `<div style="color:#ff8080;margin-top:4px">${rank.err}</div>`;
   else if (account && rankEligible() && rank.ready && !rank.uid) h += '<div style="color:#ffcc33;margin-top:4px">랭킹에 올리려면 로그아웃 후 구글로 다시 로그인해 주세요.</div>';
   if (rank.list) {
-    h += rank.list.length ? rank.list.map((r, i) => `<div class="rk${r.id === rank.uid ? ' me' : ''}"><b style="width:26px;text-align:right;color:${i === 0 ? '#ffcc33' : i < 3 ? '#e0e0f0' : '#8a8aa8'}">${i + 1}</b>${r.picture ? `<img src="${esc(r.picture)}" referrerpolicy="no-referrer" alt="">` : ''}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name || '이름 없음')}${i === 0 ? ' <b style="color:#ffcc33">👑 왕</b>' : ''}</span><b style="color:#ffcc33">${(r.score || 0).toLocaleString()}</b></div>`).join('') : '<div style="color:#777">아직 랭킹에 아무도 없어요.</div>';
+    h += rank.list.length ? rank.list.map((r, i) => `<div class="rk${r.id === rank.uid ? ' me' : ''}"><b style="width:26px;text-align:right;color:${i === 0 ? '#ffcc33' : i < 3 ? '#e0e0f0' : '#8a8aa8'}">${i + 1}</b>${r.picture ? `<img src="${esc(r.picture)}" referrerpolicy="no-referrer" alt="">` : ''}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title ? `<span style="color:#d8b8ff">[${esc(r.title)}]</span> ` : ''}${esc(r.name || '이름 없음')}${i === 0 ? ' <b style="color:#ffcc33">👑 왕</b>' : ''}</span><b style="color:#ffcc33">${(r.score || 0).toLocaleString()}</b></div>`).join('') : '<div style="color:#777">아직 랭킹에 아무도 없어요.</div>';
     // 랭킹 1등에게 '왕' 칭호
     const king = rank.list[0] && rank.list[0].id === rank.uid;
     const an = document.getElementById('accName');
-    if (an && account) an.innerHTML = esc(account.name) + (king ? ' <b style="color:#ffcc33">👑 왕</b>' : '') + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : '');
+    if (account) applyProfileUI(king);
   } else if (rank.db) h += '<div style="color:#777;margin-top:4px">불러오는 중…</div>';
   el.innerHTML = h;
 }
@@ -5335,7 +5412,7 @@ async function chatSend() {
   if (!account || !rank.uid) { toast('구글로 로그인해야 채팅할 수 있어요'); return; }
   if (Date.now() - chat.last < 3000) { toast('잠시 후에 다시 보내주세요'); return; }
   chat.last = Date.now(); inp.value = '';
-  try { await rank.db.collection('chat').add({ uid: rank.uid, name: account.name + (TESTER || TEST_SERVER ? ' 🧪' : ''), text, ms: Date.now() }); } catch (e) { console.error(e); toast('메시지를 보내지 못했어요'); }
+  try { await rank.db.collection('chat').add({ uid: rank.uid, name: (titleName() ? `[${titleName()}] ` : '') + dispName() + (TESTER || TEST_SERVER ? ' 🧪' : ''), text, ms: Date.now() }); } catch (e) { console.error(e); toast('메시지를 보내지 못했어요'); }
 }
 document.getElementById('chatBtn').onclick = () => { if (document.getElementById('chatPanel').classList.toggle('on')) chatOpen(); };
 document.getElementById('chatSend').onclick = chatSend;
@@ -5351,7 +5428,7 @@ async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
   try {
-    await pvpCol().doc(rank.uid).set({ name: account.name, tester: !!(TESTER || TEST_SERVER), picture: account.picture || '', team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
+    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
     toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
   } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
 }
@@ -5370,7 +5447,7 @@ function renderPvp() {
   else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
-    h += ops.length ? ops.map(o => `<div class="op"><b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
   }
   el.innerHTML = h;
 }
@@ -5403,8 +5480,7 @@ if (PERK) { for (const k of GACHA) save.owned[k] = true; if (save.coins < 999999
 (function () {
   const $i = id => document.getElementById(id);
   if (account) {
-    $i('accName').textContent = account.name + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : ''); $i('accName').style.color = '#e8e8f0';
-    if (account.picture) { $i('accPic').src = account.picture; $i('accPic').referrerPolicy = 'no-referrer'; $i('accPic').style.display = ''; }
+    $i('accName').style.color = '#e8e8f0'; applyProfileUI();
     $i('accLogin').style.display = 'none'; $i('accLogout').style.display = ''; $i('accLogout').onclick = googleSignOut;
     return;
   }
