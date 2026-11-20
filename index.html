@@ -2839,7 +2839,14 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
   const dm = Math.max(0, 1 + pct / 100) * (crit ? (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
-  if (f.type === 'jiho') {
+  if (f.type === 'kwak' && u.sk !== 'bugcut') {
+    // 보라색 주먹으로 타격
+    const big = u.sk === 'kwEasy' || (u.sk === 'ttuk' && i === 2) || u.sk === 'getout', ang = Math.atan2(t.y - f.y, t.x - f.x);
+    slashes.push({ punch: true, fx: f.x, fy: f.y, tx: t.x, ty: t.y, tr: t.r, ang, big, life: big ? 0.6 : 0.45, max: big ? 0.6 : 0.45, seed: Math.random() });
+    for (let k = 0; k < Math.round((big ? 36 : 20) * QUALITY) + 6; k++) { const a = ang + rand(-1.1, 1.1), sp = rand(300, big ? 900 : 650); particles.push({ x: t.x - Math.cos(ang) * t.r * 0.5, y: t.y - Math.sin(ang) * t.r * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.25, 0.5), max: 0.5, size: rand(3, 7), color: Math.random() < 0.4 ? '#ffffff' : (Math.random() < 0.5 ? '#c86aff' : '#8a3aff'), drag: 0.9, g: 0, kind: 'spark', rot: 0 }); }
+    burst(t.x, t.y, '#a04aff', big ? 22 : 12, 320, 12, 0.45);
+    shake = Math.max(shake, big ? 22 : 12); if (big) doFlash('#a04aff', 0.25);
+  } else if (f.type === 'jiho') {
     // 호랑이가 할퀴듯 큰 발톱 자국
     const big = u.sk === 'cheobun' || u.sk === 'polarbear', ang = Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.5, 0.5) + (Math.random() < 0.5 ? 0.9 : -0.9);
     slashes.push({ claw: true, x: t.x, y: t.y, ang, n: big ? 4 : 3, len: t.r * (big ? 5 : 3.8), bend: rand(0.18, 0.32) * (Math.random() < 0.5 ? 1 : -1), big, life: big ? 0.7 : 0.55, max: big ? 0.7 : 0.55 });
@@ -4403,6 +4410,42 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.punch) {
+      // 주먹이 날아가 꽂힘 (0~22%) → 충격파 · 집중선 → 사라짐
+      const dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), D = Math.hypot(sl.tx - sl.fx, sl.ty - sl.fy), hitP = 0.22;
+      const fly = p < hitP ? 1 - Math.pow(1 - p / hitP, 3) : 1, dist = (D - sl.tr * 0.9) * fly + 10;
+      const px = sl.fx + dx * dist, py = sl.fy + dy * dist, fade = p < hitP ? 1 : Math.max(0, 1 - (p - hitP) / (1 - hitP));
+      const S = sl.big ? 1.45 : 1;
+      ctx.save();
+      // 주먹 뒤로 남는 속도선
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let i = -2; i <= 2; i++) { const o = i * 9 * S, l = Math.min(dist, 120 * S); ctx.globalAlpha = fade * 0.5; ctx.strokeStyle = i % 2 ? '#c86aff' : '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px - dx * (l + 20) - dy * o, py - dy * (l + 20) + dx * o); ctx.lineTo(px - dx * 20 - dy * o, py - dy * 20 + dx * o); ctx.stroke(); }
+      // 타격 순간: 겹친 충격파 고리 + 사방으로 뻗는 집중선 + 흰 섬광
+      if (p >= hitP) {
+        const q = (p - hitP) / (1 - hitP), cx = sl.tx - dx * sl.tr * 0.4, cy = sl.ty - dy * sl.tr * 0.4;
+        ctx.globalAlpha = (1 - q); ctx.drawImage(glow('#b05aff'), cx - sl.tr * 3 * S, cy - sl.tr * 3 * S, sl.tr * 6 * S, sl.tr * 6 * S);
+        ctx.globalAlpha = Math.max(0, 1 - q * 2.5); ctx.drawImage(glow('#ffffff'), cx - sl.tr * 1.2, cy - sl.tr * 1.2, sl.tr * 2.4, sl.tr * 2.4);
+        for (const [rr, col, wd] of [[1.6, '#d8a0ff', 6], [2.6, '#8a3aff', 4], [3.6, '#ffffff', 2]]) { ctx.globalAlpha = (1 - q) * 0.9; ctx.strokeStyle = col; ctx.lineWidth = wd * (1 - q) + 1; ctx.beginPath(); ctx.ellipse(cx, cy, sl.tr * rr * S * (0.4 + q), sl.tr * rr * S * (0.3 + q * 0.8), sl.ang, 0, TAU); ctx.stroke(); }
+        const n = sl.big ? 18 : 12;
+        for (let i = 0; i < n; i++) { const a = sl.seed * 7 + i / n * TAU, r0 = sl.tr * (0.8 + q * 1.4) * S, r1 = r0 + sl.tr * (1.2 + (i % 3) * 0.5) * S * (1 - q * 0.5); ctx.globalAlpha = (1 - q) * 0.85; ctx.strokeStyle = i % 2 ? '#ffffff' : '#c86aff'; ctx.lineWidth = (1 - q) * (i % 2 ? 2 : 4) + 0.5; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke(); }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      // 주먹 (잔상 2개 + 본체)
+      const drawFist = (x, y, al) => {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(sl.ang); ctx.scale(S, S); ctx.globalAlpha = al;
+        ctx.shadowColor = '#b05aff'; ctx.shadowBlur = 24;
+        const g = ctx.createLinearGradient(-34, 0, 26, 0); g.addColorStop(0, '#3a0a6a'); g.addColorStop(0.6, '#8a3aff'); g.addColorStop(1, '#e0b8ff');
+        ctx.fillStyle = g; ctx.strokeStyle = '#1a0630'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-34, -24, 52, 48, 14); else ctx.rect(-34, -24, 52, 48); ctx.fill(); ctx.stroke(); // 손등
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(18, -18 + i * 12, 7.5, 0, TAU); ctx.fill(); ctx.stroke(); } // 주먹 마디
+        ctx.beginPath(); ctx.ellipse(-4, -26, 16, 7, 0.15, 0, TAU); ctx.fill(); ctx.stroke(); // 엄지
+        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(-26, -18, 30, 5); // 하이라이트
+        ctx.restore();
+      };
+      if (fade > 0) { for (let a = 2; a >= 1; a--) if (p < hitP + 0.1) drawFist(px - dx * a * 34 * S, py - dy * a * 34 * S, fade * 0.25 / a); drawFist(px, py, Math.min(1, fade * 1.3)); }
+      ctx.restore();
+      continue;
+    }
     if (sl.claw) {
       // 발톱 자국: 평행한 곡선 3~4줄이 대각선으로 빠르게 그어지고, 붉게 달아올랐다 사라짐
       const reveal = Math.min(1, p / 0.28), fade = p < 0.28 ? 1 : 1 - (p - 0.28) / 0.72;
@@ -5264,6 +5307,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '6.9', date: '2026-11-20', items: ['곽시율 공격 이펙트 변경: 보라색 주먹으로 타격 (속도선 · 충격파 · 집중선)'] },
   { v: '6.8', date: '2026-11-20', items: ['윤지호 공격 이펙트 변경: 호랑이가 할퀴듯 큰 발톱 자국 (처분 · 북극곰이라 불린 자는 4줄)'] },
   { v: '6.7', date: '2026-11-20', items: ['강주원 · 이건민 · 강우주 공격 이펙트 강화: 꽉 찬 불꽃 칼날 · 흰 심지 · 캐릭터별 불꽃 색 · 바닥 그을림 · 떠오르는 불씨'] },
   { v: '6.6', date: '2026-11-20', items: ['이도윤 · 정선우 공격 이펙트를 창으로 찌르는 연출로 변경 (빛줄기 · 관통 충격파 · 잔상)'] },
