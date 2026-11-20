@@ -2839,7 +2839,15 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
   const dm = Math.max(0, 1 + pct / 100) * (crit ? (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
-  if (f.type === 'song') {
+  if (f.type === 'jiho') {
+    // 호랑이가 할퀴듯 큰 발톱 자국
+    const big = u.sk === 'cheobun' || u.sk === 'polarbear', ang = Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.5, 0.5) + (Math.random() < 0.5 ? 0.9 : -0.9);
+    slashes.push({ claw: true, x: t.x, y: t.y, ang, n: big ? 4 : 3, len: t.r * (big ? 5 : 3.8), bend: rand(0.18, 0.32) * (Math.random() < 0.5 ? 1 : -1), big, life: big ? 0.7 : 0.55, max: big ? 0.7 : 0.55 });
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    for (let k = 0; k < Math.round((big ? 30 : 18) * QUALITY) + 6; k++) { const o = rand(-0.5, 0.5), sp = rand(250, 650), a2 = ang + rand(-0.4, 0.4); particles.push({ x: t.x + dx * t.r * 1.2 * o, y: t.y + dy * t.r * 1.2 * o, vx: Math.cos(a2) * sp, vy: Math.sin(a2) * sp, life: rand(0.25, 0.5), max: 0.5, size: rand(2.5, 6), color: Math.random() < 0.5 ? '#ffffff' : '#ffb04a', drag: 0.9, g: 120, kind: 'spark', rot: 0 }); }
+    burst(t.x, t.y, '#ff7a1a', big ? 18 : 10, 300, 10, 0.5); ring(t.x, t.y, '#ffb04a', t.r * (big ? 3.2 : 2.4), 0.3, 5);
+    shake = Math.max(shake, big ? 16 : 9); if (big) doFlash('#ff9a3d', 0.2);
+  } else if (f.type === 'song') {
     // 붉고 회색인 담배 연기가 대상에게 뿜어져 나감
     songSmoke(f, t, u.sk === 'sAni', u.sk === 'sSlash');
   } else if (f.type === 'cerberus') {
@@ -4395,6 +4403,29 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.claw) {
+      // 발톱 자국: 평행한 곡선 3~4줄이 대각선으로 빠르게 그어지고, 붉게 달아올랐다 사라짐
+      const reveal = Math.min(1, p / 0.28), fade = p < 0.28 ? 1 : 1 - (p - 0.28) / 0.72;
+      const dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), nx = -dy, ny = dx, gap = sl.len * 0.12;
+      ctx.save(); ctx.lineCap = 'round';
+      for (let c = 0; c < sl.n; c++) {
+        const off = (c - (sl.n - 1) / 2) * gap, L = sl.len * (1 - Math.abs(c - (sl.n - 1) / 2) * 0.12), delay = c * 0.06;
+        const rv = Math.max(0, Math.min(1, (reveal - delay) / (1 - delay * 1.5)));
+        if (rv <= 0) continue;
+        const sx = sl.x - dx * L / 2 + nx * off, sy = sl.y - dy * L / 2 + ny * off, ex = sl.x + dx * L / 2 + nx * off, ey = sl.y + dy * L / 2 + ny * off;
+        const cx = (sx + ex) / 2 + nx * L * sl.bend, cy = (sy + ey) / 2 + ny * L * sl.bend;
+        const pts = []; const N = 18; for (let i = 0; i <= N * rv; i++) { const q = i / N, a = (1 - q) * (1 - q), b2 = 2 * (1 - q) * q, c2 = q * q; pts.push([a * sx + b2 * cx + c2 * ex, a * sy + b2 * cy + c2 * ey, Math.sin(Math.PI * q)]); }
+        // 바깥 주황 빛 → 붉은 상처 → 흰 심지 (가운데가 굵고 양끝이 뾰족함)
+        for (const [col, wd, al, comp] of [['#ff7a1a', 22, 0.35, 'lighter'], ['#8a0a0a', 9, 0.9, 'source-over'], ['#ffb04a', 6, 0.9, 'lighter'], ['#ffffff', 2.5, 1, 'lighter']]) {
+          ctx.globalCompositeOperation = comp; ctx.strokeStyle = col;
+          for (let i = 1; i < pts.length; i++) { ctx.globalAlpha = fade * al; ctx.lineWidth = Math.max(0.5, wd * (sl.big ? 1.3 : 1) * pts[i][2]); ctx.beginPath(); ctx.moveTo(pts[i - 1][0], pts[i - 1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); }
+        }
+        // 긁고 지나가는 발톱 끝의 섬광
+        if (rv < 1) { const tp = pts[pts.length - 1]; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.drawImage(glow('#ffe0a0'), tp[0] - 18, tp[1] - 18, 36, 36); }
+      }
+      ctx.restore();
+      continue;
+    }
     if (sl.thrust) {
       // 찌르기: 0~35% 뻗음(대상 너머까지) → 이후 빠르게 빠지며 사라짐
       const dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), D = Math.hypot(sl.tx - sl.fx, sl.ty - sl.fy);
@@ -5233,6 +5264,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '6.8', date: '2026-11-20', items: ['윤지호 공격 이펙트 변경: 호랑이가 할퀴듯 큰 발톱 자국 (처분 · 북극곰이라 불린 자는 4줄)'] },
   { v: '6.7', date: '2026-11-20', items: ['강주원 · 이건민 · 강우주 공격 이펙트 강화: 꽉 찬 불꽃 칼날 · 흰 심지 · 캐릭터별 불꽃 색 · 바닥 그을림 · 떠오르는 불씨'] },
   { v: '6.6', date: '2026-11-20', items: ['이도윤 · 정선우 공격 이펙트를 창으로 찌르는 연출로 변경 (빛줄기 · 관통 충격파 · 잔상)'] },
   { v: '6.5', date: '2026-11-20', items: ['송재범 2페이즈 [요루] 삭제 (송재범 강화 효과: 체력 +30 · 레벨 +5)'] },
