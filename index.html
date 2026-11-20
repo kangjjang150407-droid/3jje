@@ -841,7 +841,7 @@ try { account = JSON.parse(localStorage.getItem('ballfight-user') || 'null'); if
 let TESTER = false;
 try { if (account) { if (TEST_SERVER && localStorage.getItem('ballfight-untester-' + account.sub) !== '1') localStorage.setItem('ballfight-tester-' + account.sub, '1'); TESTER = localStorage.getItem('ballfight-tester-' + account.sub) === '1'; } } catch (e) {}
 const PERK = TEST_SERVER || TESTER;
-const SV = (PERK ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
+const SV = window.BALLFIGHT_SHOWCASE ? '-showcase' : (PERK ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
 function googleSignedIn(resp) {
   try {
     const b64 = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -5740,6 +5740,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.9', date: '2026-11-20', items: ['🎬 연출 구경 서버 오픈: 모든 캐릭터·보스의 모델을 보고, 스킬 이펙트와 흐트러짐·패닉·처치·각성·되감기 부활 같은 연출을 버튼 하나로 구경할 수 있어요 (0.25x 슬로 모션 지원)'] },
   { v: '7.8', date: '2026-11-20', items: ['증오의 여왕 공격 이펙트 추가: 사랑으로!(분홍 하트 리본 · 하트 충격파) · 정의의 이름으로!(금빛 별똥별 · 별 각인) · 아르카나 슬레이브!(마법진 빛줄기 · 거대 마법진) · 발밑 마법진', '합: 공격 레벨 3 차이당 합 위력 +1 — 적용될 때 화면과 로그에 보너스가 표시돼요'] },
   { v: '7.7', date: '2026-11-20', items: ['절망의 기사 공격 이펙트 리메이크: 시린 푸른 초승달 검기 · 검 잔상 · 얼음 결정 · 금 간 충격선 · 떨어지는 눈물방울 · 바닥 물결 (텅 빈 절망은 눈물비)', '흉탄의 사수 공격 이펙트 추가: 총구 화염 · 예광탄 · 관통 섬광 · 총알 구멍 · 튀어나가는 탄피 (흉탄은 더 크고 붉게)'] },
   { v: '7.6', date: '2026-11-20', items: ['과거의 강주원 공격 이펙트 리메이크: 되감기 잔상이 모여듦 → RGB가 갈라지는 칼날 참격 · 실제로 화면이 찢어지는 글리치 · 픽셀 붕괴 · 네모난 충격파 · 깨진 타임코드 (슈뻘맨펀치는 십자 참격)'] },
@@ -5856,6 +5857,7 @@ document.getElementById('tutSkip').onclick = () => tutShow(-1);
 (function () {
   let seen = null, tutDone = null; try { seen = localStorage.getItem('ballfight-patch-seen'); tutDone = localStorage.getItem('ballfight-tutorial-done'); } catch (e) {}
   // 처음 온 사람에게는 패치 노트 대신 튜토리얼을 보여줌
+  if (window.BALLFIGHT_SHOWCASE) return; // 연출 구경 서버: 튜토리얼 · 패치 노트 자동 표시 안 함
   if (seen === null && !tutDone) { try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} tutShow(0); return; }
   if (seen !== PATCH_NOTES[0].v) { showPatchNotes(seen); try { localStorage.setItem('ballfight-patch-seen', PATCH_NOTES[0].v); } catch (e) {} }
 })();
@@ -6408,6 +6410,98 @@ resize();
 renderRoster();
 build();
 requestAnimationFrame(frame);
+
+// ================== 연출 구경 서버 (showcase/index.html) ==================
+if (window.BALLFIGHT_SHOWCASE) (function () {
+  const EXTRA = { marksman: ['hyungtan'], queen: ['arcana'], despair: ['emptyDespair'] };
+  const SKIP = { dummy: 1, dgdummy: 1, clone: 1, yoru: 1 };
+  const types = Object.keys(CHAR).filter(k => !SKIP[k]);
+  const skillsOf = t => [...new Set([].concat(T_SKILLS[t] || [], CHAR[t].pool || [], EXTRA[t] || []))].filter(k => SKILLS[k]);
+  const SPECIAL = {
+    juwon: [['🔥 2페이즈 각성', f => transformJuwon2(f, true)]],
+    pastjuwon: [['⏩ 시간 재가동', f => pjReleaseFx(f)], ['⏪ 쓰러짐 → 되감기 부활', f => { f.god = false; f.timeUsed = false; const d = fighters.find(a => a.team === 1 && a.alive); dealDamage(d || f, f, f.hp + 100, 'true', '연출'); setTimeout(() => { f.god = true; }, 3500); }]],
+    marksman: [['🎯 2페이즈 패턴', f => { f.msPhase2 = false; marksmanPattern(f); }]],
+    despair: [['👑 증오의 여왕 소환', f => { f.queenSpawned = false; spawnQueen(f); }]],
+  };
+  const st = document.createElement('style');
+  st.textContent = `#scPanel{background:rgba(14,10,28,.94);border:1px solid #5a3aa8;border-radius:12px;padding:10px 12px;margin-bottom:10px;color:#e8e0ff;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#scPanel h3{margin:2px 0 8px;font-size:16px;color:#d8b8ff}#scPanel h4{margin:10px 0 5px;font-size:12px;color:#a890d8;letter-spacing:.5px}
+#scPanel .chips{display:flex;flex-wrap:wrap;gap:4px}#scPanel button{background:#2a1e4a;color:#efe8ff;border:1px solid #4a3a7a;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer}
+#scPanel button:hover{background:#3a2a6a}#scPanel button.on{background:#7a4aff;border-color:#b090ff}#scPanel .sk{display:block;width:100%;text-align:left;margin:3px 0;padding:6px 8px}
+#scPanel .sk small{display:block;color:#a8a0c8;font-size:11px;margin-top:2px}#scModel{display:block;margin:4px auto;background:radial-gradient(#241a40,#0a0614);border-radius:10px}
+#scInfo{font-size:12px;line-height:1.55;color:#cfc4ee}#left>*:not(#scPanel){display:none!important}
+@media (max-width:900px), (orientation:portrait) and (max-width:1100px){#stage{position:fixed!important;top:0;left:0;right:0;height:52vh!important;min-height:0!important;z-index:20}#app{padding-top:52vh}#right{display:none}}`;
+  document.head.appendChild(st);
+  const P = document.createElement('div'); P.id = 'scPanel';
+  P.innerHTML = `<h3>🎬 연출 구경 서버</h3>
+<div style="color:#a8a0c8;font-size:11px;margin-bottom:6px">캐릭터를 고르고 스킬·연출 버튼을 누르면 과녁에 바로 써요. 저장 데이터와 무관해요.</div>
+<h4>캐릭터</h4><div class="chips" id="scChars"></div>
+<h4>모델</h4><canvas id="scModel" width="260" height="200"></canvas><div id="scInfo"></div>
+<h4>스킬</h4><div id="scSkills"></div>
+<h4>연출</h4><div class="chips" id="scFx"></div>
+<h4>재생 속도</h4><div class="chips" id="scSpeed"></div>
+<h4>배경</h4><div class="chips"><button id="scReset">🔄 다시 배치</button><button id="scClear">🧹 이펙트 지우기</button></div>`;
+  $('left').prepend(P);
+  let cur = null;
+  const subj = () => fighters.find(f => f.team === 0 && f.type === cur && f.alive);
+  const target = () => { const ds = fighters.filter(f => f.team === 1 && f.alive); return ds.find(d => d.scMid) || ds[0]; };
+  function setup(type) {
+    cur = type; raidMode = false; dungeonFloor = 0; pvpOpp = null;
+    roster = [{ type, team: 0 }, { type: 'dummy', team: 1 }, { type: 'dummy', team: 1 }, { type: 'dummy', team: 1 }];
+    test.on = true; test.aiOff = true; try { $('testOn').checked = true; $('tAiOff').checked = true; } catch (e) {}
+    start();
+    const f = fighters.find(a => a.team === 0), ds = fighters.filter(a => a.team === 1);
+    const port = H > W;
+    if (f) { f.x = port ? W * 0.5 : W * 0.28; f.y = port ? H * 0.74 : H * 0.5; f.vx = f.vy = 0; f.god = true; test.sel = f; }
+    ds.forEach((d, i) => { if (port) { d.x = W * (0.2 + i * 0.3); d.y = H * (i === 1 ? 0.24 : 0.3); } else { d.x = W * 0.72; d.y = H * (0.25 + i * 0.25); } d.vx = d.vy = 0; d.god = true; d.scMid = i === 1; });
+    for (const b of $('scChars').children) b.classList.toggle('on', b.dataset.t === type);
+    const C = CHAR[type], rs = C.resist || {};
+    $('scInfo').innerHTML = `<b style="color:${C.color}">${C.name}</b> · LV ${C.level} · 체력 ${C.maxHp}${C.defMod ? ` · 방어 레벨 ${C.defMod > 0 ? '+' : ''}${C.defMod}` : ''}<br>내성 — 물리 ×${(+rs.physical || 1).toFixed(2)} · 마법 ×${(+rs.magic || 1).toFixed(2)}${C.staggerAt && C.staggerAt.length ? ` · 흐트러짐 ${C.staggerAt.map(v => Math.round(v * 100) + '%').join(' / ')}` : ''}`;
+    $('scSkills').innerHTML = skillsOf(type).map(k => { const S = SKILLS[k]; return `<button class="sk" data-k="${k}"><b style="color:${S.color}">▶ ${S.name}</b><small>${S.type ? ({ physical: '물리', magic: '마법', true: '고정' }[S.type] || S.type) + ' · ' : ''}${S.coins ? `기본 ${S.base} + 코인 ${S.coinPow >= 0 ? '+' : ''}${S.coinPow} × ${S.coins}` : '수비/특수'}${S.lvMod ? ` · 공격 레벨 +${S.lvMod}` : ''}${S.unbreakable ? ' · 파괴 불가' : ''}</small></button>`; }).join('') || '<div style="color:#888">스킬 없음</div>';
+    $('scFx').innerHTML = [['💫 흐트러짐', 'stagger'], ['😱 패닉', 'panic'], ['💀 과녁 처치', 'kill'], ['🎯 과녁 흐트러짐', 'tstagger']].concat((SPECIAL[type] || []).map((x, i) => [x[0], 'sp' + i])).map(([n, k]) => `<button data-fx="${k}">${n}</button>`).join('');
+  }
+  function useSkill(k) {
+    const f = subj(); if (!f) return setup(cur);
+    if (f.busy > 0 || engagements.some(e => e.a && e.a.f === f || e.b && e.b.f === f)) { toast('이전 연출이 끝나면 다시 눌러 주세요'); return; }
+    const t = target(); f.cast = null; f.cd = 0; f.stagger = 0; f.panic = 0;
+    if (k !== 'guard' && !SKILLS[k].type && !SKILLS[k].evade && !['gimman', 'hunger'].includes(k)) { f.ready = k; toast('수비 스킬이에요 — 다음 스킬로 지정했어요 (공격받을 때 발동)'); return; }
+    if (k === 'guard' || SKILLS[k].guard) { if (k === 'guard') useGuard(f, '연출'); else { f.ready = k; toast('수비 스킬은 공격받을 때 발동해요 — 다음 스킬로 지정했어요'); } return; }
+    if (k === 'gimman') return useGimman(f);
+    if (k === 'hunger') { f.hungerUsed = false; return useHunger(f); }
+    if (SKILLS[k].evade) { f.ready = k; toast('회피 스킬은 공격받을 때 발동해요'); return; }
+    if (!t) { toast('과녁이 없어요 — 다시 배치를 눌러 주세요'); return; }
+    if (SKILLS[k].counter) { const u = makeUse(f, k); f.busy++; engagements.push({ a: u, b: null, mode: 'attack', t: 0.2, ca: 0, cb: 0, round: 0, queue: [{ use: u, tgt: t, coins: SKILLS[k].coins, counter: true }] }); return; }
+    if (SKILLS[k].cast) startCast(f, k, t); else beginEngagement(f, k, t);
+  }
+  P.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.t) return setup(b.dataset.t);
+    if (b.dataset.k) return useSkill(b.dataset.k);
+    if (b.dataset.sp) { setSpeed(+b.dataset.sp); for (const x of $('scSpeed').children) x.classList.toggle('on', x === b); return; }
+    const f = subj();
+    if (b.dataset.fx && f) {
+      const fx = b.dataset.fx, t = target();
+      if (fx === 'stagger') { if (staggerable(f)) { enterStagger(f, f.hp / f.maxHp); f.forcedStagger = true; } else toast('흐트러지지 않는 캐릭터예요'); }
+      else if (fx === 'panic') { if (f.panic <= 0) { f.sp = -45; enterPanic(f); } }
+      else if (fx === 'kill' && t) { t.god = false; dealDamage(f, t, t.hp + 999, 'true', '연출'); setTimeout(() => { if (!fighters.some(a => a.team === 1 && a.alive)) setup(cur); }, 1800); }
+      else if (fx === 'tstagger' && t) { if (staggerable(t)) { enterStagger(t, t.hp / t.maxHp); t.forcedStagger = true; } }
+      else if (fx.startsWith('sp')) SPECIAL[cur][+fx.slice(2)][1](f);
+    }
+    if (b.id === 'scReset') setup(cur);
+    if (b.id === 'scClear') { slashes.length = 0; particles.length = 0; timeFx.length = 0; }
+  });
+  $('scChars').innerHTML = types.map(t => `<button data-t="${t}" style="border-color:${CHAR[t].color}">${CHAR[t].name}</button>`).join('');
+  $('scSpeed').innerHTML = [0.25, 0.5, 1, 2].map(v => `<button data-sp="${v}"${v === 1 ? ' class="on"' : ''}>${v}x</button>`).join('');
+  // 모델 미리보기: 실제 전투 그림 함수로 크게 그림
+  const mc = $('scModel'), mctx = mc.getContext('2d');
+  setInterval(() => {
+    const f = subj(); mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.clearRect(0, 0, mc.width, mc.height); if (!f) return;
+    const ox = f.x, oy = f.y, main = ctx, k = Math.min(1.25, 52 / f.r), tOn = test.on;
+    try { test.on = false; ctx = mctx; ctx.save(); ctx.translate(mc.width / 2, mc.height / 2 + 6); ctx.scale(k, k); ctx.translate(-ox, -oy); drawFighter(f); ctx.restore(); } catch (e) {} finally { ctx = main; test.on = tOn; }
+  }, 60);
+  document.getElementById('patchModal').classList.remove('on'); tutShow(-1);
+  setTimeout(() => setup('song'), 300);
+})();
 </script>
 </body>
 </html>
