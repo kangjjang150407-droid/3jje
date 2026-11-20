@@ -3958,7 +3958,7 @@ function drawDespairSlash(sl, k, a0, a1) {
   if (sl.big) { ctx.globalAlpha = k * 0.7; ctx.strokeStyle = '#7aa0ff'; ctx.lineWidth = 2;
     for (let i = 0; i < 26; i++) { const x = (((i * 0.37 + sl.seed) % 1) - 0.5) * R * 2.6, y = ((p * 2.4 + i * 0.13) % 1) * R * 2.4 - R * 1.4; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 18); ctx.stroke(); } }
   // 검: 잔상 3개 + 푸른 빛 + 본체
-  const L = R * 1.2, img = sl.img, hasImg = img && img.complete && img.naturalWidth;
+  const L = sl.sweep ? Math.min(R * 0.55, 150) : R, img = sl.img, hasImg = img && img.complete && img.naturalWidth;
   const drawSword = al => { ctx.globalAlpha = al; if (hasImg) { const ih = L * 1.7, iw = ih * img.naturalWidth / img.naturalHeight; ctx.save(); ctx.rotate(Math.PI / 2); ctx.drawImage(img, -iw / 2, -L * 1.15, iw, ih); ctx.restore(); }
     else { ctx.fillStyle = '#cfe0ff'; ctx.beginPath(); ctx.moveTo(L * 0.1, -5); ctx.lineTo(L * 1.1, 0); ctx.lineTo(L * 0.1, 5); ctx.closePath(); ctx.fill(); } };
   const span = a1 - a0;
@@ -4056,7 +4056,7 @@ function drawFireSlash(sl, k, a0, a1) {
     ctx.globalAlpha = k * 0.6; ctx.drawImage(glow(P[3]), fx - fh * 0.35, fy - fh * 0.9 - p * 18, fh * 0.7, fh * 1.1);
   }
   ctx.globalCompositeOperation = 'source-over';
-  const L = sl.r * 1.2, hasImg = sl.img && sl.img.complete && sl.img.naturalWidth;
+  const L = sl.sweep ? Math.min(sl.r * 0.55, 150) : sl.r, hasImg = sl.img && sl.img.complete && sl.img.naturalWidth;
   const drawSword = alpha => {
     ctx.globalAlpha = alpha;
     if (hasImg) {
@@ -5758,6 +5758,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '8.2', date: '2026-11-20', items: ['검 크기 축소: 휘두르는 검이 작아졌어요 (여러 대상을 휩쓸 때는 검기만 멀리 뻗고 검은 손에 든 크기로)'] },
   { v: '8.1', date: '2026-11-20', items: ['검 휘두르기 연출 수정: 여러 대상을 동시에 공격할 때 대상마다 검이 따로 나오지 않고, 검 하나가 모든 대상을 휩쓸듯이 휘둘러져요 (강주원 · 강주원 [불타는 울음] · 이건민 · 강우주 · 절망의 기사)'] },
   { v: '8.0', date: '2026-11-20', items: ['흐트러짐 효과음 추가: 캐릭터가 흐트러지는 순간 전용 효과음이 재생돼요'] },
   { v: '7.9', date: '2026-11-20', items: ['🎬 연출 구경 서버 오픈: 모든 캐릭터·보스의 모델을 보고, 스킬 이펙트와 흐트러짐·패닉·처치·각성·되감기 부활 같은 연출을 버튼 하나로 구경할 수 있어요 (0.25x 슬로 모션 지원)'] },
