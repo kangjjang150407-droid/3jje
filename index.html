@@ -2863,10 +2863,24 @@ function hitCoin(u, t, pow, i, heads, crit) {
     // 붉고 회색인 담배 연기가 대상에게 뿜어져 나감
     songSmoke(f, t, u.sk === 'sAni', u.sk === 'sSlash');
   } else if (f.type === 'cerberus') {
-    // 발톱으로 할퀴는 붉은 자국
-    const ang = Math.atan2(t.y - f.y, t.x - f.x);
-    for (let k = -1; k <= 1; k++) lightning(t.x - Math.cos(ang + 1.57) * k * 22 - Math.cos(ang) * 70, t.y - Math.sin(ang + 1.57) * k * 22 - Math.sin(ang) * 70, t.x - Math.cos(ang + 1.57) * k * 22 + Math.cos(ang) * 70, t.y - Math.sin(ang + 1.57) * k * 22 + Math.sin(ang) * 70, '#ff4a6a', 7, 0.35);
-    burst(t.x, t.y, '#ff2a4a', 30, 520, 11, 0.6); shake = Math.max(shake, 14);
+    // 세 머리가 동시에 물어뜯음: 위아래 이빨이 맞물리며 피가 튐
+    const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'cerBite';
+    slashes.push({ bite: true, x: t.x, y: t.y, tr: t.r, ang, big, life: 0.55, max: 0.55 });
+    for (let k = 0; k < Math.round(26 * QUALITY) + 6; k++) { const a = ang + rand(-1.3, 1.3), sp = rand(200, 620); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, life: rand(0.35, 0.7), max: 0.7, size: rand(3, 8), color: Math.random() < 0.7 ? '#c8001a' : '#ff4a5a', drag: 0.93, g: 520, kind: 'glow', rot: 0 }); }
+    shake = Math.max(shake, big ? 18 : 12); if (big) doFlash('#c8001a', 0.25);
+  } else if (f.type === 'targetking') {
+    // 과녁의 왕: 금빛 조준선이 대상을 잡고 → 과녁 모양 충격
+    slashes.push({ reticle: true, x: t.x, y: t.y, tr: t.r, life: 0.6, max: 0.6, seed: Math.random() });
+    burst(t.x, t.y, '#ffd84a', 26, 600, 7, 0.5, { kind: 'spark' }); shake = Math.max(shake, 14); doFlash('#ffcc33', 0.18);
+  } else if (f.type === 'darkwooju') {
+    // 암흑진화: 어둠이 묻은 혀(촉수)가 휘감아 치고 → 어둠으로 빨려드는 붕괴
+    slashes.push({ voidLash: true, fx: f.x, fy: f.y, x: t.x, y: t.y, tr: t.r, big: u.sk === 'dwLink' || u.sk === 'dwWalk', life: 0.6, max: 0.6, seed: Math.random() * 10 });
+    for (let k = 0; k < Math.round(18 * QUALITY) + 4; k++) { const a = Math.random() * TAU, d = rand(80, 160); particles.push({ x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, vx: -Math.cos(a) * d * 2.2, vy: -Math.sin(a) * d * 2.2, life: 0.45, max: 0.45, size: rand(4, 9), color: Math.random() < 0.5 ? '#6a3aff' : '#1a0838', drag: 1, g: 0, kind: 'glow', rot: 0 }); }
+    shake = Math.max(shake, 12);
+  } else if (f.type === 'pastjuwon') {
+    // 과거의 강주원: 화면이 찢어지는 글리치 일격
+    slashes.push({ glitchHit: true, x: t.x, y: t.y, tr: t.r, ang: Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.6, 0.6), big: u.sk === 'pjPunch', life: 0.5, max: 0.5, seed: Math.random() * 100 });
+    shake = Math.max(shake, u.sk === 'pjPunch' ? 22 : 11);
   } else if (f.type === 'despair') {
     // 절망의 기사의 검이 휘둘러지는 검기
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
@@ -4415,6 +4429,59 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.bite) {
+      // 세 쌍의 턱이 위아래에서 맞물림
+      const close = Math.min(1, p / 0.3), fade = p < 0.3 ? 1 : 1 - (p - 0.3) / 0.7;
+      ctx.save();
+      for (let h = -1; h <= 1; h++) {
+        const a = sl.ang + h * 0.9, cx = sl.x + Math.cos(sl.ang + Math.PI / 2) * h * sl.tr * 0.9, cy = sl.y + Math.sin(sl.ang + Math.PI / 2) * h * sl.tr * 0.9;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(a); const W = sl.tr * (sl.big ? 1.15 : 0.95), gap = sl.tr * 1.4 * (1 - close * close) + 2;
+        for (const sgn of [-1, 1]) {
+          const y0 = sgn * gap; ctx.globalAlpha = fade;
+          const g = ctx.createLinearGradient(0, y0 + sgn * 26, 0, y0); g.addColorStop(0, 'rgba(60,0,10,0)'); g.addColorStop(1, '#3a0008');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, y0 + sgn * 12, W, 16, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = '#fff2e8'; ctx.strokeStyle = '#5a0010'; ctx.lineWidth = 1.2;
+          for (let k = -3; k <= 3; k++) { const x0 = k * W / 3.6, len = (k === -3 || k === 3) ? 22 : 14; ctx.beginPath(); ctx.moveTo(x0 - 6, y0); ctx.lineTo(x0, y0 - sgn * len); ctx.lineTo(x0 + 6, y0); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        }
+        ctx.restore();
+      }
+      if (p > 0.28) { const q = (p - 0.28) / 0.72; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - q) * 0.9; ctx.drawImage(glow('#ff1a3a'), sl.x - sl.tr * 2.5, sl.y - sl.tr * 2.5, sl.tr * 5, sl.tr * 5); ctx.strokeStyle = '#ff3a4a'; ctx.lineWidth = 4 * (1 - q); ctx.beginPath(); ctx.arc(sl.x, sl.y, sl.tr * (1.2 + q * 1.8), 0, TAU); ctx.stroke(); }
+      ctx.restore(); continue;
+    }
+    if (sl.reticle) {
+      // 금빛 조준선이 회전하며 좁혀오고(0~40%) → 과녁 무늬 충격파
+      ctx.save(); const R = sl.tr * (3.4 - Math.min(1, p / 0.4) * 2.1), rot = p * 6 + sl.seed * 6;
+      ctx.globalAlpha = p < 0.4 ? 1 : Math.max(0, 1 - (p - 0.4) / 0.3); ctx.strokeStyle = '#ffcc33'; ctx.lineWidth = 3; ctx.shadowColor = '#ffcc33'; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(sl.x, sl.y, R, 0, TAU); ctx.stroke(); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sl.x, sl.y, R * 0.7, 0, TAU); ctx.stroke();
+      for (let k = 0; k < 4; k++) { const a = rot + k * Math.PI / 2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sl.x + Math.cos(a) * R * 0.55, sl.y + Math.sin(a) * R * 0.55); ctx.lineTo(sl.x + Math.cos(a) * R * 1.25, sl.y + Math.sin(a) * R * 1.25); ctx.stroke(); }
+      ctx.shadowBlur = 0;
+      if (p >= 0.4) { const q = (p - 0.4) / 0.6; ctx.globalCompositeOperation = 'lighter';
+        for (let r = 0; r < 4; r++) { ctx.globalAlpha = (1 - q) * 0.85; ctx.strokeStyle = ['#ffffff', '#ff3a3a', '#ffcc33', '#ff3a3a'][r]; ctx.lineWidth = (6 - r) * (1 - q) + 1; ctx.beginPath(); ctx.arc(sl.x, sl.y, sl.tr * (0.6 + r * 0.55 + q * 2.2), 0, TAU); ctx.stroke(); }
+        ctx.globalAlpha = Math.max(0, 1 - q * 3); ctx.drawImage(glow('#fff3a0'), sl.x - sl.tr * 1.6, sl.y - sl.tr * 1.6, sl.tr * 3.2, sl.tr * 3.2); }
+      ctx.restore(); continue;
+    }
+    if (sl.voidLash) {
+      // 어둠 촉수: 검은 심지 + 보라 빛, 물결치며 뻗음 → 대상 주변이 어둠으로 빨려듦
+      const reach = Math.min(1, p / 0.3), fade = p < 0.3 ? 1 : 1 - (p - 0.3) / 0.7, dx = sl.x - sl.fx, dy = sl.y - sl.fy, D = Math.hypot(dx, dy) || 1, nx = -dy / D, ny = dx / D;
+      ctx.save(); ctx.lineCap = 'round';
+      for (const [col, wd, al, comp] of [['#6a3aff', sl.big ? 26 : 18, 0.5, 'lighter'], ['#0a0418', sl.big ? 12 : 8, 1, 'source-over'], ['#c8a0ff', 2, 0.9, 'lighter']]) {
+        ctx.globalCompositeOperation = comp; ctx.globalAlpha = fade * al; ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath();
+        for (let i = 0; i <= 30 * reach; i++) { const q = i / 30, w = Math.sin(q * 10 + sl.seed + simTime * 20) * 22 * Math.sin(Math.PI * q); ctx.lineTo(sl.fx + dx * q + nx * w, sl.fy + dy * q + ny * w); } ctx.stroke(); }
+      if (p > 0.25) { const q = (p - 0.25) / 0.75, R = sl.tr * (2.6 - q * 1.8); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = (1 - q) * 0.75;
+        const g = ctx.createRadialGradient(sl.x, sl.y, 0, sl.x, sl.y, R); g.addColorStop(0, '#000000'); g.addColorStop(0.7, 'rgba(20,6,50,0.8)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sl.x, sl.y, R, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#8a5aff'; ctx.lineWidth = 3; ctx.globalAlpha = (1 - q); ctx.beginPath(); ctx.arc(sl.x, sl.y, R, 0, TAU); ctx.stroke(); }
+      ctx.restore(); continue;
+    }
+    if (sl.glitchHit) {
+      // 글리치 일격: 색이 어긋난 세 줄 베기 + 깨진 화면 조각
+      const fade = p < 0.2 ? 1 : 1 - (p - 0.2) / 0.8, dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), L = sl.tr * (sl.big ? 4.5 : 3.2);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const [col, o] of [['#ff2a6a', -5], ['#2affe0', 5], ['#ffffff', 0]]) { ctx.globalAlpha = fade * (o ? 0.8 : 1); ctx.strokeStyle = col; ctx.lineWidth = o ? 7 : 3; ctx.beginPath(); ctx.moveTo(sl.x - dx * L / 2 + o, sl.y - dy * L / 2); ctx.lineTo(sl.x + dx * L / 2 + o, sl.y + dy * L / 2); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+      const rnd = k => { const v = Math.sin(sl.seed * 91 + k * 37.7) * 43758.5; return v - Math.floor(v); };
+      for (let k = 0; k < (sl.big ? 26 : 14); k++) { const ox = (rnd(k) - 0.5) * sl.tr * 4, oy = (rnd(k + 50) - 0.5) * sl.tr * 3, w = 6 + rnd(k + 9) * 34, h = 3 + rnd(k + 19) * 12; if (Math.random() < 0.25) continue; ctx.globalAlpha = fade * 0.85; ctx.fillStyle = ['#ff2a6a', '#2affe0', '#ffe14d', '#ffffff', '#1a0010'][k % 5]; ctx.fillRect(sl.x + ox + (Math.random() - 0.5) * 10 * fade, sl.y + oy, w, h); }
+      ctx.restore(); continue;
+    }
     if (sl.awl) {
       // 0~35% 진동하며 떠 있음 → 35~50% 꽂힘 → 박힌 채 떨리다 사라짐
       const hold = 0.35, hit = 0.5, fade = p < 0.75 ? 1 : 1 - (p - 0.75) / 0.25;
@@ -5368,6 +5435,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.2', date: '2026-11-20', items: ['레이드 보스 공격 이펙트 강화: 과녁의 왕(금빛 조준선 · 과녁 충격파) · 케로베로스(세 턱이 물어뜯음) · 강우주 - 암흑진화(어둠 촉수 · 붕괴) · 과거의 강주원(글리치 일격)'] },
   { v: '7.1', date: '2026-11-20', items: ['유환 공격 이펙트 변경: 노랗게 물든 송곳들이 진동하다 꽂힘 (인정합니노 · 도박수는 7개)'] },
   { v: '7.0', date: '2026-11-20', items: ['곽시율 주먹 이펙트 퀄리티 향상: 말아 쥔 손가락 · 엄지 · 입체 음영 · 보라 기운'] },
   { v: '6.9', date: '2026-11-20', items: ['곽시율 공격 이펙트 변경: 보라색 주먹으로 타격 (속도선 · 충격파 · 집중선)'] },
