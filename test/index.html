@@ -5053,6 +5053,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.9', date: '2026-11-20', items: ['쿠폰 MECUT은 테스터만 사용 가능'] },
   { v: '5.8', date: '2026-11-20', items: ['🎟 10회 뽑기권 추가 (뽑기 창에서 사용)', '쿠폰 MECUT 추가'] },
   { v: '5.7', date: '2026-11-20', items: ['👥 친구 추가: 친구 코드로 요청 → 수락하면 친구', '친구에게 하루 1번 선물 보내기 (코인 100 · 내 코인은 들지 않음) · 받은 선물 받기'] },
   { v: '5.6', date: '2026-11-20', items: ['👤 프로필 추가 (구글 로그인 시): 닉네임(7일마다 변경) · 칭호 · 프로필 사진', '랭킹 · 채팅 · PVP에 닉네임과 칭호가 표시됨'] },
@@ -5178,7 +5179,7 @@ document.getElementById('mailBtn').onclick = () => { const on = document.getElem
 // 코드는 대소문자 구분 · 기간(from ~ to, 포함) 안에 계정(저장 데이터)당 한 번
 const COUPONS = [
   { code: 'MEMB', coin: 1000, from: '2026-11-19', to: '2026-11-23' },
-  { code: 'MECUT', special: 'mecut', from: '2000-01-01', to: '2999-12-31' }, // 코인 100만으로 조정 · 테스터 해제 · 10회 뽑기권 10장
+  { code: 'MECUT', special: 'mecut', from: '2000-01-01', to: '2999-12-31' }, // 테스터 전용: 코인 100만으로 조정 · 테스터 해제 · 10회 뽑기권 10장
 ];
 if (!save.coupons) save.coupons = {};
 function useCoupon() {
@@ -5188,8 +5189,8 @@ function useCoupon() {
   if (!c) return toast('🎟 없는 쿠폰 코드예요');
   if (d < c.from) return toast(`🎟 아직 사용할 수 없는 쿠폰이에요 (${+c.from.slice(5, 7)}월 ${+c.from.slice(8, 10)}일부터)`);
   if (d > c.to) return toast('🎟 기간이 지난 쿠폰이에요');
+  if (c.special === 'mecut') { inp.value = ''; return couponMecut(); } // 테스터만 사용 (쓰면 테스터가 풀림)
   if (save.coupons[code]) return toast('🎟 이미 사용한 쿠폰이에요');
-  if (c.special === 'mecut') { inp.value = ''; return couponMecut(); }
   // 쿠폰 코인은 이번 주 랭킹 점수에 넣지 않음
   let before = 0; try { before = rankScore().total; } catch (e) {}
   save.coupons[code] = true; addCoins(c.coin, `쿠폰 ${code}`);
@@ -5204,20 +5205,17 @@ function couponMecut() {
     if (!sv.coupons) sv.coupons = {}; sv.coupons.MECUT = true;
     if (sv.rankBase && sv.rankBase.week === weekStr()) sv.rankBase.total += Math.floor(sv.coins / 100) - oldPts; // 쿠폰 코인은 주간 랭킹 점수 제외
   };
-  if (account && (TESTER || localStorage.getItem('ballfight-tester-' + account.sub) === '1')) {
+  if (!(account && (TESTER || localStorage.getItem('ballfight-tester-' + account.sub) === '1'))) return toast('🎟 테스터만 사용할 수 있는 쿠폰이에요');
+  {
     // 테스터 해제: 본 서버 데이터에 적용하고 다시 테스터가 되지 않게 기록
     const key = 'ballfight-save-u' + account.sub; let sv = {};
     try { sv = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { sv = {}; }
-    if (sv.coupons && sv.coupons.MECUT) return toast('🎟 이미 사용한 쿠폰이에요');
     apply(sv); localStorage.setItem(key, JSON.stringify(sv));
     save.coupons.MECUT = true; persist();
     localStorage.removeItem('ballfight-tester-' + account.sub); localStorage.setItem('ballfight-untester-' + account.sub, '1');
     toast('🎟 MECUT: 테스터 해제 · 코인 1,000,000 · 10회 뽑기권 10장 — 새로고침할게요');
     setTimeout(() => location.reload(), 1200);
-    return;
   }
-  apply(save); persist(); renderQuests(); if (typeof renderStones === 'function') renderStones();
-  toast('🎟 MECUT: 코인 1,000,000 · 10회 뽑기권 10장');
 }
 document.getElementById('couponUse').onclick = useCoupon;
 document.getElementById('couponInput').addEventListener('keydown', e => { if (e.key === 'Enter') useCoupon(); });
