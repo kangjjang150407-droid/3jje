@@ -253,6 +253,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="gachaPanel">
       <div id="pickupBanner"></div>
       <div class="row"><button id="pull1" class="can2">1회 뽑기 🪙 200</button><button id="pull10" class="can2">10회 뽑기 🪙 2000</button></div>
+      <button id="pullTicket" class="can2" style="display:none;width:100%;margin-top:6px;padding:8px;font-weight:700;background:linear-gradient(90deg,#ffcc33,#ff7a3a);border:none;color:#2a1600"></button>
       <div id="gachaResult"></div>
       <div class="qtitle" style="margin-top:8px">영혼석 · 강화 <span>(송재범·강주원은 기본 보유, 나머지는 뽑기에서 획득 · 영혼석 20개로 강화 · 넘치는 영혼석은 1개당 코인 10)</span></div>
       <div id="stoneList"></div>
@@ -841,7 +842,7 @@ let account = null; // { sub, name, picture }
 try { account = JSON.parse(localStorage.getItem('ballfight-user') || 'null'); if (account && !account.sub) account = null; } catch (e) { account = null; }
 // 테스트 서버에 로그인한 적 있는 계정(테스터)은 본 서버에서도 테스트 서버의 데이터·혜택이 그대로 적용됨
 let TESTER = false;
-try { if (account) { if (TEST_SERVER) localStorage.setItem('ballfight-tester-' + account.sub, '1'); TESTER = localStorage.getItem('ballfight-tester-' + account.sub) === '1'; } } catch (e) {}
+try { if (account) { if (TEST_SERVER && localStorage.getItem('ballfight-untester-' + account.sub) !== '1') localStorage.setItem('ballfight-tester-' + account.sub, '1'); TESTER = localStorage.getItem('ballfight-tester-' + account.sub) === '1'; } } catch (e) {}
 const PERK = TEST_SERVER || TESTER;
 const SV = (PERK ? '-test' : '') + (account ? '-u' + account.sub : ''); // 계정마다 저장 데이터 분리
 function googleSignedIn(resp) {
@@ -5051,6 +5052,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.8', date: '2026-11-20', items: ['🎟 10회 뽑기권 추가 (뽑기 창에서 사용)', '쿠폰 MECUT 추가'] },
   { v: '5.7', date: '2026-11-20', items: ['👥 친구 추가: 친구 코드로 요청 → 수락하면 친구', '친구에게 하루 1번 선물 보내기 (코인 100 · 내 코인은 들지 않음) · 받은 선물 받기'] },
   { v: '5.6', date: '2026-11-20', items: ['👤 프로필 추가 (구글 로그인 시): 닉네임(7일마다 변경) · 칭호 · 프로필 사진', '랭킹 · 채팅 · PVP에 닉네임과 칭호가 표시됨'] },
   { v: '5.5', date: '2026-11-19', items: ['레이드에 실패하면 결과 화면에 전투 팁 표시'] },
@@ -5175,6 +5177,7 @@ document.getElementById('mailBtn').onclick = () => { const on = document.getElem
 // 코드는 대소문자 구분 · 기간(from ~ to, 포함) 안에 계정(저장 데이터)당 한 번
 const COUPONS = [
   { code: 'MEMB', coin: 1000, from: '2026-11-19', to: '2026-11-23' },
+  { code: 'MECUT', special: 'mecut', from: '2000-01-01', to: '2999-12-31' }, // 코인 100만으로 조정 · 테스터 해제 · 10회 뽑기권 10장
 ];
 if (!save.coupons) save.coupons = {};
 function useCoupon() {
@@ -5185,11 +5188,35 @@ function useCoupon() {
   if (d < c.from) return toast(`🎟 아직 사용할 수 없는 쿠폰이에요 (${+c.from.slice(5, 7)}월 ${+c.from.slice(8, 10)}일부터)`);
   if (d > c.to) return toast('🎟 기간이 지난 쿠폰이에요');
   if (save.coupons[code]) return toast('🎟 이미 사용한 쿠폰이에요');
+  if (c.special === 'mecut') { inp.value = ''; return couponMecut(); }
   // 쿠폰 코인은 이번 주 랭킹 점수에 넣지 않음
   let before = 0; try { before = rankScore().total; } catch (e) {}
   save.coupons[code] = true; addCoins(c.coin, `쿠폰 ${code}`);
   try { if (save.rankBase && save.rankBase.week === weekStr()) { save.rankBase.total += rankScore().total - before; persist(); } } catch (e) {}
   inp.value = '';
+}
+// MECUT: 지금 코인을 1,000,000개로 조정하고 테스터를 해제, 대신 10회 뽑기권 10장
+function couponMecut() {
+  const apply = sv => {
+    const oldPts = Math.floor((sv.coins || 0) / 100);
+    sv.coins = 1000000; sv.tickets10 = (sv.tickets10 || 0) + 10;
+    if (!sv.coupons) sv.coupons = {}; sv.coupons.MECUT = true;
+    if (sv.rankBase && sv.rankBase.week === weekStr()) sv.rankBase.total += Math.floor(sv.coins / 100) - oldPts; // 쿠폰 코인은 주간 랭킹 점수 제외
+  };
+  if (account && (TESTER || localStorage.getItem('ballfight-tester-' + account.sub) === '1')) {
+    // 테스터 해제: 본 서버 데이터에 적용하고 다시 테스터가 되지 않게 기록
+    const key = 'ballfight-save-u' + account.sub; let sv = {};
+    try { sv = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { sv = {}; }
+    if (sv.coupons && sv.coupons.MECUT) return toast('🎟 이미 사용한 쿠폰이에요');
+    apply(sv); localStorage.setItem(key, JSON.stringify(sv));
+    save.coupons.MECUT = true; persist();
+    localStorage.removeItem('ballfight-tester-' + account.sub); localStorage.setItem('ballfight-untester-' + account.sub, '1');
+    toast('🎟 MECUT: 테스터 해제 · 코인 1,000,000 · 10회 뽑기권 10장 — 새로고침할게요');
+    setTimeout(() => location.reload(), 1200);
+    return;
+  }
+  apply(save); persist(); renderQuests(); if (typeof renderStones === 'function') renderStones();
+  toast('🎟 MECUT: 코인 1,000,000 · 10회 뽑기권 10장');
 }
 document.getElementById('couponUse').onclick = useCoupon;
 document.getElementById('couponInput').addEventListener('keydown', e => { if (e.key === 'Enter') useCoupon(); });
@@ -5618,9 +5645,10 @@ function renderPickup() {
   const md = d => `${+d.slice(5, 7)}.${+d.slice(8, 10)}`;
   el.innerHTML = `<div style="margin-bottom:6px;padding:6px 8px;border-radius:8px;background:linear-gradient(90deg,#3a2a10,#1a1208);border:1px solid #d8a86a;font-size:12px">🎉 <b style="color:#ffd27a">${CHAR[pk.type].name} - 픽업 뽑기</b> <span style="color:#a89878">(${md(pk.from)} ~ ${md(pk.to)})</span><br>${CHAR[pk.type].name} 등장 확률 <b style="color:#ffd27a">${Math.round(pk.rate * 100)}%</b> (원래 ${Math.round(100 / GACHA.length)}%) · 강화 효과: ${UPG_FX[pk.type] || '-'}</div>`;
 }
-function pull(n) {
-  const cost = 200 * n;
-  if (save.coins < cost) { toast(`코인이 부족해요 (필요 ${cost}, 보유 ${save.coins})`); return; }
+function pull(n, ticket) {
+  const cost = ticket ? 0 : 200 * n;
+  if (ticket) { if (!(save.tickets10 > 0)) { toast('10회 뽑기권이 없어요'); return; } save.tickets10--; }
+  else if (save.coins < cost) { toast(`코인이 부족해요 (필요 ${cost}, 보유 ${save.coins})`); return; }
   save.coins -= cost;
   const got = {}, fresh = []; let refund = 0;
   for (let i = 0; i < n; i++) {
@@ -5645,9 +5673,10 @@ function renderStones() {
       <div class="fx">${UPG_FX[k]}</div></div>`;
   }).join('');
   $('pull1').disabled = save.coins < 200; $('pull10').disabled = save.coins < 2000;
+  { const t = save.tickets10 || 0, b = $('pullTicket'); b.style.display = t > 0 ? '' : 'none'; b.textContent = `🎟 10회 뽑기권 사용 (${t}장)`; }
   $('pull1').style.opacity = save.coins < 200 ? 0.45 : 1; $('pull10').style.opacity = save.coins < 2000 ? 0.45 : 1;
 }
-$('pull1').onclick = () => pull(1); $('pull10').onclick = () => pull(10);
+$('pull1').onclick = () => pull(1); $('pull10').onclick = () => pull(10); $('pullTicket').onclick = () => pull(10, true);
 $('stoneList').addEventListener('click', e => {
   const b2 = e.target.closest('button[data-up]'); if (!b2) return;
   const k = b2.dataset.up;
