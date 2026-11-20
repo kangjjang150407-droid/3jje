@@ -2840,7 +2840,12 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
   const dm = Math.max(0, 1 + pct / 100) * (crit ? (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
-  if (f.type === 'kwak' && u.sk !== 'bugcut') {
+  if (f.type === 'yuhwan' && u.sk !== 'heuhaha') {
+    // 노랗게 물든 송곳들이 진동하다가 꽂힘
+    const big = u.sk === 'admit' || u.sk === 'gamble', base = Math.atan2(f.y - t.y, f.x - t.x), n = big ? 7 : 4, spikes = [];
+    for (let k = 0; k < n; k++) spikes.push({ a: base + (k - (n - 1) / 2) * (big ? 0.42 : 0.5) + rand(-0.12, 0.12), d: t.r * rand(2.6, 3.4) * (big ? 1.2 : 1), delay: k * 0.025 });
+    slashes.push({ awl: true, x: t.x, y: t.y, tr: t.r, spikes, big, life: big ? 0.8 : 0.62, max: big ? 0.8 : 0.62, seed: Math.random() });
+  } else if (f.type === 'kwak' && u.sk !== 'bugcut') {
     // 보라색 주먹으로 타격
     const big = u.sk === 'kwEasy' || (u.sk === 'ttuk' && i === 2) || u.sk === 'getout', ang = Math.atan2(t.y - f.y, t.x - f.x);
     slashes.push({ punch: true, fx: f.x, fy: f.y, tx: t.x, ty: t.y, tr: t.r, ang, big, life: big ? 0.6 : 0.45, max: big ? 0.6 : 0.45, seed: Math.random() });
@@ -4411,6 +4416,38 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.awl) {
+      // 0~35% 진동하며 떠 있음 → 35~50% 꽂힘 → 박힌 채 떨리다 사라짐
+      const hold = 0.35, hit = 0.5, fade = p < 0.75 ? 1 : 1 - (p - 0.75) / 0.25;
+      ctx.save();
+      for (const sp of sl.spikes) {
+        const lp = Math.max(0, p - sp.delay), dx = Math.cos(sp.a), dy = Math.sin(sp.a);
+        let dist, vib;
+        if (lp < hold) { dist = sp.d * (0.8 + 0.2 * Math.min(1, lp / 0.12)); vib = 4; }
+        else if (lp < hit) { const q = (lp - hold) / (hit - hold); dist = sp.d + (sl.tr * 0.35 - sp.d) * q * q; vib = 1; }
+        else { dist = sl.tr * 0.35; vib = 2.5 * Math.max(0, 1 - (lp - hit) / 0.3); }
+        const jx = Math.sin(simTime * 90 + sp.a * 13) * vib, jy = Math.cos(simTime * 77 + sp.a * 7) * vib;
+        const tipX = sl.x + dx * dist + jx, tipY = sl.y + dy * dist + jy, L = sl.tr * (sl.big ? 2.3 : 1.9), W = sl.big ? 9 : 7.5;
+        const bx = tipX + dx * L, by = tipY + dy * L, nx = -dy, ny = dx;
+        // 진동 표시: 송곳 옆으로 떨리는 물결선
+        if (lp < hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6; ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 1.5;
+          for (const sgn of [-1, 1]) { ctx.beginPath(); for (let i = 0; i <= 10; i++) { const q = i / 10, w = Math.sin(q * 18 + simTime * 60) * 3; ctx.lineTo(tipX + dx * L * q + nx * (W * 1.8 + w) * sgn, tipY + dy * L * q + ny * (W * 1.8 + w) * sgn); } ctx.stroke(); } }
+        // 송곳 몸체: 끝으로 갈수록 가늘고 밝아짐 (노랗게 물든 금속)
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade * 0.55; ctx.drawImage(glow('#ffd84a'), Math.min(tipX, bx) - 14, Math.min(tipY, by) - 14, Math.abs(bx - tipX) + 28, Math.abs(by - tipY) + 28); ctx.globalAlpha = fade * 0.8; ctx.drawImage(glow('#fff3a0'), tipX - 18, tipY - 18, 36, 36);
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = fade;
+        const g = ctx.createLinearGradient(bx, by, tipX, tipY); g.addColorStop(0, '#a87a10'); g.addColorStop(0.4, '#ffc81a'); g.addColorStop(0.8, '#fff07a'); g.addColorStop(1, '#ffffff');
+        ctx.fillStyle = g; ctx.strokeStyle = '#2a1a00'; ctx.lineWidth = 1.2; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(bx + nx * W, by + ny * W); ctx.lineTo(bx - dx * 6 + nx * W * 0.6, by - dy * 6 + ny * W * 0.6); ctx.lineTo(bx - dx * 6 - nx * W * 0.6, by - dy * 6 - ny * W * 0.6); ctx.lineTo(bx - nx * W, by - ny * W); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(bx + dx * 4, by + dy * 4, W * 1.1, 0, TAU); ctx.fill(); ctx.stroke(); // 손잡이 끝
+        ctx.strokeStyle = 'rgba(255,255,230,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tipX + nx * 1, tipY + ny * 1); ctx.lineTo(bx + nx * W * 0.4, by + ny * W * 0.4); ctx.stroke(); // 금속 반사
+        // 꽂히는 순간 불꽃
+        if (lp >= hit && !sp.hitFx) { sp.hitFx = true; for (let k = 0; k < 8; k++) { const a = sp.a + Math.PI + rand(-0.9, 0.9), v = rand(200, 520); particles.push({ x: tipX, y: tipY, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, max: 0.35, size: rand(2, 5), color: Math.random() < 0.5 ? '#ffffff' : '#ffd84a', drag: 0.9, g: 200, kind: 'spark', rot: 0 }); } ring(tipX, tipY, '#ffe14d', 26, 0.25, 3); shake = Math.max(shake, sl.big ? 9 : 5); }
+      }
+      // 모두 꽂힌 뒤: 대상이 진동하듯 노란 파동
+      if (p > hit && p < 0.85) { const q = (p - hit) / 0.35; ctx.globalCompositeOperation = 'lighter'; for (let r = 0; r < 3; r++) { ctx.globalAlpha = (1 - q) * 0.7; ctx.strokeStyle = r % 2 ? '#fff3a0' : '#ffc81a'; ctx.lineWidth = 3 * (1 - q); ctx.beginPath(); for (let i = 0; i <= 40; i++) { const a = i / 40 * TAU, rr = sl.tr * (1.2 + q * 1.4 + r * 0.35) + Math.sin(a * 12 + simTime * 50) * 4; ctx.lineTo(sl.x + Math.cos(a) * rr, sl.y + Math.sin(a) * rr); } ctx.stroke(); } }
+      ctx.restore();
+      continue;
+    }
     if (sl.punch) {
       // 주먹이 날아가 꽂힘 (0~22%) → 충격파 · 집중선 → 사라짐
       const dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), D = Math.hypot(sl.tx - sl.fx, sl.ty - sl.fy), hitP = 0.22;
@@ -5332,6 +5369,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.1', date: '2026-11-20', items: ['유환 공격 이펙트 변경: 노랗게 물든 송곳들이 진동하다 꽂힘 (인정합니노 · 도박수는 7개)'] },
   { v: '7.0', date: '2026-11-20', items: ['곽시율 주먹 이펙트 퀄리티 향상: 말아 쥔 손가락 · 엄지 · 입체 음영 · 보라 기운'] },
   { v: '6.9', date: '2026-11-20', items: ['곽시율 공격 이펙트 변경: 보라색 주먹으로 타격 (속도선 · 충격파 · 집중선)'] },
   { v: '6.8', date: '2026-11-20', items: ['윤지호 공격 이펙트 변경: 호랑이가 할퀴듯 큰 발톱 자국 (처분 · 북극곰이라 불린 자는 4줄)'] },
