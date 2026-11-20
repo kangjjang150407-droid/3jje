@@ -2588,6 +2588,7 @@ function stepEngagement(e) {
         floatText(Wn.f.x, Wn.f.y - Wn.f.r - 60, '방어 성공!', SKILLS[Wn.sk].color, 26, { life: 1.2 });
         ring(Wn.f.x, Wn.f.y, SKILLS[Wn.sk].color, Wn.f.r * 4, 0.6, 8);
         log(`🛡 ${nm(Wn.f)} ${sk(Wn.sk)} 방어 성공`, 'skill');
+        if (Wn.sk === 'sGuard') addStack(Wn.f, 'poise', 0, 1, '호흡', '#9fe8ff'); // 수비 태세 [합 승리시] 호흡 횟수 1
         changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho', Wn.f) ? -10 : 10, '합 승리');
         e.mode = 'attack'; e.t = 0.4;
         return;
@@ -2611,7 +2612,6 @@ function stepEngagement(e) {
       questEvent('clash');
       changeSp(Wn.f, Wn.f.type === 'jiho' && up('jiho', Wn.f) ? -10 : 10, '합 승리');
       if (Wn.sk === 'sAng') addStack(Wn.f, 'poise', 1, 0, '호흡', '#9fe8ff'); // 앙 [합 승리시] 호흡 1
-      if (Wn.sk === 'sGuard') addStack(Wn.f, 'poise', 0, 1, '호흡', '#9fe8ff'); // 수비 태세 [합 승리시] 호흡 횟수 1
       if (L.sk === 'pjSmoke') { L.f.smokeLoss = (L.f.smokeLoss || 0) + 1; log(`${nm(L.f)} ${sk('pjSmoke')} 합 패배 → 가중치 -2`); }
       if (Wn.sk === 'pjPunch') { Wn.f.permMagic = (Wn.f.permMagic || 0) + 10; log(`${nm(Wn.f)} ${sk('pjPunch')} 합 승리 → 이번 전투 마법 피해량 +10%`); }
       // 절망의 기사 [합 승리시]: 남은 코인 갯수만큼 차갑고 검은 눈물 부여
@@ -2629,7 +2629,7 @@ function stepEngagement(e) {
         bleedCount(L.f, -1);
       }
       e.queue.push({ use: Wn, tgt: L.f, coins: winA ? e.ca : e.cb });
-      if (L.ub) e.queue.push({ use: L, tgt: Wn.f, coins: L.coins });
+      if (L.ub && SKILLS[L.sk].type) e.queue.push({ use: L, tgt: Wn.f, coins: L.coins }); // 수비 스킬(피해 유형 없음)은 반격하지 않음
       else if (L.ubStart != null) e.queue.push({ use: L, tgt: Wn.f, coins: L.coins, start: L.ubStart });
       else if (counterOf(L.f)) e.queue.push({ use: makeUse(L.f, counterOf(L.f)), tgt: Wn.f, coins: SKILLS[counterOf(L.f)].coins, counter: true });
       // 곽시율 패시브 [방해 되네]: 체력 10% 미만인 송재범이 합 패배 시 송재범에게 벌레 컷 사용
