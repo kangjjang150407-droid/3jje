@@ -801,7 +801,7 @@ const SKILLS = {
   sAng:         { name: '앙', color: '#ff7ab8', type: 'physical', lvMod: 0, base: 4, coinPow: 6, coins: 2, cast: 0.6 },
   sHahat:       { name: '하핳', color: '#ff9ac8', type: 'physical', lvMod: 5, base: 11, coinPow: 7, coins: 1, cast: 0.6 },
   sAni:         { name: '아니', color: '#ff4a9a', type: 'physical', lvMod: 10, base: 14, coinPow: 9, coins: 1, unbreakable: true, cast: 0.7 },
-  sSlash:       { name: '공간참 - 청[空間斬 - 靑]', color: '#5ac8ff', type: 'physical', lvMod: 20, base: 20, coinPow: 10, coins: 5, unbreakable: true, cast: 1.1 },
+  sSlash:       { name: '공간참 - 청[空間斬 - 靑]', color: '#ff5a6a', type: 'physical', lvMod: 20, base: 20, coinPow: 10, coins: 5, unbreakable: true, cast: 1.1 },
   sGuard:       { name: '수비 태세', color: '#9cc4ff', defense: true, clashDefense: true, base: 10, coinPow: 4, coins: 1, unbreakable: true },
   pjA:          { name: '도리수니백앤아말량홍차', color: '#ff7a9a', type: 'magic', lvMod: 0, base: 7, coinPow: 3, coins: 2, cast: 0.6, glitch: [40, 80, 100, 190] },
   pjB:          { name: '프나펑가셀로애니레츠고', color: '#ff9ab8', type: 'magic', lvMod: 0, base: 7, coinPow: 2, coins: 3, cast: 0.6, glitch: [40, 80, 100, 190] },
@@ -966,6 +966,30 @@ function drawClock(x, y, R, t, color, alpha, dir) {
   ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(m - 1.57) * R * 0.72, y + Math.sin(m - 1.57) * R * 0.72); ctx.stroke();
   ctx.restore();
 }
+// 공간참 - 청: 붉고 회색인 담배 연기가 모여 검이 되고, 한 번에 벰
+function smokeBladePos(e) {
+  const f = e.f, t = e.tgt && e.tgt.alive ? e.tgt : null, ang = t ? Math.atan2(t.y - f.y, t.x - f.x) : 0;
+  return { x: f.x - Math.cos(ang) * 10, y: f.y - f.r - 70, ang: ang - Math.PI / 2 + 0.25, len: 190 };
+}
+function smokeFormStep(e, dt) {
+  if (particles.length > PARTICLE_CAP || !e.f.alive) return;
+  const b = smokeBladePos(e), cols = ['#9a9aa4', '#7a7a84', '#c8404e', '#a82a3a'];
+  for (let i = 0; i < Math.ceil(dt * 90 * QUALITY); i++) {
+    // 주변에서 피어난 연기가 칼날 자리로 빨려 들어감
+    const a = Math.random() * TAU, r = rand(140, 240), sx = e.f.x + Math.cos(a) * r, sy = e.f.y + Math.sin(a) * r;
+    const k = Math.random(), tx = b.x + Math.cos(b.ang) * b.len * (k - 0.35), ty = b.y + Math.sin(b.ang) * b.len * (k - 0.35), T = rand(0.35, 0.55);
+    particles.push({ x: sx, y: sy, vx: (tx - sx) / T, vy: (ty - sy) / T, life: T, max: T, size: rand(8, 16), color: cols[(Math.random() * 4) | 0], drag: 1, g: 0, kind: 'smoke', rot: 0, a: 0.6 });
+  }
+}
+function drawSmokeBlade(x, y, ang, len, alpha, w) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= alpha;
+  const g = ctx.createLinearGradient(-len * 0.35, 0, len * 0.65, 0);
+  g.addColorStop(0, '#4a3a40'); g.addColorStop(0.35, '#a8a8b4'); g.addColorStop(0.7, '#ff5a6a'); g.addColorStop(1, '#ffd0d4');
+  ctx.shadowColor = '#ff3a4a'; ctx.shadowBlur = 28; ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(-len * 0.35, -w * 0.5); ctx.lineTo(len * 0.5, -w * 0.5); ctx.lineTo(len * 0.65, 0); ctx.lineTo(len * 0.5, w * 0.5); ctx.lineTo(-len * 0.35, w * 0.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a2a30'; ctx.fillRect(-len * 0.38, -w * 1.6, 8, w * 3.2); ctx.fillRect(-len * 0.52, -w * 0.4, len * 0.14, w * 0.8); // 코등이 · 손잡이
+  ctx.restore();
+}
 function drawTimeFx() {
   for (const e of timeFx) {
     const k = e.life / e.max, p = 1 - k, f = e.f, x = f ? f.x : e.x, y = f ? f.y : e.y;
@@ -976,6 +1000,19 @@ function drawTimeFx() {
       ctx.save(); ctx.globalAlpha = k * 0.85;
       for (let i = 0; i < 6; i++) { const yy = y + rand(-e.r * 1.6, e.r * 1.6), w = rand(e.r * 1.2, e.r * 3.4); ctx.fillStyle = Math.random() < 0.6 ? '#ffe14d' : (Math.random() < 0.5 ? 'rgba(0,255,255,0.7)' : 'rgba(255,0,120,0.7)'); ctx.fillRect(x - w / 2 + rand(-20, 20), yy, w, rand(2, 7)); }
       ctx.restore();
+    } else if (e.kind === 'smokeForm') {
+      // 연기가 모여 검이 형체를 갖춰감
+      const b = smokeBladePos(e), pr = Math.min(1, p * 1.3);
+      drawSmokeBlade(b.x + rand(-2, 2) * (1 - pr), b.y + rand(-2, 2) * (1 - pr), b.ang, b.len * (0.5 + pr * 0.5), pr * 0.95, 14 + pr * 6);
+    } else if (e.kind === 'smokeCut') {
+      // 한 번에 크게 베는 연기 검기
+      const t = e.tgt, cx = t ? t.x : e.x, cy = t ? t.y : e.y, R = 230, a0 = e.ang - 1.6, sw = 3.2 * Math.min(1, p * 2.2), a1 = a0 + sw;
+      ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.6);
+      ctx.globalCompositeOperation = 'lighter';
+      const gr = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.05); gr.addColorStop(0, 'rgba(160,160,175,0)'); gr.addColorStop(0.6, 'rgba(255,70,90,0.85)'); gr.addColorStop(1, 'rgba(200,200,210,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, a0, a1); ctx.arc(cx, cy, R * 0.6, a1, a0, true); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over'; ctx.restore();
+      if (p < 0.6) drawSmokeBlade(cx + Math.cos(a1) * R * 0.82, cy + Math.sin(a1) * R * 0.82, a1 + Math.PI / 2, 220, 1 - p, 22);
     } else if (e.kind === 'rewind') {
       // 시간을 되돌리는 시계 (반시계 방향으로 빠르게)
       drawClock(x, y, 150 + Math.sin(p * 12) * 6, p * 20, '#9ff0ff', Math.min(1, k * 3), -1);
@@ -1076,8 +1113,9 @@ try { Object.assign(gfx, JSON.parse(localStorage.getItem('ballfight-gfx') || '{}
 function saveGfx() { try { localStorage.setItem('ballfight-gfx', JSON.stringify(gfx)); } catch (e) {} }
 function applyGfxQuality() { const pr = GFX_PRESET[gfx.quality]; if (pr) { QUALITY = pr[0]; PARTICLE_CAP = pr[1]; } }
 applyGfxQuality();
-function songSmoke(f, t, big) {
+function songSmoke(f, t, big, light) {
   if (particles.length > PARTICLE_CAP) return;
+  if (light) { for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, sp = rand(60, 200); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.8, max: 0.8, size: rand(12, 22), color: Math.random() < 0.5 ? '#8a8a94' : '#b8384a', drag: 0.95, g: -50, kind: 'smoke', rot: 0, a: 0.5 }); } return; }
   const dx = t.x - f.x, dy = t.y - f.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, px = -uy, py = ux;
   const n = Math.round((big ? 48 : 30) * QUALITY) + 10, cols = ['#9a9aa4', '#7a7a84', '#c8404e', '#a82a3a', '#5a4a50'];
   for (let i = 0; i < n; i++) {
@@ -2062,6 +2100,7 @@ function kill(t, src, reason) {
 function startCast(f, skill, target) {
   if (!target) return;
   f.cast = { skill, target, t: 0, dur: SKILLS[skill].cast, pop: 0 };
+  if (skill === 'sSlash') timeFx.push({ f, tgt: target, life: SKILLS.sSlash.cast, max: SKILLS.sSlash.cast, kind: 'smokeForm' }); // 담배 연기가 모여 검이 됨
   const s = SKILLS[skill];
   floatText(f.x, f.y - f.r - 46, s.name + '!', s.color, skill === 'ppung' ? 26 : 24, { vy: -30, life: 1.3 });
   ring(f.x, f.y, s.color, f.r * 2.6, 0.45, 5);
@@ -2301,7 +2340,14 @@ function onUse(u) {
   } else if (u.sk === 'sSlash') {
     const b = f.breath || 0; u.pct += b * 100; u.coinPow += b * 5; u.slashBreath = b;
     log(`${nm(f)} ${sk(u.sk)}: 완성 되어가는 숨결 ${b} → 피해량 +${b * 100}% · 코인 위력 +${b * 5}`, 'skill');
-    showBig('공간참 - 청', '#5ac8ff', 1.8); doFlash('#5ac8ff', 0.5); darkenT = 1.2; shake = Math.max(shake, 22);
+    showBig('공간참 - 청', '#ff5a6a', 1.8); doFlash('#ff3a4a', 0.5); darkenT = 1.2; shake = Math.max(shake, 26);
+    timeFx = timeFx.filter(x => !(x.kind === 'smokeForm' && x.f === f));
+    if (u.tgt) {
+      const ang = Math.atan2(u.tgt.y - f.y, u.tgt.x - f.x);
+      timeFx.push({ tgt: u.tgt, x: u.tgt.x, y: u.tgt.y, ang, life: 0.9, max: 0.9, kind: 'smokeCut' });
+      songSmoke(f, u.tgt, true);
+      for (let k = 0; k < 40; k++) { const a = ang + rand(-1.4, 1.4), sp = rand(200, 520); particles.push({ x: u.tgt.x, y: u.tgt.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.7, 1.2), max: 1.2, size: rand(14, 30), color: Math.random() < 0.5 ? '#9a9aa4' : '#c8404e', drag: 0.94, g: -40, kind: 'smoke', rot: 0, a: 0.55 }); }
+    }
   } else if (u.sk === 'pjPunch') {
     f.noStaggerSkill = true; u.pjPoise = 0;
     if (f.sp >= 20 && f.poise) { const c = f.poise.pot; f.poise = null; u.pjPoise = c; const add = Math.floor(c / 30) * 10; u.finalBonus = (u.finalBonus || 0) + add; log(`${nm(f)} ${sk(u.sk)}: 정신력 20 이상 → 호흡 ${c} 모두 소모 → 최종 위력 +${add}`, 'skill'); }
@@ -2799,7 +2845,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   // VFX
   if (f.type === 'song') {
     // 붉고 회색인 담배 연기가 대상에게 뿜어져 나감
-    songSmoke(f, t, u.sk === 'sSlash' || u.sk === 'sAni');
+    songSmoke(f, t, u.sk === 'sAni', u.sk === 'sSlash');
   } else if (f.type === 'cerberus') {
     // 발톱으로 할퀴는 붉은 자국
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
@@ -2932,8 +2978,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   } else if (u.sk === 'sAni') {
     if (!u.lost && t.alive && dealt > 0) dealDamage(f, t, dealt, 'physical', '아니 추가 피해', '이 코인 최종 피해량 → ');
   } else if (u.sk === 'sSlash') {
-    ring(t.x, t.y, '#5ac8ff', t.r * 4, 0.4, 8); burst(t.x, t.y, '#bff0ff', 30, 600, 9, 0.5, { kind: 'spark' });
-    for (let k = -1; k <= 1; k++) lightning(t.x - 160, t.y + k * 18 - 40, t.x + 160, t.y + k * 18 + 40, '#9fe8ff', 6, 0.3);
+    ring(t.x, t.y, '#ff5a6a', t.r * 3, 0.35, 6); burst(t.x, t.y, '#ffb0b8', 20, 500, 7, 0.45, { kind: 'spark' });
     if (i === 4 && t.alive && dealt > 0 && staggerable(t)) { const idx = t.staggerTh.findIndex((th, i2) => !t.staggerHit[i2]); if (idx !== -1) { t.staggerTh[idx] += dealt * 0.5 / t.maxHp; log(`${nm(t)} 흐트러짐 피해 ${Math.round(dealt * 0.5)}`); checkStagger(t); } }
   } else if (u.sk === 'pjA' || u.sk === 'pjB') {
     addStack(f, 'poise', 3, 0, '호흡', '#9fe8ff'); // 호흡 획득 3배
@@ -3555,7 +3600,7 @@ function update(dt) {
     if (t.life <= 0) texts.splice(i, 1);
   }
   if (bigText) { bigText.life -= dt; if (bigText.life <= 0) bigText = null; }
-  for (const e of timeFx) e.life -= dt; timeFx = timeFx.filter(e => e.life > 0);
+  for (const e of timeFx) { e.life -= dt; if (e.kind === 'smokeForm') smokeFormStep(e, dt); } timeFx = timeFx.filter(e => e.life > 0);
   for (const f of fighters) if (f.rewindUntil) rewindStep(f, dt);
   darkenT -= dt;
   flushLog();
@@ -5133,6 +5178,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '6.4', date: '2026-11-20', items: ['공간참 - 청 이펙트 변경: 붉고 회색인 담배 연기가 모여 검이 된 뒤 한 번에 벰'] },
   { v: '6.3', date: '2026-11-20', items: ['송재범 공격 이펙트 변경: 붉고 회색인 담배 연기를 내뿜음'] },
   { v: '6.2', date: '2026-11-20', items: ['죽음 예상 아이콘 추가'] },
   { v: '6.1', date: '2026-11-20', items: ['송재범: 아니 사용 시 완성 되어가는 숨결 1 획득', '완성 되어가는 숨결 아이콘 추가'] },
