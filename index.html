@@ -4431,18 +4431,42 @@ function render() {
       }
       ctx.globalCompositeOperation = 'source-over';
       // 주먹 (잔상 2개 + 본체)
-      const drawFist = (x, y, al) => {
+      const drawFist = (x, y, al, ghost) => {
         ctx.save(); ctx.translate(x, y); ctx.rotate(sl.ang); ctx.scale(S, S); ctx.globalAlpha = al;
-        ctx.shadowColor = '#b05aff'; ctx.shadowBlur = 24;
-        const g = ctx.createLinearGradient(-34, 0, 26, 0); g.addColorStop(0, '#3a0a6a'); g.addColorStop(0.6, '#8a3aff'); g.addColorStop(1, '#e0b8ff');
-        ctx.fillStyle = g; ctx.strokeStyle = '#1a0630'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-34, -24, 52, 48, 14); else ctx.rect(-34, -24, 52, 48); ctx.fill(); ctx.stroke(); // 손등
-        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(18, -18 + i * 12, 7.5, 0, TAU); ctx.fill(); ctx.stroke(); } // 주먹 마디
-        ctx.beginPath(); ctx.ellipse(-4, -26, 16, 7, 0.15, 0, TAU); ctx.fill(); ctx.stroke(); // 엄지
-        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(-26, -18, 30, 5); // 하이라이트
+        const t2 = simTime * 30 + sl.seed * 10;
+        // 주먹을 감싸는 보라 기운 (뒤로 흩날리는 불꽃 모양)
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.drawImage(glow('#8a3aff'), -70, -46, 120, 92);
+        for (let w = 0; w < 5; w++) { const yy = -20 + w * 10, len = 40 + Math.sin(t2 + w * 1.7) * 12; ctx.globalAlpha = al * 0.55; ctx.drawImage(glow(w % 2 ? '#c86aff' : '#7a2aff'), -40 - len, yy - 9, len + 10, 18); }
+        ctx.restore(); ctx.globalAlpha = al;
+        if (ghost) { ctx.fillStyle = '#b05aff'; ctx.beginPath(); ctx.ellipse(-2, 0, 32, 28, 0, 0, TAU); ctx.fill(); ctx.restore(); return; }
+        const OL = '#170428'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6; ctx.strokeStyle = OL;
+        // 손목 · 팔 (뒤로 갈수록 기운으로 흐려짐)
+        const gw = ctx.createLinearGradient(-72, 0, -26, 0); gw.addColorStop(0, 'rgba(90,30,180,0)'); gw.addColorStop(1, '#5a1aa8');
+        ctx.fillStyle = gw; ctx.beginPath(); ctx.moveTo(-72, -15); ctx.lineTo(-28, -18); ctx.lineTo(-28, 18); ctx.lineTo(-72, 15); ctx.closePath(); ctx.fill();
+        // 손등 (위에서 빛을 받는 입체감)
+        const gb = ctx.createLinearGradient(0, -30, 0, 30); gb.addColorStop(0, '#c890ff'); gb.addColorStop(0.45, '#8a3aff'); gb.addColorStop(1, '#3e0c80');
+        ctx.fillStyle = gb; ctx.beginPath();
+        ctx.moveTo(-32, -22); ctx.quadraticCurveTo(-20, -30, 4, -29); ctx.lineTo(8, 27); ctx.quadraticCurveTo(-18, 30, -32, 20); ctx.quadraticCurveTo(-38, 0, -32, -22); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // 말아 쥔 네 손가락 (주름선 + 마디 하이라이트)
+        for (let f2 = 0; f2 < 4; f2++) {
+          const y0 = -28 + f2 * 13.5, gf = ctx.createLinearGradient(4, y0, 30, y0 + 13); gf.addColorStop(0, '#9a4aff'); gf.addColorStop(0.6, '#b878ff'); gf.addColorStop(1, '#6a20d0');
+          ctx.fillStyle = gf; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(2, y0, 30 - Math.abs(f2 - 1.5) * 2, 14, 7); else ctx.rect(2, y0, 28, 14); ctx.fill(); ctx.stroke();
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,230,255,0.55)'; ctx.beginPath(); ctx.ellipse(24 - Math.abs(f2 - 1.5) * 2, y0 + 4, 4, 2.4, 0, 0, TAU); ctx.fill(); ctx.restore(); // 마디 반짝임
+          ctx.strokeStyle = 'rgba(23,4,40,0.6)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(12, y0 + 3); ctx.lineTo(12, y0 + 11); ctx.stroke(); ctx.lineWidth = 2.6; ctx.strokeStyle = OL; // 손가락 마디 주름
+        }
+        // 엄지 (손가락 앞을 감싸 쥠)
+        const gt = ctx.createLinearGradient(-20, 10, 20, 26); gt.addColorStop(0, '#7a2ae0'); gt.addColorStop(1, '#c08aff');
+        ctx.fillStyle = gt; ctx.beginPath(); ctx.moveTo(-22, 12); ctx.quadraticCurveTo(-4, 6, 18, 12); ctx.quadraticCurveTo(26, 16, 20, 23); ctx.quadraticCurveTo(-2, 27, -22, 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,240,255,0.5)'; ctx.beginPath(); ctx.ellipse(16, 15, 4, 2.5, 0.3, 0, TAU); ctx.fill(); // 엄지 손톱 반짝임
+        // 손등 위 하이라이트 · 주먹 앞쪽 테두리 빛
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(-12, -20, 15, 4.5, -0.1, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(230,190,255,0.9)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(31, -24); ctx.quadraticCurveTo(37, 0, 31, 24); ctx.stroke();
+        ctx.restore();
         ctx.restore();
       };
-      if (fade > 0) { for (let a = 2; a >= 1; a--) if (p < hitP + 0.1) drawFist(px - dx * a * 34 * S, py - dy * a * 34 * S, fade * 0.25 / a); drawFist(px, py, Math.min(1, fade * 1.3)); }
+      if (fade > 0) { for (let a = 3; a >= 1; a--) if (p < hitP + 0.1) drawFist(px - dx * a * 30 * S, py - dy * a * 30 * S, fade * 0.3 / a, true); drawFist(px, py, Math.min(1, fade * 1.3)); }
       ctx.restore();
       continue;
     }
@@ -5307,6 +5331,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.0', date: '2026-11-20', items: ['곽시율 주먹 이펙트 퀄리티 향상: 말아 쥔 손가락 · 엄지 · 입체 음영 · 보라 기운'] },
   { v: '6.9', date: '2026-11-20', items: ['곽시율 공격 이펙트 변경: 보라색 주먹으로 타격 (속도선 · 충격파 · 집중선)'] },
   { v: '6.8', date: '2026-11-20', items: ['윤지호 공격 이펙트 변경: 호랑이가 할퀴듯 큰 발톱 자국 (처분 · 북극곰이라 불린 자는 4줄)'] },
   { v: '6.7', date: '2026-11-20', items: ['강주원 · 이건민 · 강우주 공격 이펙트 강화: 꽉 찬 불꽃 칼날 · 흰 심지 · 캐릭터별 불꽃 색 · 바닥 그을림 · 떠오르는 불씨'] },
