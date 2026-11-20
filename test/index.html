@@ -2625,6 +2625,8 @@ function stepEngagement(e) {
     if (!A.f.alive || !B.f.alive || A.f.away || B.f.away || A.f.stagger > 0 || B.f.stagger > 0) return endEngagement(e);
     const ra = clashPower(A, e.ca, B), rb = clashPower(B, e.cb, A);
     e.round++;
+    if (e.round === 1) { const dl = offLv(A.f, A.sk) - offLv(B.f, B.sk), W2 = dl > 0 ? A : B, bn = Math.floor(Math.abs(dl) / 3);
+      if (bn > 0) { floatText(W2.f.x, W2.f.y - W2.f.r - 58, `공격 레벨 차 ${Math.abs(dl)} → 합 위력 +${bn}`, '#ffb070', 14, { life: 1.1 }); log(`⚔ ${nm(W2.f)} ${sk(W2.sk)}: 공격 레벨 ${Math.abs(dl)} 높음 → 합 위력 +${bn} (3 차이당 +1)`); } }
     const mx = (A.f.x + B.f.x) / 2, my = (A.f.y + B.f.y) / 2;
     floatText(A.f.x, A.f.y - A.f.r - 28, String(ra.p), ra.p >= rb.p ? '#fff27a' : '#999', ra.p >= rb.p ? 34 : 24, { vy: -20, life: 0.5 });
     floatText(B.f.x, B.f.y - B.f.r - 28, String(rb.p), rb.p >= ra.p ? '#fff27a' : '#999', rb.p >= ra.p ? 34 : 24, { vy: -20, life: 0.5 });
@@ -2882,6 +2884,11 @@ function hitCoin(u, t, pow, i, heads, crit) {
     // 과거의 강주원: 화면이 찢어지는 글리치 일격
     slashes.push({ glitchHit: true, x: t.x, y: t.y, tr: t.r, ang: Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.6, 0.6), big: u.sk === 'pjPunch', life: 0.7, max: 0.7, seed: Math.random() * 100 });
     shake = Math.max(shake, u.sk === 'pjPunch' ? 22 : 11);
+  } else if (f.type === 'queen' && (u.sk === 'qLove' || u.sk === 'qJustice' || u.sk === 'arcana')) {
+    // 증오의 여왕: 사랑 = 하트 리본 · 정의 = 금빛 별 · 아르카나 = 마법진 빛줄기
+    const v = u.sk === 'qLove' ? 'love' : u.sk === 'qJustice' ? 'justice' : 'arcana', big = v === 'arcana';
+    slashes.push({ qMagic: true, v, fx: f.x, fy: f.y, fr: f.r, tx: t.x, ty: t.y, tr: t.r, life: big ? 1.1 : 0.75, max: big ? 1.1 : 0.75, seed: Math.random() * 10 });
+    if (v !== 'arcana') { burst(t.x, t.y, v === 'love' ? '#ff9ad8' : '#ffe07a', 18, 420, 9, 0.6, { kind: v === 'love' ? 'heart' : 'spark' }); shake = Math.max(shake, v === 'justice' ? 13 : 9); if (v === 'justice') doFlash('#ffd84a', 0.15); }
   } else if (f.type === 'marksman') {
     // 흉탄의 사수: 총구 화염 → 예광탄 → 관통
     const big = u.sk === 'hyungtan';
@@ -3854,6 +3861,64 @@ const FIRE_PAL = {
   gunmin: ['#ff6a00', '#ff9a1a', '#ffc84a', '#fff6c8'], // 이건민: 새벽의 금빛
   wooju:  ['#ff8a00', '#ffb81a', '#ffe06a', '#ffffff'], // 강우주: 한낮(정오)의 흰 열기
 };
+// 증오의 여왕: 마법소녀풍 — 사랑(분홍 하트 리본) · 정의(금빛 별 각인) · 아르카나(마법진 빔)
+function heartPath(x, y, s) { ctx.beginPath(); ctx.moveTo(x, y + s * 0.9); ctx.bezierCurveTo(x - s * 1.6, y - s * 0.2, x - s * 0.7, y - s * 1.4, x, y - s * 0.5); ctx.bezierCurveTo(x + s * 0.7, y - s * 1.4, x + s * 1.6, y - s * 0.2, x, y + s * 0.9); ctx.closePath(); }
+function starPath(x, y, r, n, inner, rot) { ctx.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n - Math.PI / 2, rr = i % 2 ? r * inner : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); }
+function sparkle(x, y, r, col, al) { ctx.globalAlpha = al; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.quadraticCurveTo(x, y, x, y + r); ctx.quadraticCurveTo(x, y, x - r, y); ctx.quadraticCurveTo(x, y, x, y - r); ctx.fill(); }
+function drawQueenMagic(sl, k) {
+  const p = 1 - k, X = sl.tx, Y = sl.ty, tr = sl.tr, dx = X - sl.fx, dy = Y - sl.fy, D = Math.hypot(dx, dy) || 1, ux = dx / D, uy = dy / D, nx = -uy, ny = ux, a = Math.atan2(dy, dx);
+  const love = sl.v === 'love', just = sl.v === 'justice', arc = sl.v === 'arcana', C1 = love ? '#ff7ac8' : just ? '#ffd84a' : '#ff4ad8', C2 = love ? '#ffd0ec' : just ? '#fff6c0' : '#ffffff';
+  const TRV = arc ? 0.22 : 0.3, tv = Math.min(1, p / TRV), hit = p < TRV ? 0 : (p - TRV) / (1 - TRV), fade = hit < 0.3 ? 1 : 1 - (hit - 0.3) / 0.7;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  // 시전자 발밑 마법진
+  { const R = sl.fr * (arc ? 2.4 : 1.6), al = Math.min(1, p * 6) * fade, rot = simTime * 2 + sl.seed;
+    ctx.globalAlpha = al * 0.9; ctx.strokeStyle = C1; ctx.lineWidth = 2; ctx.save(); ctx.translate(sl.fx, sl.fy); ctx.scale(1, 0.45);
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, R * 0.78, 0, TAU); ctx.stroke();
+    starPath(0, 0, R * 0.78, arc ? 6 : 5, 0.5, rot); ctx.stroke();
+    for (let i = 0; i < 12; i++) { const aa = -rot + i * TAU / 12; ctx.fillStyle = C2; ctx.beginPath(); ctx.arc(Math.cos(aa) * R * 0.89, Math.sin(aa) * R * 0.89, 2.5, 0, TAU); ctx.fill(); }
+    ctx.restore(); }
+  if (love) {
+    // 분홍 리본이 나풀거리며 날아가고, 끝에 하트
+    const M = 30, upto = Math.floor(M * tv);
+    for (const [col, w, al, ph] of [[C1, 10, 0.6, 0], [C2, 3, 0.9, 0], ['#ff4aa8', 6, 0.5, 2.2]]) { ctx.globalAlpha = al * fade; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
+      for (let i = 0; i <= upto; i++) { const q = i / M, wv = Math.sin(q * 12 + ph + simTime * 18) * 24 * Math.sin(Math.PI * q); ctx.lineTo(sl.fx + dx * q + nx * wv, sl.fy + dy * q + ny * wv); } ctx.stroke(); }
+    if (!hit) { const hx = sl.fx + dx * tv, hy = sl.fy + dy * tv; ctx.globalAlpha = 1; ctx.drawImage(glow(C1), hx - 30, hy - 30, 60, 60); heartPath(hx, hy, 12); ctx.fillStyle = C2; ctx.fill(); }
+  } else if (just) {
+    // 금빛 별똥별
+    const sx = sl.fx + dx * tv, sy = sl.fy + dy * tv, tail = Math.min(D * tv, 220);
+    const g = ctx.createLinearGradient(sx - ux * tail, sy - uy * tail, sx, sy); g.addColorStop(0, 'rgba(255,216,74,0)'); g.addColorStop(1, C1);
+    ctx.globalAlpha = fade * (hit ? 1 - hit : 1); ctx.strokeStyle = g; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(sx - ux * tail, sy - uy * tail); ctx.lineTo(sx, sy); ctx.stroke();
+    if (!hit) { ctx.globalAlpha = 1; ctx.drawImage(glow(C1), sx - 34, sy - 34, 68, 68); starPath(sx, sy, 16, 5, 0.45, simTime * 10); ctx.fillStyle = C2; ctx.fill(); }
+    for (let i = 0; i < 6; i++) { const q = ((sl.seed + i * 0.17) % 1) * tv; sparkle(sl.fx + dx * q + nx * Math.sin(i * 5) * 18, sl.fy + dy * q + ny * Math.sin(i * 5) * 18, 6, C2, fade * 0.8); }
+  } else {
+    // 아르카나: 굵은 분홍 빛줄기
+    const bw = (arc ? 46 : 20) * (hit ? 1 - hit * 0.8 : tv);
+    for (const [col, w, al] of [[C1, 1.6, 0.45], ['#ff9ad8', 1, 0.7], ['#ffffff', 0.35, 1]]) { ctx.globalAlpha = al * fade; ctx.strokeStyle = col; ctx.lineWidth = bw * w + Math.sin(simTime * 50) * 3; ctx.beginPath(); ctx.moveTo(sl.fx, sl.fy); ctx.lineTo(sl.fx + dx * tv, sl.fy + dy * tv); ctx.stroke(); }
+    for (let i = 0; i < 14; i++) { const q = (i / 14 + simTime * 1.5) % 1; if (q > tv) continue; sparkle(sl.fx + dx * q + nx * Math.sin(i * 3.3) * bw, sl.fy + dy * q + ny * Math.sin(i * 3.3) * bw, 7, i % 2 ? '#ffffff' : '#ffb0e8', fade); }
+  }
+  if (hit > 0) {
+    const q = hit, e = 1 - Math.pow(1 - q, 2);
+    ctx.globalAlpha = Math.max(0, 1 - q * 3.5); ctx.drawImage(glow('#ffffff'), X - tr * 2, Y - tr * 2, tr * 4, tr * 4);
+    ctx.globalAlpha = (1 - q) * 0.8; ctx.drawImage(glow(C1), X - tr * 3, Y - tr * 3, tr * 6, tr * 6);
+    if (love) {
+      // 하트 충격파 2겹 + 큰 하트가 터짐
+      for (let i = 0; i < 2; i++) { const s2 = tr * (0.6 + e * (1.6 + i * 0.6)); ctx.globalAlpha = (1 - q) * (i ? 0.6 : 0.9); ctx.strokeStyle = i ? C2 : C1; ctx.lineWidth = (i ? 3 : 6) * (1 - q) + 1; heartPath(X, Y + s2 * 0.15, s2); ctx.stroke(); }
+      ctx.globalAlpha = Math.max(0, 1 - q * 2); heartPath(X, Y, tr * (0.5 + q * 0.4)); ctx.fillStyle = C1; ctx.fill();
+      for (let i = 0; i < 8; i++) { const aa = sl.seed + i * TAU / 8, d = tr * (0.8 + e * 2); ctx.globalAlpha = (1 - q); heartPath(X + Math.cos(aa) * d, Y + Math.sin(aa) * d - q * 30, 6 + (i % 2) * 4); ctx.fillStyle = i % 2 ? C2 : '#ff4aa8'; ctx.fill(); }
+    } else if (just) {
+      // 금빛 별 각인 + 십자 빛줄기
+      ctx.globalAlpha = (1 - q); ctx.strokeStyle = C1; ctx.lineWidth = 5 * (1 - q) + 1; starPath(X, Y, tr * (0.8 + e * 2.2), 5, 0.42, sl.seed); ctx.stroke();
+      ctx.globalAlpha = Math.min(1, (1 - q) * 1.6); starPath(X, Y, tr * 0.75, 5, 0.42, sl.seed); ctx.fillStyle = 'rgba(255,216,74,0.55)'; ctx.fill(); ctx.strokeStyle = C2; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < 4; i++) { const aa = i * Math.PI / 2 + Math.PI / 4, L = tr * (1.5 + e * 2.5); ctx.globalAlpha = 1 - q; ctx.strokeStyle = C2; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X + Math.cos(aa) * L, Y + Math.sin(aa) * L); ctx.stroke(); }
+      for (let i = 0; i < 10; i++) { const aa = sl.seed * 3 + i * TAU / 10, d = tr * (1 + e * 2.4); sparkle(X + Math.cos(aa) * d, Y + Math.sin(aa) * d, 8 * (1 - q) + 2, i % 2 ? C2 : C1, 1 - q); }
+    } else {
+      // 대상 발밑 거대 마법진 + 별
+      const R = tr * (2.2 + e * 1.2), rot = -simTime * 3; ctx.save(); ctx.translate(X, Y); ctx.globalAlpha = 1 - q; ctx.strokeStyle = C1; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, R * 0.8, 0, TAU); ctx.stroke(); starPath(0, 0, R * 0.8, 6, 0.55, rot); ctx.stroke(); heartPath(0, R * 0.05, R * 0.3); ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.restore();
+    }
+  }
+  ctx.restore();
+}
 // 절망의 기사: 차갑고 푸른 검기 + 떨어지는 눈물 + 물결
 function drawTear(x, y, sz, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - sz * 1.8); ctx.quadraticCurveTo(x + sz, y - sz * 0.2, x, y + sz); ctx.quadraticCurveTo(x - sz, y - sz * 0.2, x, y - sz * 1.8); ctx.fill(); }
 function drawDespairSlash(sl, k, a0, a1) {
@@ -4883,6 +4948,7 @@ function render() {
     if (sl.fire) { drawFireSlash(sl, k, a0, a1); continue; }
     if (sl.despairSl) { drawDespairSlash(sl, k, a0, a1); continue; }
     if (sl.gunshot) { drawGunshot(sl, k); continue; }
+    if (sl.qMagic) { drawQueenMagic(sl, k); continue; }
     ctx.save(); ctx.translate(sl.x, sl.y);
     // 검기 (초승달 모양 회색 궤적)
     const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
@@ -5675,6 +5741,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.8', date: '2026-11-20', items: ['증오의 여왕 공격 이펙트 추가: 사랑으로!(분홍 하트 리본 · 하트 충격파) · 정의의 이름으로!(금빛 별똥별 · 별 각인) · 아르카나 슬레이브!(마법진 빛줄기 · 거대 마법진) · 발밑 마법진', '합: 공격 레벨 3 차이당 합 위력 +1 — 적용될 때 화면과 로그에 보너스가 표시돼요'] },
   { v: '7.7', date: '2026-11-20', items: ['절망의 기사 공격 이펙트 리메이크: 시린 푸른 초승달 검기 · 검 잔상 · 얼음 결정 · 금 간 충격선 · 떨어지는 눈물방울 · 바닥 물결 (텅 빈 절망은 눈물비)', '흉탄의 사수 공격 이펙트 추가: 총구 화염 · 예광탄 · 관통 섬광 · 총알 구멍 · 튀어나가는 탄피 (흉탄은 더 크고 붉게)'] },
   { v: '7.6', date: '2026-11-20', items: ['과거의 강주원 공격 이펙트 리메이크: 되감기 잔상이 모여듦 → RGB가 갈라지는 칼날 참격 · 실제로 화면이 찢어지는 글리치 · 픽셀 붕괴 · 네모난 충격파 · 깨진 타임코드 (슈뻘맨펀치는 십자 참격)'] },
   { v: '7.5', date: '2026-11-20', items: ['강우주 - 암흑진화 공격 이펙트 리메이크: 발밑 어둠의 균열 · 가시 돋친 촉수 다발 · 보라 번개 → 소용돌이치는 블랙홀 붕괴 → 어둠 폭발'] },
