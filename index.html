@@ -48,6 +48,12 @@
   #coinBar button{margin-left:auto;font-size:11px;padding:5px 7px}
   #gachaPanel{display:none;border:1px solid #5a3a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#100a18}
   #gachaPanel.on{display:block}
+  #friendPanel{display:none;border:1px solid #3a8a6a;border-radius:10px;padding:10px;margin-bottom:10px;background:#0a1612;font-size:12px;line-height:1.6}
+  #friendPanel.on{display:block}
+  #friendPanel .fr{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #14281e}
+  #friendPanel .fr img{width:26px;height:26px;border-radius:50%;object-fit:cover}
+  #friendPanel input{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:13px;min-width:0}
+  #friendPanel button{padding:5px 8px;font-size:12px}
   #profPanel{display:none;border:1px solid #6a4a9a;border-radius:10px;padding:10px;margin-bottom:10px;background:#120c1a;font-size:12px;line-height:1.6}
   #profPanel.on{display:block}
   #profPanel input[type=text],#profPanel select{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:13px;min-width:0}
@@ -228,8 +234,9 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="profBtn" style="flex:1 1 40%;font-size:12px">👤 프로필</button><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="profBtn" style="flex:1 1 40%;font-size:12px">👤 프로필</button><button id="friendBtn" style="flex:1 1 40%;font-size:12px">👥 친구</button><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
     <div id="profPanel"></div>
+    <div id="friendPanel"></div>
     <div id="rankPanel"></div>
     <div id="chatPanel"><div id="chatList"></div><div style="display:flex;gap:6px"><input id="chatInput" maxlength="200" placeholder="메시지 입력 (최대 200자)"><button id="chatSend">보내기</button></div><div id="chatNote" style="color:#8a8aa8;margin-top:4px"></div></div>
     <div id="pvpPanel"></div>
@@ -5044,6 +5051,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '5.7', date: '2026-11-20', items: ['👥 친구 추가: 친구 코드로 요청 → 수락하면 친구', '친구에게 하루 1번 선물 보내기 (코인 100 · 내 코인은 들지 않음) · 받은 선물 받기'] },
   { v: '5.6', date: '2026-11-20', items: ['👤 프로필 추가 (구글 로그인 시): 닉네임(7일마다 변경) · 칭호 · 프로필 사진', '랭킹 · 채팅 · PVP에 닉네임과 칭호가 표시됨'] },
   { v: '5.5', date: '2026-11-19', items: ['레이드에 실패하면 결과 화면에 전투 팁 표시'] },
   { v: '5.4', date: '2026-11-19', items: ['과거의 강주원 되감기 중 체력 숫자도 함께 차오름'] },
@@ -5261,7 +5269,7 @@ function renderProfile() {
     <div><b>프로필 사진</b></div>
     <div style="display:flex;gap:6px;margin-top:4px"><label style="flex:1;text-align:center;padding:7px;border:1px solid #33335a;border-radius:8px;cursor:pointer;background:#1a1a30">📷 사진 고르기<input type="file" id="profPicIn" accept="image/*" style="display:none"></label><button id="profPicReset">구글 사진으로</button></div>`;
 }
-function profSync() { try { scheduleRankUpload(); if (rank.uid && rank.db) pvpCol().doc(rank.uid).update({ name: dispName(), picture: dispPic(), title: titleName() }).catch(() => {}); } catch (e) {} applyProfileUI(); }
+function profSync() { try { friendSelfUpload(); scheduleRankUpload(); if (rank.uid && rank.db) pvpCol().doc(rank.uid).update({ name: dispName(), picture: dispPic(), title: titleName() }).catch(() => {}); } catch (e) {} applyProfileUI(); }
 document.getElementById('profBtn').onclick = () => { if (document.getElementById('profPanel').classList.toggle('on')) renderProfile(); };
 document.getElementById('profPanel').addEventListener('click', e => {
   if (e.target.id === 'profNickSave') {
@@ -5285,6 +5293,96 @@ document.getElementById('profPanel').addEventListener('change', e => {
     img.onerror = () => toast('사진을 불러오지 못했어요');
     img.src = url;
   }
+});
+// ================== 친구 ==================
+// 친구 코드로 요청 → 상대가 수락하면 친구 · 친구에게 하루 1번 선물(코인 100, 내 코인은 안 듦)
+const GIFT_COIN = 100;
+var fr = { list: [], reqs: [], gifts: [], err: '', loading: false };
+const myCode = () => rank.uid ? rank.uid.slice(0, 8).toUpperCase() : '';
+if (!save.giftSent) save.giftSent = {};
+async function friendSelfUpload() {
+  if (!rank.db || !rank.uid || !account) return;
+  try { await rank.db.collection('users').doc(rank.uid).set({ name: dispName(), picture: dispPic(), title: titleName(), code: myCode(), t: Date.now() }); } catch (e) { console.error(e); }
+}
+const fcol = (a, b) => rank.db.collection(a).doc(b);
+async function friendRefresh(silent) {
+  if (!rank.db || !rank.uid) { renderFriends(); return; }
+  fr.loading = true; if (!silent) renderFriends();
+  try {
+    const me = rank.uid;
+    const mine = (await fcol('friends', me).collection('list').get()).docs.map(d => d.id);
+    const users = {};
+    const getUser = async id => { if (!users[id]) { try { const d = await rank.db.collection('users').doc(id).get(); users[id] = d.exists ? d.data() : { name: '알 수 없음' }; } catch (e) { users[id] = { name: '알 수 없음' }; } } return users[id]; };
+    fr.list = [];
+    for (const id of mine) {
+      let mutual = false; try { mutual = (await fcol('friends', id).collection('list').doc(me).get()).exists; } catch (e) {}
+      fr.list.push({ id, mutual, ...(await getUser(id)) });
+    }
+    fr.reqs = [];
+    for (const d of (await fcol('inbox', me).collection('req').get()).docs) if (!mine.includes(d.id) || !(fr.list.find(x => x.id === d.id) || {}).mutual) { if (mine.includes(d.id)) { await fcol('inbox', me).collection('req').doc(d.id).delete().catch(() => {}); continue; } fr.reqs.push({ id: d.id, ...(await getUser(d.id)) }); }
+    fr.gifts = [];
+    for (const d of (await fcol('gifts', me).collection('from').get()).docs) fr.gifts.push({ id: d.id, ...d.data(), ...(await getUser(d.id)) });
+    fr.err = '';
+  } catch (e) { console.error(e); fr.err = '친구 정보를 불러오지 못했어요'; }
+  fr.loading = false; renderFriends();
+}
+function friendBadge() {
+  const n = fr.reqs.length + fr.gifts.length, b = document.getElementById('friendBtn');
+  if (b) b.innerHTML = '👥 친구' + (n ? ` <b style="color:#ff5a5a">●${n}</b>` : '');
+}
+function renderFriends() {
+  friendBadge();
+  const el = document.getElementById('friendPanel'); if (!el || !el.classList.contains('on')) return;
+  const esc2 = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const who = u => `${u.picture ? `<img src="${esc2(u.picture)}" referrerpolicy="no-referrer" alt="">` : '<span style="width:26px;height:26px;border-radius:50%;background:#2a3a34;display:inline-block"></span>'}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.title ? `<span style="color:#d8b8ff">[${esc2(u.title)}]</span> ` : ''}${esc2(u.name || '이름 없음')}</span>`;
+  if (!account) { el.innerHTML = '<div style="color:#aaa">구글로 로그인하면 친구를 추가할 수 있어요.</div>'; return; }
+  if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) { el.innerHTML = '<div style="color:#aaa">친구 기능은 웹 주소(GitHub Pages)에서만 돼요.</div>'; return; }
+  if (!rank.db || !rank.uid) { el.innerHTML = `<div style="color:#aaa">${rank.ready ? '친구 기능을 쓰려면 로그아웃 후 구글로 다시 로그인해 주세요.' : '서버에 연결하는 중…'}</div>`; return; }
+  const today = dayStr();
+  let h = `<div>내 친구 코드 <b style="color:#7dffb0;font-size:15px;letter-spacing:1px">${myCode()}</b> <button id="frCopy">복사</button></div>
+    <div style="display:flex;gap:6px;margin:6px 0 8px"><input id="frCode" maxlength="8" placeholder="친구 코드 입력" style="flex:1;text-transform:uppercase"><button id="frAdd">친구 추가</button></div>`;
+  if (fr.err) h += `<div style="color:#ff8080">${fr.err}</div>`;
+  if (fr.loading) h += '<div style="color:#777">불러오는 중…</div>';
+  if (fr.gifts.length) h += `<div style="margin-top:6px"><b>🎁 받은 선물</b> <button id="frClaimAll">모두 받기 (🪙 ${(fr.gifts.length * GIFT_COIN).toLocaleString()})</button></div>` + fr.gifts.map(g => `<div class="fr">${who(g)}<span style="color:#ffcc33">🪙 ${GIFT_COIN}</span><button data-claim="${g.id}">받기</button></div>`).join('');
+  if (fr.reqs.length) h += '<div style="margin-top:6px"><b>📨 받은 친구 요청</b></div>' + fr.reqs.map(r => `<div class="fr">${who(r)}<button data-accept="${r.id}">수락</button><button data-reject="${r.id}">거절</button></div>`).join('');
+  h += `<div style="margin-top:6px"><b>👥 친구</b> <span style="color:#8a8aa8">(선물은 친구마다 하루 1번 · 내 코인은 들지 않아요)</span></div>`;
+  h += fr.list.length ? fr.list.map(f => `<div class="fr">${who(f)}${f.mutual ? `<button data-gift="${f.id}" ${save.giftSent[f.id] === today ? 'disabled' : ''}>${save.giftSent[f.id] === today ? '보냄 ✔' : '🎁 선물'}</button>` : '<span style="color:#8a8aa8">수락 대기</span>'}<button data-unfriend="${f.id}" title="친구 삭제">✕</button></div>`).join('') : '<div style="color:#777">아직 친구가 없어요. 친구 코드를 주고받아 추가해 보세요.</div>';
+  el.innerHTML = h;
+}
+async function claimGifts(ids) {
+  let n = 0, before = 0; try { before = rankScore().total; } catch (e) {}
+  for (const id of ids) { try { await fcol('gifts', rank.uid).collection('from').doc(id).delete(); n++; } catch (e) { console.error(e); } }
+  fr.gifts = fr.gifts.filter(g => !ids.includes(g.id));
+  if (n) { addCoins(n * GIFT_COIN, `친구 선물 ${n}개`); try { if (save.rankBase && save.rankBase.week === weekStr()) { save.rankBase.total += rankScore().total - before; persist(); } } catch (e) {} } // 선물 코인은 주간 랭킹 점수에서 제외
+  renderFriends();
+}
+document.getElementById('friendBtn').onclick = async () => { if (!document.getElementById('friendPanel').classList.toggle('on')) return; renderFriends(); if (account) { await rankInit(); friendRefresh(); } };
+document.getElementById('friendPanel').addEventListener('click', async e => {
+  const t = e.target, d = t.dataset, me = rank.uid; if (!me) return;
+  try {
+    if (t.id === 'frCopy') { try { await navigator.clipboard.writeText(myCode()); toast('📋 친구 코드를 복사했어요'); } catch (err) { toast(`친구 코드: ${myCode()}`); } }
+    else if (t.id === 'frAdd') {
+      const code = document.getElementById('frCode').value.trim().toUpperCase();
+      if (code.length !== 8) return toast('친구 코드 8자리를 입력해 주세요');
+      if (code === myCode()) return toast('내 코드예요');
+      const q = await rank.db.collection('users').where('code', '==', code).limit(1).get();
+      if (!q.docs.length) return toast('그 코드의 사람을 찾지 못했어요');
+      const id = q.docs[0].id;
+      await fcol('friends', me).collection('list').doc(id).set({ t: Date.now() });
+      await fcol('inbox', id).collection('req').doc(me).set({ t: Date.now() });
+      toast('📨 친구 요청을 보냈어요'); friendRefresh();
+    }
+    else if (d.accept) { await fcol('friends', me).collection('list').doc(d.accept).set({ t: Date.now() }); await fcol('inbox', me).collection('req').doc(d.accept).delete(); toast('👥 친구가 되었어요!'); friendRefresh(); }
+    else if (d.reject) { await fcol('inbox', me).collection('req').doc(d.reject).delete(); fr.reqs = fr.reqs.filter(r => r.id !== d.reject); renderFriends(); }
+    else if (d.unfriend) { if (!confirm('친구를 삭제할까요?')) return; await fcol('friends', me).collection('list').doc(d.unfriend).delete(); friendRefresh(); }
+    else if (d.gift) {
+      if (save.giftSent[d.gift] === dayStr()) return toast('오늘은 이미 선물을 보냈어요');
+      await fcol('gifts', d.gift).collection('from').doc(me).set({ day: dayStr(), ms: Date.now() });
+      save.giftSent[d.gift] = dayStr(); persist(); toast('🎁 선물을 보냈어요 (코인 100)'); renderFriends();
+    }
+    else if (d.claim) claimGifts([d.claim]);
+    else if (t.id === 'frClaimAll') claimGifts(fr.gifts.map(g => g.id));
+  } catch (err) { console.error(err); toast('처리하지 못했어요 — 잠시 후 다시 시도해 주세요'); }
 });
 // ================== 랭킹 ==================
 // 구글 로그인한 사람만 올라감 (테스터·테스트 서버 제외) · Firebase Firestore에 저장
@@ -5323,7 +5421,7 @@ async function rankInit() {
     rank.db = firebase.firestore();
     const cred = sessionStorage.getItem('ballfight-gcred');
     if (cred && account) { sessionStorage.removeItem('ballfight-gcred'); try { await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(cred)); } catch (e) { console.error(e); } }
-    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); } renderRank(); });
+    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); friendSelfUpload(); friendRefresh(true); } renderRank(); });
   } catch (e) { console.error(e); rank.err = '랭킹 서버에 연결하지 못했어요'; renderRank(); }
   })();
   return rank.loading;
