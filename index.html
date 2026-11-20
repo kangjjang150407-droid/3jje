@@ -2879,7 +2879,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
     shake = Math.max(shake, 12);
   } else if (f.type === 'pastjuwon') {
     // 과거의 강주원: 화면이 찢어지는 글리치 일격
-    slashes.push({ glitchHit: true, x: t.x, y: t.y, tr: t.r, ang: Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.6, 0.6), big: u.sk === 'pjPunch', life: 0.5, max: 0.5, seed: Math.random() * 100 });
+    slashes.push({ glitchHit: true, x: t.x, y: t.y, tr: t.r, ang: Math.atan2(t.y - f.y, t.x - f.x) + rand(-0.6, 0.6), big: u.sk === 'pjPunch', life: 0.7, max: 0.7, seed: Math.random() * 100 });
     shake = Math.max(shake, u.sk === 'pjPunch' ? 22 : 11);
   } else if (f.type === 'despair') {
     // 절망의 기사의 검이 휘둘러지는 검기
@@ -4593,13 +4593,44 @@ function render() {
       ctx.restore(); continue;
     }
     if (sl.glitchHit) {
-      // 글리치 일격: 색이 어긋난 세 줄 베기 + 깨진 화면 조각
-      const fade = p < 0.2 ? 1 : 1 - (p - 0.2) / 0.8, dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), L = sl.tr * (sl.big ? 4.5 : 3.2);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (const [col, o] of [['#ff2a6a', -5], ['#2affe0', 5], ['#ffffff', 0]]) { ctx.globalAlpha = fade * (o ? 0.8 : 1); ctx.strokeStyle = col; ctx.lineWidth = o ? 7 : 3; ctx.beginPath(); ctx.moveTo(sl.x - dx * L / 2 + o, sl.y - dy * L / 2); ctx.lineTo(sl.x + dx * L / 2 + o, sl.y + dy * L / 2); ctx.stroke(); }
-      ctx.globalCompositeOperation = 'source-over';
+      // 과거의 강주원: 잔상이 모여들고(되감기) → RGB 분리 참격 → 실제 화면이 찢어지는 글리치 + 픽셀 붕괴
+      const PRE = 0.18, pre = Math.min(1, p / PRE), q = p < PRE ? 0 : (p - PRE) / (1 - PRE), fade = q < 0.25 ? 1 : 1 - (q - 0.25) / 0.75;
+      const X = sl.x, Y = sl.y, tr = sl.tr, dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), L = tr * (sl.big ? 5.4 : 4.2), Wd = sl.big ? 24 : 16;
       const rnd = k => { const v = Math.sin(sl.seed * 91 + k * 37.7) * 43758.5; return v - Math.floor(v); };
-      for (let k = 0; k < (sl.big ? 26 : 14); k++) { const ox = (rnd(k) - 0.5) * sl.tr * 4, oy = (rnd(k + 50) - 0.5) * sl.tr * 3, w = 6 + rnd(k + 9) * 34, h = 3 + rnd(k + 19) * 12; if (Math.random() < 0.25) continue; ctx.globalAlpha = fade * 0.85; ctx.fillStyle = ['#ff2a6a', '#2affe0', '#ffe14d', '#ffffff', '#1a0010'][k % 5]; ctx.fillRect(sl.x + ox + (Math.random() - 0.5) * 10 * fade, sl.y + oy, w, h); }
+      const blade = (ox, oy, w, col, al) => { // 가운데가 두껍고 양끝이 뾰족한 칼날
+        const nx = -dy, ny = dx; ctx.globalAlpha = al; ctx.fillStyle = col; ctx.beginPath();
+        ctx.moveTo(X - dx * L / 2 + ox, Y - dy * L / 2 + oy); ctx.quadraticCurveTo(X + nx * w + ox, Y + ny * w + oy, X + dx * L / 2 + ox, Y + dy * L / 2 + oy); ctx.quadraticCurveTo(X - nx * w * 0.35 + ox, Y - ny * w * 0.35 + oy, X - dx * L / 2 + ox, Y - dy * L / 2 + oy); ctx.fill(); };
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      if (p < PRE) { // 되감기 잔상: 세 색의 잔상 칼날이 흩어진 곳에서 모여듦
+        for (const [col, k] of [['#ff2a6a', 0], ['#2affe0', 1], ['#ffe14d', 2]]) { const d = (1 - pre) * tr * 2.2, a2 = sl.seed + k * 2.1; blade(Math.cos(a2) * d, Math.sin(a2) * d, Wd * 0.7, col, 0.4 + pre * 0.5); }
+        ctx.restore(); continue;
+      }
+      if (!sl.hitDone) { sl.hitDone = true;
+        for (let k = 0; k < Math.round(20 * QUALITY) + 6; k++) { const aa = sl.ang + (Math.random() < 0.5 ? 0 : Math.PI) + rand(-0.5, 0.5), sp = rand(200, 700); particles.push({ x: X, y: Y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: rand(0.25, 0.55), max: 0.55, size: rand(3, 6), color: ['#ff2a6a', '#2affe0', '#ffffff', '#ffe14d'][k % 4], drag: 0.88, g: 0, kind: 'spark', rot: 0 }); } }
+      // RGB 분리 참격 (색 채널이 점점 벌어짐)
+      const sp2 = 3 + q * (sl.big ? 22 : 14), jx = (Math.random() - 0.5) * 6 * fade;
+      blade(-sp2 + jx, 0, Wd * 1.6, '#ff1a5a', fade * 0.85); blade(sp2 + jx, sp2 * 0.3, Wd * 1.6, '#1affd8', fade * 0.85); blade(jx * 0.5, -sp2 * 0.3, Wd * 1.2, '#4a6aff', fade * 0.5);
+      blade(0, 0, Wd * 0.55, '#ffffff', Math.min(1, fade * 1.3));
+      if (sl.big) { const a2 = sl.ang + 1.2, cx2 = Math.cos(a2), cy2 = Math.sin(a2); ctx.save(); ctx.translate(X, Y); ctx.rotate(1.2); ctx.translate(-X, -Y); blade(-sp2, 0, Wd, '#ff1a5a', fade * 0.7); blade(sp2, 0, Wd, '#1affd8', fade * 0.7); blade(0, 0, Wd * 0.4, '#ffffff', fade); ctx.restore(); }
+      // 섬광
+      ctx.globalAlpha = Math.max(0, 1 - q * 4); ctx.drawImage(glow('#ffffff'), X - tr * 2, Y - tr * 2, tr * 4, tr * 4);
+      // 네모난 충격파 (RGB)
+      for (const [col, o] of [['#ff2a6a', -3], ['#2affe0', 3], ['#ffffff', 0]]) { const R = tr * (0.9 + q * (sl.big ? 3.2 : 2.2)); ctx.globalAlpha = fade * (o ? 0.6 : 0.8); ctx.strokeStyle = col; ctx.lineWidth = (o ? 4 : 2) * (1 - q) + 1; ctx.strokeRect(X - R + o, Y - R * 0.8, R * 2, R * 1.6); }
+      ctx.globalCompositeOperation = 'source-over';
+      // 실제 화면 찢김: 대상 주변을 가로 띠로 잘라 옆으로 밀어냄
+      if (q < 0.6 && gfx.shake !== false) {
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); const k2 = dpr * scale, cxp = dpr * offX + X * k2, cyp = dpr * offY + Y * k2, half = tr * 2.6 * k2, bands = sl.big ? 9 : 6;
+        for (let i = 0; i < bands; i++) { if (Math.random() < 0.3) continue; const hgt = Math.max(2, (4 + Math.random() * 14) * k2), y0 = Math.round(cyp + (Math.random() - 0.5) * half * 1.6), x0 = Math.max(0, Math.round(cxp - half)), w = Math.min(cv.width - x0, Math.round(half * 2)), sh3 = Math.round((Math.random() - 0.5) * 40 * k2 * (1 - q));
+          if (w > 4 && y0 > 0 && y0 + hgt < cv.height) ctx.drawImage(cv, x0, y0, w, hgt, x0 + sh3, y0, w, hgt); }
+        ctx.restore();
+      }
+      // 픽셀 붕괴 조각 + 스캔라인
+      for (let k = 0; k < (sl.big ? 30 : 18); k++) { if (Math.random() < 0.3) continue; const ox = (rnd(k) - 0.5) * tr * 4.4, oy = (rnd(k + 50) - 0.5) * tr * 3.2, w = 4 + rnd(k + 9) * 30, h = 3 + rnd(k + 19) * 10;
+        ctx.globalAlpha = fade * 0.6; ctx.fillStyle = ['#ff2a6a', '#2affe0', '#ffe14d', '#ffffff', '#120010'][k % 5]; ctx.fillRect(X + ox + (Math.random() - 0.5) * 12 * fade, Y + oy, w, h); }
+      ctx.globalAlpha = fade * 0.25; ctx.fillStyle = '#000'; for (let yy = -tr * 1.6; yy < tr * 1.6; yy += 4) ctx.fillRect(X - tr * 2.2, Y + yy, tr * 4.4, 1.5);
+      // 깨진 타임코드
+      if (Math.random() < 0.6 * fade) { ctx.globalAlpha = fade; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = Math.random() < 0.5 ? '#ff2a6a' : '#2affe0';
+        ctx.fillText(['◀◀ 00:0' + ((Math.random() * 9) | 0) + ':' + ((Math.random() * 60) | 0), 'ERR_PAST', '▌▌ ' + (sl.seed | 0).toString(16).toUpperCase() + 'F'][(Math.random() * 3) | 0], X + (Math.random() - 0.5) * tr * 2, Y - tr * 1.6 - Math.random() * 10); }
       ctx.restore(); continue;
     }
     if (sl.awl) {
@@ -5555,6 +5586,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '7.6', date: '2026-11-20', items: ['과거의 강주원 공격 이펙트 리메이크: 되감기 잔상이 모여듦 → RGB가 갈라지는 칼날 참격 · 실제로 화면이 찢어지는 글리치 · 픽셀 붕괴 · 네모난 충격파 · 깨진 타임코드 (슈뻘맨펀치는 십자 참격)'] },
   { v: '7.5', date: '2026-11-20', items: ['강우주 - 암흑진화 공격 이펙트 리메이크: 발밑 어둠의 균열 · 가시 돋친 촉수 다발 · 보라 번개 → 소용돌이치는 블랙홀 붕괴 → 어둠 폭발'] },
   { v: '7.4', date: '2026-11-20', items: ['과녁의 왕 공격 이펙트 리메이크: 레이저 조준 · 회전 눈금 조준경 · LOCK 표시 → 금빛 화살 섬광 · 과녁 고리 충격파 · 왕관 문양 각인'] },
   { v: '7.3', date: '2026-11-20', items: ['케로베로스 물어뜯기 이펙트 리메이크: 불타는 아가리를 벌린 세 머리가 돌진해 맞물림 · 송곳니 자국 · 피와 불티 · 붉은 충격파'] },
