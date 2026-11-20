@@ -2766,7 +2766,9 @@ function stepEngagement(e) {
   u.rawCoin = q.i;
   // 코인별 연: 해당 코인을 던질 때 연결된 아군이 함께 공격
   if (S.coinLink && S.coinLink[ci] && !u.linked) { u.linkedDone = u.linkedDone || []; const types = S.coinLink[ci].filter(x => !u.linkedDone.includes(x)); if (types.length) { u.linkedDone.push(...types); linkAttack(u.f, { link: types }, q.tgt); } }
+  { const al = targets.filter(x => x.alive); sweepCtx = al.length > 1 ? { list: al, done: false } : null; }
   targets.forEach((tg, k) => { if (tg.alive) { const r = hitCoin(u, tg, q.pow, ci, heads, crit); if (k === 0) again = r; } });
+  sweepCtx = null;
   if (u.f.coinView) {
     if (again) { u.f.coinView.total++; u.f.coinView.alive++; }
     u.f.coinView.res[u.f.coinView.res.length] = heads;
@@ -2902,7 +2904,9 @@ function hitCoin(u, t, pow, i, heads, crit) {
     // 절망의 기사의 검이 휘둘러지는 검기
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
     const big = u.sk === 'emptyDespair';
-    slashes.push({ despairSl: true, img: despairSwordImg, x: t.x, y: t.y, tr: t.r, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.7 + (big ? 45 : 0), big, life: big ? 0.85 : 0.65, max: big ? 0.85 : 0.65, seed: Math.random() * 10 });
+    const dsw = sweepInfo(f), dsl = { despairSl: true, img: despairSwordImg, x: t.x, y: t.y, tr: t.r, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.7 + (big ? 45 : 0), big, life: big ? 0.85 : 0.65, max: big ? 0.85 : 0.65, seed: Math.random() * 10 };
+    if (dsw && !dsw.skip) Object.assign(dsl, { x: dsw.x, y: dsw.y, ang: dsw.ang, r: dsw.r, sweep: dsw.sweep, life: 0.95, max: 0.95 });
+    if (!dsw || !dsw.skip) slashes.push(dsl);
     burst(t.x, t.y, '#8ab0ff', 18, 460, 8, 0.5, { kind: 'spark' }); burst(t.x, t.y, '#1a2a6a', 5, 90, 30, 1.0, { kind: 'smoke', drag: 0.95, g: 30 });
     shake = Math.max(shake, big ? 18 : 10); if (big) doFlash('#1a3aff', 0.25);
   } else if (f.type === 'sunwoo' || f.type === 'doyun') {
@@ -2919,8 +2923,10 @@ function hitCoin(u, t, pow, i, heads, crit) {
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
     const big = u.sk === 'dawn' || u.sk === 'rage' || u.sk === 'noon';
     const dir = Math.random() < 0.5 ? 1 : -1, R = t.r * 2.9 + (big ? 45 : 0);
-    const pal = FIRE_PAL[f.type] || FIRE_PAL.juwon;
-    slashes.push({ fire: true, pal, img: f.type === 'gunmin' ? gunminSwordImg : f.type === 'wooju' ? woojuSwordImg : f.type === 'juwon' ? juwonSwordImg : f.type === 'juwon2' ? juwon2SwordImg : null, x: t.x, y: t.y, ang, dir, r: R, life: 0.72, max: 0.72, big, seed: Math.random() * 10 });
+    const pal = FIRE_PAL[f.type] || FIRE_PAL.juwon, sw = sweepInfo(f);
+    const fsl = { fire: true, pal, img: f.type === 'gunmin' ? gunminSwordImg : f.type === 'wooju' ? woojuSwordImg : f.type === 'juwon' ? juwonSwordImg : f.type === 'juwon2' ? juwon2SwordImg : null, x: t.x, y: t.y, ang, dir, r: R, life: 0.72, max: 0.72, big, seed: Math.random() * 10 };
+    if (sw && !sw.skip) Object.assign(fsl, { x: sw.x, y: sw.y, ang: sw.ang, r: sw.r, sweep: sw.sweep, life: 0.85, max: 0.85 });
+    if (!sw || !sw.skip) slashes.push(fsl);
     timeFx.push({ x: t.x, y: t.y, r: R * 0.55, life: 1.4, max: 1.4, kind: 'scorch', col: pal[0] }); // 바닥에 남는 그을림
     // 오래 떠오르는 불씨
     for (let k = 0; k < Math.round((big ? 22 : 12) * QUALITY) + 3; k++) particles.push({ x: t.x + rand(-R * 0.5, R * 0.5), y: t.y + rand(-R * 0.3, R * 0.3), vx: rand(-40, 40), vy: rand(-160, -60), life: rand(0.9, 1.6), max: 1.6, size: rand(2, 4.5), color: pal[3], drag: 0.98, g: -30, kind: 'spark', rot: 0 });
@@ -3927,7 +3933,7 @@ function drawDespairSlash(sl, k, a0, a1) {
   const lo = Math.min(a0, a1), hi = Math.max(a0, a1), p = 1 - k, R = sl.r;
   ctx.save(); ctx.translate(sl.x, sl.y);
   // 바닥의 물결 (침잠)
-  for (let i = 0; i < 3; i++) { const q = Math.max(0, p * 1.4 - i * 0.18); if (q <= 0 || q >= 1) continue; ctx.globalAlpha = (1 - q) * 0.7; ctx.strokeStyle = i % 2 ? '#9ac0ff' : '#3a6aff'; ctx.lineWidth = 3 * (1 - q) + 0.5; ctx.beginPath(); ctx.ellipse(0, sl.tr * 0.7, R * (0.3 + q * 0.9), R * (0.1 + q * 0.28), 0, 0, TAU); ctx.stroke(); }
+  if (!sl.sweep) for (let i = 0; i < 3; i++) { const q = Math.max(0, p * 1.4 - i * 0.18); if (q <= 0 || q >= 1) continue; ctx.globalAlpha = (1 - q) * 0.7; ctx.strokeStyle = i % 2 ? '#9ac0ff' : '#3a6aff'; ctx.lineWidth = 3 * (1 - q) + 0.5; ctx.beginPath(); ctx.ellipse(0, sl.tr * 0.7, R * (0.3 + q * 0.9), R * (0.1 + q * 0.28), 0, 0, TAU); ctx.stroke(); }
   ctx.globalCompositeOperation = 'lighter';
   // 짙은 남색 → 시린 하늘색 초승달 칼날
   if (hi - lo > 0.05) {
@@ -3997,6 +4003,16 @@ function drawGunshot(sl, k) {
   // 튀어나가는 탄피
   { const ex = mx - ux * 10 + (-uy) * (40 * p) - ux * 30 * p, ey = my - uy * 10 + ux * (40 * p) + 300 * p * p - 60 * p; ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = Math.min(1, k * 2); ctx.save(); ctx.translate(ex, ey); ctx.rotate(p * 20); ctx.fillStyle = '#e0b04a'; ctx.fillRect(-5, -2.5, 10, 5); ctx.fillStyle = '#8a5a1a'; ctx.fillRect(3, -2.5, 2, 5); ctx.restore(); }
   ctx.restore();
+}
+// 여러 대상 동시 공격: 검 하나가 시전자를 중심으로 모든 대상을 휩쓸듯 휘둘러짐
+let sweepCtx = null;
+function sweepInfo(f) {
+  const c = sweepCtx; if (!c) return null; if (c.done) return { skip: true }; c.done = true;
+  let sx = 0, sy = 0; for (const t of c.list) { sx += t.x; sy += t.y; }
+  const mid = Math.atan2(sy / c.list.length - f.y, sx / c.list.length - f.x);
+  let lo = 0, hi = 0, far = 0, tr = 0;
+  for (const t of c.list) { let d = Math.atan2(t.y - f.y, t.x - f.x) - mid; d = Math.atan2(Math.sin(d), Math.cos(d)); lo = Math.min(lo, d); hi = Math.max(hi, d); far = Math.max(far, Math.hypot(t.x - f.x, t.y - f.y)); tr = Math.max(tr, t.r); }
+  return { x: f.x, y: f.y, ang: mid + (lo + hi) / 2, sweep: clamp(hi - lo + 1.1, 1.8, 5.6), r: far + tr * 0.7 };
 }
 function drawFireSlash(sl, k, a0, a1) {
   const lo = Math.min(a0, a1), hi = Math.max(a0, a1), fl = simTime * 40 + sl.seed, p = 1 - k, P = sl.pal || FIRE_PAL.juwon;
@@ -4582,7 +4598,7 @@ function render() {
   for (const pp2 of panicPops) { const k = pp2.life / pp2.max, p = 1 - k; drawIcon(pp2.type === 'redglow' ? redglowImg : wrathImg, pp2.x, pp2.y - p * 30, 70 + p * 40, k); }
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
-    const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    const sweep = sl.sweep || 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
     if (sl.bite) {
       // 지옥견의 세 머리: 벌린 아가리(불타는 목구멍)로 돌진 → 콱 맞물림 → 송곳니 자국 · 피 · 붉은 충격
       const SN = 0.34, lunge = Math.min(1, p / SN), snap = p < SN ? 0 : Math.min(1, (p - SN) / 0.66), fade = p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
@@ -5743,6 +5759,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '8.1', date: '2026-11-20', items: ['검 휘두르기 연출 수정: 여러 대상을 동시에 공격할 때 대상마다 검이 따로 나오지 않고, 검 하나가 모든 대상을 휩쓸듯이 휘둘러져요 (강주원 · 강주원 [불타는 울음] · 이건민 · 강우주 · 절망의 기사)'] },
   { v: '8.0', date: '2026-11-20', items: ['흐트러짐 효과음 추가: 캐릭터가 흐트러지는 순간 전용 효과음이 재생돼요'] },
   { v: '7.9', date: '2026-11-20', items: ['🎬 연출 구경 서버 오픈: 모든 캐릭터·보스의 모델을 보고, 스킬 이펙트와 흐트러짐·패닉·처치·각성·되감기 부활 같은 연출을 버튼 하나로 구경할 수 있어요 (0.25x 슬로 모션 지원)'] },
   { v: '7.8', date: '2026-11-20', items: ['증오의 여왕 공격 이펙트 추가: 사랑으로!(분홍 하트 리본 · 하트 충격파) · 정의의 이름으로!(금빛 별똥별 · 별 각인) · 아르카나 슬레이브!(마법진 빛줄기 · 거대 마법진) · 발밑 마법진', '합: 공격 레벨 3 차이당 합 위력 +1 — 적용될 때 화면과 로그에 보너스가 표시돼요'] },
