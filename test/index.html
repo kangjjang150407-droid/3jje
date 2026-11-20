@@ -2847,10 +2847,14 @@ function hitCoin(u, t, pow, i, heads, crit) {
     slashes.push({ img: despairSwordImg, x: t.x, y: t.y, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.6 + (u.sk === 'emptyDespair' ? 40 : 0), life: 0.42, max: 0.42 });
     burst(t.x, t.y, '#8ab0ff', 16, 460, 8, 0.45, { kind: 'spark' });
   } else if (f.type === 'sunwoo' || f.type === 'doyun') {
-    // 회색 창이 휘둘러지는 검기
-    const ang = Math.atan2(t.y - f.y, t.x - f.x);
-    slashes.push({ img: f.type === 'doyun' ? doyunSpearImg : sunwooSpearImg, x: t.x, y: t.y, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.4 + (u.sk === 'wedge' ? 30 : 0), life: 0.38, max: 0.38 });
-    burst(t.x, t.y, '#d8dce6', 14, 420, 8, 0.4, { kind: 'spark' });
+    // 창으로 찌름: 빠르게 뻗어 대상을 꿰뚫고 뒤로 관통하는 충격
+    const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'wedge' || u.sk === 'haPlus' || u.sk === 'retreat';
+    const col = f.type === 'doyun' ? '#c8a8ff' : '#8ff0d8';
+    slashes.push({ thrust: true, img: f.type === 'doyun' ? doyunSpearImg : sunwooSpearImg, fx: f.x, fy: f.y, tx: t.x, ty: t.y, tr: t.r, ang, col, big, life: big ? 0.5 : 0.4, max: big ? 0.5 : 0.4, seed: Math.random() });
+    // 관통 방향으로 튀는 불꽃 · 파편
+    for (let k = 0; k < Math.round((big ? 34 : 22) * QUALITY) + 6; k++) { const a = ang + rand(-0.35, 0.35), sp = rand(400, big ? 1100 : 850); particles.push({ x: t.x + Math.cos(ang) * t.r * 0.6, y: t.y + Math.sin(ang) * t.r * 0.6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.25, 0.5), max: 0.5, size: rand(3, 7), color: Math.random() < 0.6 ? '#ffffff' : col, drag: 0.9, g: 0, kind: 'spark', rot: 0 }); }
+    for (let k = 0; k < 8; k++) { const a = ang + Math.PI + rand(-1.2, 1.2), sp = rand(80, 220); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5, max: 0.5, size: rand(10, 18), color: '#b8bcc8', drag: 0.92, g: -20, kind: 'smoke', rot: 0, a: 0.4 }); }
+    shake = Math.max(shake, big ? 12 : 7);
   } else if (f.type === 'juwon' || f.type === 'juwon2' || f.type === 'gunmin' || f.type === 'wooju') {
     // 이글거리는 붉은 검이 휘둘러지는 검기
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
@@ -4364,6 +4368,40 @@ function render() {
   for (const sl of slashes) {
     const k = sl.life / sl.max, p = 1 - k, e2 = 1 - Math.pow(1 - p, 3);
     const sweep = 2.4, a0 = sl.ang - sl.dir * sweep / 2, a1 = a0 + sl.dir * sweep * e2; // 휘두르는 각도
+    if (sl.thrust) {
+      // 찌르기: 0~35% 뻗음(대상 너머까지) → 이후 빠르게 빠지며 사라짐
+      const dx = Math.cos(sl.ang), dy = Math.sin(sl.ang), D = Math.hypot(sl.tx - sl.fx, sl.ty - sl.fy);
+      const reach = D + sl.tr * (sl.big ? 1.6 : 1.1), ext = p < 0.35 ? 1 - Math.pow(1 - p / 0.35, 3) : 1 - (p - 0.35) / 0.65 * 0.25;
+      const tipD = 20 + (reach - 20) * ext, tipX = sl.fx + dx * tipD, tipY = sl.fy + dy * tipD, fade = p < 0.35 ? 1 : k / 0.65;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      // 찌른 궤적: 끝이 뾰족한 빛줄기
+      const g = ctx.createLinearGradient(sl.fx, sl.fy, tipX, tipY); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, sl.col); g.addColorStop(1, '#ffffff');
+      ctx.globalAlpha = fade * 0.85; ctx.fillStyle = g; const w = (sl.big ? 16 : 10) * fade + 2;
+      ctx.beginPath(); ctx.moveTo(sl.fx - dy * w * 0.2, sl.fy + dx * w * 0.2); ctx.lineTo(tipX - dy * w, tipY + dx * w); ctx.lineTo(tipX + dx * w * 2.5, tipY + dy * w * 2.5); ctx.lineTo(tipX + dy * w, tipY - dx * w); ctx.lineTo(sl.fx + dy * w * 0.2, sl.fy - dx * w * 0.2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.globalAlpha = fade; ctx.beginPath(); ctx.moveTo(sl.fx, sl.fy); ctx.lineTo(tipX + dx * w * 2, tipY + dy * w * 2); ctx.stroke();
+      // 꿰뚫는 순간: 대상 뒤로 길쭉하게 터지는 충격파
+      if (p > 0.2 && p < 0.75) {
+        const q = (p - 0.2) / 0.55, cx = sl.tx + dx * sl.tr * (0.5 + q * 1.5), cy = sl.ty + dy * sl.tr * (0.5 + q * 1.5);
+        ctx.globalAlpha = (1 - q) * 0.9; ctx.translate(cx, cy); ctx.rotate(sl.ang);
+        const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, sl.tr * 2.2); rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.35, sl.col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(0, 0, sl.tr * (1.2 + q * 2.4), sl.tr * (0.35 + q * 0.4), 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = sl.col; ctx.lineWidth = 3 * (1 - q); ctx.beginPath(); ctx.ellipse(-sl.tr * 0.6, 0, sl.tr * (0.4 + q * 0.6), sl.tr * (1 + q * 1.4), 0, 0, TAU); ctx.stroke();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+      ctx.restore();
+      // 창 (잔상 2개 + 본체) — 창끝이 찌르는 방향
+      const im = sl.img;
+      if (im && im.complete && im.naturalWidth) {
+        const ih = sl.big ? 230 : 190, iw = ih * im.naturalWidth / im.naturalHeight;
+        for (let a = 2; a >= 0; a--) {
+          const td = tipD - a * 26 * (p < 0.35 ? 1 : 0.3); if (td < 0) continue;
+          ctx.save(); ctx.globalAlpha = fade * (a ? 0.22 / a : 1); ctx.translate(sl.fx + dx * td, sl.fy + dy * td); ctx.rotate(sl.ang + Math.PI / 2);
+          if (!a) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.6; ctx.drawImage(glow(sl.col), -iw * 1.6, -ih * 0.05, iw * 3.2, ih * 0.6); ctx.restore(); }
+          ctx.drawImage(im, -iw / 2, 0, iw, ih); ctx.restore();
+        }
+      }
+      continue;
+    }
     if (sl.stab) {
       // 검이 위에서 떨어져 꽂힘
       const fall = Math.min(1, p / 0.3), ee = fall * fall, y = sl.y - (1 - ee) * 460;
@@ -5168,6 +5206,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '6.6', date: '2026-11-20', items: ['이도윤 · 정선우 공격 이펙트를 창으로 찌르는 연출로 변경 (빛줄기 · 관통 충격파 · 잔상)'] },
   { v: '6.5', date: '2026-11-20', items: ['송재범 2페이즈 [요루] 삭제 (송재범 강화 효과: 체력 +30 · 레벨 +5)'] },
   { v: '6.4', date: '2026-11-20', items: ['공간참 - 청 이펙트 변경: 붉고 회색인 담배 연기가 모여 검이 된 뒤 한 번에 벰'] },
   { v: '6.3', date: '2026-11-20', items: ['송재범 공격 이펙트 변경: 붉고 회색인 담배 연기를 내뿜음'] },
