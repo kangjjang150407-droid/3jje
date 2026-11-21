@@ -158,6 +158,34 @@
     #startBtn,#left>.row{display:none}
     h1{font-size:16px}
   }
+
+  /* ===== 칭호 연출 ===== */
+  .tt{display:inline-block;font-weight:700;white-space:nowrap;color:#d8b8ff}
+  .tt .ch{display:inline-block}
+  .tt-shine{background:linear-gradient(100deg,var(--c1) 20%,#fff 45%,var(--c1) 70%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:ttShine 2.6s linear infinite}
+  @keyframes ttShine{from{background-position:120% 0}to{background-position:-120% 0}}
+  .tt-glow{animation:ttGlow 2s ease-in-out infinite}
+  @keyframes ttGlow{0%,100%{text-shadow:0 0 2px var(--g)}50%{text-shadow:0 0 10px var(--g),0 0 18px var(--g)}}
+  .tt-wave .ch{animation:ttWave 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * -0.12s)}
+  @keyframes ttWave{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .tt-fire{animation:ttFire .5s steps(2) infinite alternate}
+  @keyframes ttFire{from{text-shadow:0 0 4px #ff3a1a,0 -2px 6px #ff8a2a}to{text-shadow:0 0 8px #ff1a0a,0 -4px 10px #ffd04a}}
+  .tt-glitch{animation:ttGlitch 1.8s infinite}
+  @keyframes ttGlitch{0%,86%,100%{text-shadow:none;transform:none}88%{text-shadow:-2px 0 #ff2a6a,2px 0 #2affe0;transform:translateX(1px)}91%{text-shadow:2px 0 #ff2a6a,-2px 0 #2affe0;transform:translateX(-1px) skewX(-8deg)}94%{text-shadow:-1px 0 #ff2a6a,1px 0 #2affe0;transform:none}}
+  .tt-ghost{animation:ttGhost 3s ease-in-out infinite}
+  @keyframes ttGhost{0%,100%{opacity:1;filter:none}50%{opacity:.45;filter:blur(.6px)}}
+  .tt-pulse{animation:ttPulse 1.4s ease-in-out infinite}
+  @keyframes ttPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  .tt-bob{animation:ttBob 2.4s ease-in-out infinite}
+  @keyframes ttBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .tt-rainbow{background:linear-gradient(90deg,#ff5a5a,#ffcc33,#5aff8a,#5ad8ff,#b05aff,#ff5ab0,#ff5a5a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:ttRain 3s linear infinite}
+  @keyframes ttRain{from{background-position:0 0}to{background-position:300% 0}}
+  .tt-rainbow.tt-wave{background:none;color:#fff!important}
+  .tt-rainbow.tt-wave .ch{animation:ttWave 1.6s ease-in-out infinite,ttHue 2.4s linear infinite;animation-delay:calc(var(--i) * -0.12s),calc(var(--i) * -0.2s);text-shadow:0 0 6px rgba(255,255,255,.5)}
+  @keyframes ttHue{0%{color:#ff5a5a}17%{color:#ffcc33}33%{color:#5aff8a}50%{color:#5ad8ff}67%{color:#b05aff}83%{color:#ff5ab0}100%{color:#ff5a5a}}
+  .tt-spark{position:relative}
+  .tt-spark::after{content:'✦';position:absolute;right:-7px;top:-6px;font-size:9px;color:#fff;animation:ttSpark 1.6s ease-in-out infinite}
+  @keyframes ttSpark{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(90deg)}}
 </style>
 </head>
 <body>
@@ -5962,6 +5990,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.3', date: '2026-11-21', items: ['✨ 칭호 연출 추가: 칭호마다 고유한 색과 움직임 (빛나는 광택 · 일렁이는 물결 · 불꽃 · 글리치 · 유령처럼 깜빡임 · 무지갯빛 · 반짝이 등)', '채팅 · 주간 랭킹 · PVP 랭킹 · PVP 상대 목록 · 친구 목록 · 프로필에서 모두 보여요'] },
   { v: '9.2', date: '2026-11-21', items: ['🎖 PVP 티어 칭호 10종 추가: 브론즈 도전자 · 실버 검객 · 황금의 투사 · 에메랄드 수호자 · 다이아몬드 정예 · PVP 마스터 · 그랜드 마스터 · 빛나는 자 · 한계를 넘은 자 · 영원히 군림하는 자', '한 번이라도 달성한 최고 티어의 칭호까지 모두 얻고, 시즌이 바뀌어도 유지돼요 (프로필에서 장착)'] },
   { v: '9.1', date: '2026-11-21', items: ['PVP 점수 변화 표시: 전투가 끝나면 점수 카드가 떠서 점수가 실시간으로 오르내리고 게이지가 차요 (티어 경계를 넘으면 엠블럼이 바뀌며 번쩍임 → 승급 시 티어 연출)', 'PVP 랭킹 탭을 열어둔 채 대전하면 결과가 바로 반영돼요'] },
   { v: '9.0', date: '2026-11-21', items: ['🏆 PVP 랭킹 추가: PVP 패널의 랭킹 탭에서 이번 시즌 티어 순으로 볼 수 있어요 (같은 티어는 점수 순 · 티어별로 구분 · 엠블럼 표시)', 'PVP를 한 판이라도 하면 방어 팀을 등록하지 않아도 랭킹에 올라가요'] },
@@ -6214,12 +6243,42 @@ try { if (account) prof = JSON.parse(localStorage.getItem('ballfight-profile-' +
 function saveProf() { try { localStorage.setItem('ballfight-profile-' + account.sub, JSON.stringify(prof)); } catch (e) { toast('저장 공간이 부족해요'); } }
 const dispName = () => account ? (prof.nick || account.name) : '게스트';
 const dispPic = () => account ? (prof.pic || account.picture || '') : '';
+// 칭호 연출: 칭호마다 색과 애니메이션 (채팅 · 랭킹 · PVP · 친구 · 프로필에 공통 적용)
+const TITLE_FX = {
+  rookie: { c: '#b8b0d8', fx: 'glow', g: '#8a80b0' },
+  raid1: { c: '#ff6a6a', fx: 'pulse glow', g: '#ff3a3a' },
+  raid2: { c: '#ff7a3a', fx: 'fire' },
+  raid3: { c: '#b080ff', fx: 'wave glow', g: '#6a2aff' },
+  raid4: { c: '#ff6a9a', fx: 'glitch' },
+  extreme: { c: '#ffcc33', fx: 'shine spark' },
+  dungeon: { c: '#d8a870', fx: 'glow', g: '#a06a30' },
+  hidden: { c: '#8ab0ff', fx: 'ghost glow', g: '#3a6aff' },
+  collector: { c: '#fff', fx: 'rainbow' },
+  upgrader: { c: '#ffe08a', fx: 'shine', },
+  pvp: { c: '#9fd8ff', fx: 'pulse glow', g: '#3a9aff' },
+  tier0: { c: '#d89a6a', fx: 'glow', g: '#a0603a' },
+  tier1: { c: '#dfe6f0', fx: 'shine' },
+  tier2: { c: '#ffd04a', fx: 'shine glow', g: '#ffaa00' },
+  tier3: { c: '#3ae0a0', fx: 'glow pulse', g: '#0aa060' },
+  tier4: { c: '#7ad8ff', fx: 'shine spark' },
+  tier5: { c: '#c070ff', fx: 'wave glow', g: '#8a2aff' },
+  tier6: { c: '#ff5a7a', fx: 'fire wave' },
+  tier7: { c: '#fff09a', fx: 'shine glow spark', g: '#ffd04a' },
+  tier8: { c: '#ff8a3a', fx: 'bob glow wave', g: '#ff5a00' },
+  tier9: { c: '#fff', fx: 'rainbow wave spark' },
+};
+function titleHTML(name, trailingSpace = true) {
+  if (!name) return '';
+  const t = TITLES.find(x => x.name === name), F = (t && TITLE_FX[t.id]) || { c: '#d8b8ff', fx: '' }, txt = `[${name}]`, esc3 = c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] || c);
+  const fx = F.fx.split(' ').filter(Boolean), inner = fx.includes('wave') ? [...txt].map((c, i) => `<span class="ch" style="--i:${i}">${c === ' ' ? '&nbsp;' : esc3(c)}</span>`).join('') : [...txt].map(esc3).join('');
+  return `<span class="tt ${fx.map(x => 'tt-' + x).join(' ')}" style="color:${F.c};--c1:${F.c};--g:${F.g || F.c}">${inner}</span>${trailingSpace ? ' ' : ''}`;
+}
 const titleName = () => { const t = TITLES.find(x => x.id === prof.title); return t && t.ok() ? t.name : ''; };
 function applyProfileUI(king) {
   if (!account) return;
   const an = document.getElementById('accName'), ap = document.getElementById('accPic');
   const t = titleName(), esc2 = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  if (an) an.innerHTML = (t ? `<span style="color:#d8b8ff">[${esc2(t)}]</span> ` : '') + esc2(dispName()) + (king ? ' <b style="color:#ffcc33">👑 왕</b>' : '') + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : '');
+  if (an) an.innerHTML = titleHTML(t) + esc2(dispName()) + (king ? ' <b style="color:#ffcc33">👑 왕</b>' : '') + (TESTER && !TEST_SERVER ? ' 🧪 테스터' : '');
   const pic = dispPic(); if (ap && pic) { ap.src = pic; ap.referrerPolicy = 'no-referrer'; ap.style.display = ''; }
 }
 function renderProfile() {
@@ -6230,7 +6289,7 @@ function renderProfile() {
   const pic = dispPic();
   el.innerHTML = `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
       ${pic ? `<img src="${esc2(pic)}" referrerpolicy="no-referrer" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #8a6aff">` : '<div style="width:56px;height:56px;border-radius:50%;background:#2a2a4a"></div>'}
-      <div>${titleName() ? `<div style="color:#d8b8ff">[${esc2(titleName())}]</div>` : ''}<b style="font-size:15px">${esc2(dispName())}</b></div></div>
+      <div>${titleName() ? `<div>${titleHTML(titleName(), false)}</div>` : ''}<b style="font-size:15px">${esc2(dispName())}</b></div></div>
     <div><b>닉네임</b> <span style="color:#8a8aa8">(2~12자 · ${NICK_DAYS}일마다 변경 가능)</span></div>
     <div style="display:flex;gap:6px;margin:4px 0 8px"><input type="text" id="profNick" maxlength="12" placeholder="${esc2(dispName())}" style="flex:1" ${can ? '' : 'disabled'}><button id="profNickSave" ${can ? '' : 'disabled'}>변경</button></div>
     ${can ? '' : `<div style="color:#ffb84a;margin:-4px 0 8px">다음 변경까지 ${Math.floor(left / 864e5)}일 ${Math.floor(left % 864e5 / 36e5)}시간</div>`}
@@ -6305,7 +6364,7 @@ function renderFriends() {
   friendBadge();
   const el = document.getElementById('friendPanel'); if (!el || !el.classList.contains('on')) return;
   const esc2 = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const who = u => `${u.picture ? `<img src="${esc2(u.picture)}" referrerpolicy="no-referrer" alt="">` : '<span style="width:26px;height:26px;border-radius:50%;background:#2a3a34;display:inline-block"></span>'}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.title ? `<span style="color:#d8b8ff">[${esc2(u.title)}]</span> ` : ''}${esc2(u.name || '이름 없음')}</span>`;
+  const who = u => `${u.picture ? `<img src="${esc2(u.picture)}" referrerpolicy="no-referrer" alt="">` : '<span style="width:26px;height:26px;border-radius:50%;background:#2a3a34;display:inline-block"></span>'}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}${esc2(u.name || '이름 없음')}</span>`;
   if (!account) { el.innerHTML = '<div style="color:#aaa">구글로 로그인하면 친구를 추가할 수 있어요.</div>'; return; }
   if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) { el.innerHTML = '<div style="color:#aaa">친구 기능은 웹 주소(GitHub Pages)에서만 돼요.</div>'; return; }
   if (!rank.db || !rank.uid) { el.innerHTML = `<div style="color:#aaa">${rank.ready ? '친구 기능을 쓰려면 로그아웃 후 구글로 다시 로그인해 주세요.' : '서버에 연결하는 중…'}</div>`; return; }
@@ -6449,7 +6508,7 @@ function renderRank() {
   else if (rank.err) h += `<div style="color:#ff8080;margin-top:4px">${rank.err}</div>`;
   else if (account && rankEligible() && rank.ready && !rank.uid) h += '<div style="color:#ffcc33;margin-top:4px">랭킹에 올리려면 로그아웃 후 구글로 다시 로그인해 주세요.</div>';
   if (rank.list) {
-    h += rank.list.length ? rank.list.map((r, i) => `<div class="rk${r.id === rank.uid ? ' me' : ''}"><b style="width:26px;text-align:right;color:${i === 0 ? '#ffcc33' : i < 3 ? '#e0e0f0' : '#8a8aa8'}">${i + 1}</b>${r.picture ? `<img src="${esc(r.picture)}" referrerpolicy="no-referrer" alt="">` : ''}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title ? `<span style="color:#d8b8ff">[${esc(r.title)}]</span> ` : ''}${esc(r.name || '이름 없음')}${i === 0 ? ' <b style="color:#ffcc33">👑 왕</b>' : ''}</span><b style="color:#ffcc33">${(r.score || 0).toLocaleString()}</b></div>`).join('') : '<div style="color:#777">아직 랭킹에 아무도 없어요.</div>';
+    h += rank.list.length ? rank.list.map((r, i) => `<div class="rk${r.id === rank.uid ? ' me' : ''}"><b style="width:26px;text-align:right;color:${i === 0 ? '#ffcc33' : i < 3 ? '#e0e0f0' : '#8a8aa8'}">${i + 1}</b>${r.picture ? `<img src="${esc(r.picture)}" referrerpolicy="no-referrer" alt="">` : ''}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(r.title)}${esc(r.name || '이름 없음')}${i === 0 ? ' <b style="color:#ffcc33">👑 왕</b>' : ''}</span><b style="color:#ffcc33">${(r.score || 0).toLocaleString()}</b></div>`).join('') : '<div style="color:#777">아직 랭킹에 아무도 없어요.</div>';
     // 랭킹 1등에게 '왕' 칭호
     const king = rank.list[0] && rank.list[0].id === rank.uid;
     const an = document.getElementById('accName');
@@ -6472,7 +6531,7 @@ async function chatOpen() {
   chat.unsub = rank.db.collection('chat').orderBy('ms', 'desc').limit(50).onSnapshot(q => {
     const king = rank.list && rank.list[0] ? rank.list[0].id : null;
     document.getElementById('chatList').innerHTML = q.docs.map(d => { const m = d.data(), tm = new Date(m.ms || 0);
-      return `<div class="cm"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b style="color:${m.uid === rank.uid ? '#ffcc33' : '#9fd8ff'}">${escH(m.name || '익명')}${m.uid === king ? ' 👑' : ''}</b> ${escH(m.text || '')}</div>`; }).join('') || '<div style="color:#777">아직 메시지가 없어요.</div>';
+      return `<div class="cm"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b style="color:${m.uid === rank.uid ? '#ffcc33' : '#9fd8ff'}">${(() => { const mm = /^\[(.+?)\] (.*)$/.exec(m.name || ''); return mm && TITLES.some(x => x.name === mm[1]) ? titleHTML(mm[1]) + escH(mm[2]) : escH(m.name || '익명'); })()}${m.uid === king ? ' 👑' : ''}</b> ${escH(m.text || '')}</div>`; }).join('') || '<div style="color:#777">아직 메시지가 없어요.</div>';
   }, e => { console.error(e); chatNote('채팅을 불러오지 못했어요.'); });
 }
 async function chatSend() {
@@ -6663,7 +6722,7 @@ function renderPvp() {
     L.slice(0, 60).forEach((o, i) => {
       const ti = pvpTierIdx(o.crp), T = PVP_TIERS[ti];
       if (ti !== lastTier) { lastTier = ti; h += `<div style="margin:6px 0 2px;font-size:11px;font-weight:800;color:${T.c};border-bottom:1px solid ${T.c}44">${T.n}</div>`; }
-      h += `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:6px;${o.me ? 'background:#1e2e4a;' : ''}"><b style="width:22px;text-align:right;color:${i < 3 ? '#ffd84a' : '#889'}">${i + 1}</b><img src="${tierImg(ti, 32)}" style="width:26px;height:26px"><div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:${o.me ? '#7dffb0' : '#9fd8ff'}">${escH(o.name || '이름 없음')}</b>${o.me ? ' (나)' : ''}</div><span style="color:${T.c};font-weight:700">${o.crp}점</span><span style="color:#889;font-size:11px">${o.w || 0}승 ${o.l || 0}패</span></div>`;
+      h += `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:6px;${o.me ? 'background:#1e2e4a;' : ''}"><b style="width:22px;text-align:right;color:${i < 3 ? '#ffd84a' : '#889'}">${i + 1}</b><img src="${tierImg(ti, 32)}" style="width:26px;height:26px"><div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(o.title)}<b style="color:${o.me ? '#7dffb0' : '#9fd8ff'}">${escH(o.name || '이름 없음')}</b>${o.me ? ' (나)' : ''}</div><span style="color:${T.c};font-weight:700">${o.crp}점</span><span style="color:#889;font-size:11px">${o.w || 0}승 ${o.l || 0}패</span></div>`;
     });
     if (!L.length) h += '<div style="color:#777">아직 이번 시즌 기록이 없어요.</div>';
     el.innerHTML = h; return;
@@ -6675,7 +6734,7 @@ function renderPvp() {
   else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
-    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <img src="${tierImg(pvpTierIdx((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0), 24)}" style="width:20px;height:20px;vertical-align:middle"><span style="color:${pvpTier((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0).c};font-size:11px">${pvpTier((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0).n}</span>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+    h += ops.length ? ops.map(o => `<div class="op">${titleHTML(o.title)}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <img src="${tierImg(pvpTierIdx((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0), 24)}" style="width:20px;height:20px;vertical-align:middle"><span style="color:${pvpTier((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0).c};font-size:11px">${pvpTier((o.season ?? 1) === pvpSeasonOf() ? o.rp : 0).n}</span>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
   }
   el.innerHTML = h;
 }
