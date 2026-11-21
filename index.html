@@ -5990,6 +5990,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.4', date: '2026-11-21', items: ['🎬 연출 구경 서버에 칭호 연출 추가: 모든 칭호의 연출과 얻는 방법을 한 번에 볼 수 있어요'] },
   { v: '9.3', date: '2026-11-21', items: ['✨ 칭호 연출 추가: 칭호마다 고유한 색과 움직임 (빛나는 광택 · 일렁이는 물결 · 불꽃 · 글리치 · 유령처럼 깜빡임 · 무지갯빛 · 반짝이 등)', '채팅 · 주간 랭킹 · PVP 랭킹 · PVP 상대 목록 · 친구 목록 · 프로필에서 모두 보여요'] },
   { v: '9.2', date: '2026-11-21', items: ['🎖 PVP 티어 칭호 10종 추가: 브론즈 도전자 · 실버 검객 · 황금의 투사 · 에메랄드 수호자 · 다이아몬드 정예 · PVP 마스터 · 그랜드 마스터 · 빛나는 자 · 한계를 넘은 자 · 영원히 군림하는 자', '한 번이라도 달성한 최고 티어의 칭호까지 모두 얻고, 시즌이 바뀌어도 유지돼요 (프로필에서 장착)'] },
   { v: '9.1', date: '2026-11-21', items: ['PVP 점수 변화 표시: 전투가 끝나면 점수 카드가 떠서 점수가 실시간으로 오르내리고 게이지가 차요 (티어 경계를 넘으면 엠블럼이 바뀌며 번쩍임 → 승급 시 티어 연출)', 'PVP 랭킹 탭을 열어둔 채 대전하면 결과가 바로 반영돼요'] },
@@ -6908,6 +6909,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
 <h4>스킬</h4><div id="scSkills"></div>
 <h4>연출</h4><div class="chips" id="scFx"></div>
 <h4>PVP 티어 연출</h4><div class="chips" id="scTiers"></div>
+<h4>칭호 연출</h4><div id="scTitles" style="background:#0a0716;border:1px solid #3a2a6a;border-radius:8px;padding:6px 8px;line-height:1.9;font-size:13px"></div>
 <h4>재생 속도</h4><div class="chips" id="scSpeed"></div>
 <h4>배경</h4><div class="chips"><button id="scReset">🔄 다시 배치</button><button id="scClear">🧹 이펙트 지우기</button></div>`;
   $('left').prepend(P);
@@ -6962,6 +6964,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   });
   $('scChars').innerHTML = types.map(t => `<button data-t="${t}" style="border-color:${CHAR[t].color}">${CHAR[t].name}</button>`).join('');
   $('scTiers').innerHTML = PVP_TIERS.map((x, i) => `<button data-tier="${i}" style="display:flex;align-items:center;gap:3px;border-color:${x.c}"><img src="${tierImg(i, 24)}" style="width:20px;height:20px">${x.n}</button>`).join('');
+  $('scTitles').innerHTML = TITLES.map(t => `<div title="${t.how}">${titleHTML(t.name)}<span style="color:#9fd8ff">플레이어</span><div style="color:#6a6088;font-size:10px;line-height:1.2;margin:-2px 0 4px">${t.how}</div></div>`).join('');
   $('scSpeed').innerHTML = [0.25, 0.5, 1, 2].map(v => `<button data-sp="${v}"${v === 1 ? ' class="on"' : ''}>${v}x</button>`).join('');
   // 모델 미리보기: 실제 전투 그림 함수로 크게 그림
   const mc = $('scModel'), mctx = mc.getContext('2d');
