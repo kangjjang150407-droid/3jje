@@ -5963,6 +5963,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '8.9', date: '2026-11-21', items: ['PVP 티어 엠블럼 추가: 티어마다 다른 엠블럼 (실버부터 칼날 · 다이아몬드부터 왕관 · 마스터부터 날개 · 레디언트부터 후광 · 초월자부터 궤도 고리 · 영생은 무지갯빛)', 'PVP 티어 승급 연출 추가: 티어가 높을수록 빛줄기 · 충격파 · 파티클 · 번개가 화려해져요 (PVP 패널이나 연출 구경 서버에서 엠블럼을 눌러 미리 볼 수 있어요)'] },
   { v: '8.8', date: '2026-11-21', items: ['🏅 PVP 티어 추가 — PVP 시즌 1 (11.21 ~ 12.20)', '승리 +25점 · 패배 -15점, 100점마다 티어 상승: 브론즈 · 실버 · 골드 · 에메랄드 · 다이아몬드 · 마스터 · 그랜드 마스터 · 레디언트 · 초월자 · 영생', '시즌 종료 시 최종 티어 보상이 우편으로 도착: 브론즈 2,000 ~ 영생 20,000 코인 (시즌 중 PVP를 1판 이상 한 경우)', 'PVP 상대 목록에 상대의 티어 표시'] },
   { v: '8.7', date: '2026-11-21', items: ['노윤 상태 이름 변경: 보랏빛 날개 → 부엉이'] },
   { v: '8.6', date: '2026-11-21', items: ['노윤 강화 효과 추가: 파탄을 장착한 턴에 정신력 25 감소 (기존 강화 반격 마지막 일격 해금과 함께 적용)'] },
@@ -6496,6 +6497,86 @@ const pvpSeasonOf = (t = Date.now()) => Math.max(1, Math.floor((t - PVP_SEASON0)
 const pvpSeasonEnd = n => new Date(PVP_SEASON0 + (n * PVP_SEASON_DAYS - 1) * 864e5); // 마지막 날
 const pvpTierIdx = rp => Math.min(PVP_TIERS.length - 1, Math.floor((rp || 0) / PVP_STEP));
 const pvpTier = rp => PVP_TIERS[pvpTierIdx(rp)];
+
+// ---- 티어 엠블럼 (직접 그림) · 티어 승급 연출 ----
+function drawTierEmblem(g, cx, cy, S, idx, tm = 0) {
+  const T = PVP_TIERS[idx], col = idx === 9 ? `hsl(${(tm * 90) % 360},90%,72%)` : T.c, R = S / 2;
+  g.save(); g.translate(cx, cy); g.lineJoin = 'round';
+  const glowC = (c, a, r) => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, r); gr.addColorStop(0, c); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; };
+  glowC(col, 0.35 + idx * 0.04, R * 1.05);
+  // 날개 (마스터 이상)
+  if (idx >= 5) for (const sd of [-1, 1]) {
+    g.save(); g.scale(sd, 1); const n = idx >= 7 ? 5 : 3;
+    for (let k = 0; k < n; k++) { const a = -0.5 + k * 0.32 + Math.sin(tm * 3) * 0.04, L = R * (0.95 - k * 0.1);
+      g.save(); g.translate(R * 0.42, -R * 0.05); g.rotate(a); const gr = g.createLinearGradient(0, 0, L, 0); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0.85)');
+      g.fillStyle = gr; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = S * 0.012; g.beginPath(); g.moveTo(0, -R * 0.06); g.quadraticCurveTo(L * 0.6, -R * 0.14, L, 0); g.quadraticCurveTo(L * 0.6, R * 0.08, 0, R * 0.06); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+    g.restore();
+  }
+  // 후광 (레디언트 이상) · 궤도 고리 (초월자 이상)
+  if (idx >= 7) { g.strokeStyle = col; g.lineWidth = S * 0.025; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(0, -R * 0.62, R * 0.38, R * 0.1, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1; }
+  if (idx >= 8) { g.save(); g.rotate(tm * 0.8); g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = S * 0.015; g.beginPath(); g.ellipse(0, 0, R * 0.9, R * 0.3, 0.4, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(R * 0.9 * Math.cos(tm * 2), R * 0.3 * Math.sin(tm * 2), S * 0.03, 0, Math.PI * 2); g.fill(); g.restore(); }
+  // 왕관 가시 (다이아몬드 이상)
+  if (idx >= 4) { const n = Math.min(7, idx - 1); g.fillStyle = col; g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = S * 0.012;
+    for (let k = 0; k < n; k++) { const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.32; g.save(); g.rotate(a + Math.PI / 2); g.beginPath(); g.moveTo(-R * 0.08, -R * 0.5); g.lineTo(0, -R * (0.78 + (k === (n - 1) / 2 ? 0.1 : 0))); g.lineTo(R * 0.08, -R * 0.5); g.closePath(); g.fill(); g.stroke(); g.restore(); } }
+  // 옆 칼날 (실버 이상)
+  if (idx >= 1) for (const sd of [-1, 1]) { g.fillStyle = 'rgba(255,255,255,0.75)'; g.beginPath(); g.moveTo(sd * R * 0.36, -R * 0.3); g.lineTo(sd * R * (0.6 + idx * 0.012), 0); g.lineTo(sd * R * 0.36, R * 0.3); g.closePath(); g.fill(); }
+  // 방패 몸체
+  const sh = () => { g.beginPath(); g.moveTo(0, -R * 0.55); g.lineTo(R * 0.42, -R * 0.36); g.lineTo(R * 0.38, R * 0.18); g.quadraticCurveTo(R * 0.25, R * 0.45, 0, R * 0.6); g.quadraticCurveTo(-R * 0.25, R * 0.45, -R * 0.38, R * 0.18); g.lineTo(-R * 0.42, -R * 0.36); g.closePath(); };
+  let gr = g.createLinearGradient(0, -R * 0.55, 0, R * 0.6); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.25, col); gr.addColorStop(1, '#14101e');
+  sh(); g.fillStyle = gr; g.fill(); g.lineWidth = S * 0.035; g.strokeStyle = '#0a0812'; g.stroke(); g.lineWidth = S * 0.015; g.strokeStyle = 'rgba(255,255,255,0.8)'; g.stroke();
+  // 가운데 보석
+  const gs = R * (0.2 + idx * 0.012);
+  gr = g.createLinearGradient(-gs, -gs, gs, gs); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, col); gr.addColorStop(1, '#201030');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, -gs * 1.2); g.lineTo(gs, 0); g.lineTo(0, gs * 1.3); g.lineTo(-gs, 0); g.closePath(); g.fill(); g.strokeStyle = '#0a0812'; g.lineWidth = S * 0.015; g.stroke();
+  if (idx >= 3) { g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = S * 0.008; g.beginPath(); g.moveTo(0, -gs * 1.2); g.lineTo(0, gs * 1.3); g.moveTo(-gs, 0); g.lineTo(gs, 0); g.stroke(); }
+  // 별 점 (티어 단계)
+  const pips = idx % 3 + 1, py = R * 0.34;
+  for (let k = 0; k < pips; k++) { const px = (k - (pips - 1) / 2) * R * 0.14; g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? S * 0.012 : S * 0.03; g.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr); } g.closePath(); g.fill(); }
+  // 반짝임
+  const tw = (Math.sin(tm * 4 + idx) + 1) / 2; g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5 + tw * 0.5; g.fillStyle = '#fff';
+  g.beginPath(); const sx = -R * 0.2, sy = -R * 0.3, rr = S * (0.04 + tw * 0.03); g.moveTo(sx, sy - rr); g.quadraticCurveTo(sx, sy, sx + rr, sy); g.quadraticCurveTo(sx, sy, sx, sy + rr); g.quadraticCurveTo(sx, sy, sx - rr, sy); g.quadraticCurveTo(sx, sy, sx, sy - rr); g.fill();
+  g.restore();
+}
+const tierImgCache = {};
+function tierImg(idx, px = 64) { const k = idx + '_' + px; if (!tierImgCache[k]) { const c = document.createElement('canvas'); c.width = c.height = px * 2; drawTierEmblem(c.getContext('2d'), px, px, px * 1.7, idx, 0.6); tierImgCache[k] = c.toDataURL(); } return tierImgCache[k]; }
+// 티어 승급 연출: 티어가 높을수록 화려해짐 (클릭하면 넘어감)
+function tierCutscene(idx, label) {
+  const T = PVP_TIERS[idx], c = document.createElement('canvas'), dp = Math.min(2, window.devicePixelRatio || 1);
+  c.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:3000;cursor:pointer';
+  const W2 = innerWidth, H2 = innerHeight; c.width = W2 * dp; c.height = H2 * dp; document.body.appendChild(c);
+  const g = c.getContext('2d'), t0 = performance.now(), DUR = 2600 + idx * 220, parts = [];
+  const col = () => idx === 9 ? `hsl(${((performance.now() - t0) / 6) % 360},90%,70%)` : T.c;
+  for (let k = 0; k < 40 + idx * 18; k++) { const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * (300 + idx * 60); parts.push({ a, sp, r: 1.5 + Math.random() * (2 + idx * 0.3), d: Math.random() * 0.4, hue: Math.random() * 360 }); }
+  let done = false; const end = () => { if (done) return; done = true; c.remove(); };
+  c.onclick = end;
+  (function frame() {
+    if (done) return; const t = (performance.now() - t0) / 1000, p = t / (DUR / 1000); if (p >= 1) return end();
+    g.setTransform(dp, 0, 0, dp, 0, 0); g.clearRect(0, 0, W2, H2);
+    const fadeIn = Math.min(1, t / 0.25), fadeOut = p > 0.85 ? 1 - (p - 0.85) / 0.15 : 1, A = fadeIn * fadeOut, cx = W2 / 2, cy = H2 * 0.45, C = col();
+    g.globalAlpha = 0.82 * A; g.fillStyle = '#05040a'; g.fillRect(0, 0, W2, H2); g.globalAlpha = A;
+    // 빛줄기 (티어가 높을수록 많아짐)
+    const rays = 6 + idx * 3; g.save(); g.translate(cx, cy); g.rotate(t * (0.3 + idx * 0.05)); g.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < rays; k++) { g.rotate(Math.PI * 2 / rays); const L = Math.max(W2, H2) * 0.8; const gr = g.createLinearGradient(0, 0, L, 0); gr.addColorStop(0, C); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = A * (0.12 + idx * 0.012); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.lineTo(L, -L * 0.06); g.lineTo(L, L * 0.06); g.closePath(); g.fill(); }
+    g.restore();
+    // 충격파 고리
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 1 + Math.floor(idx / 3); k++) { const q = Math.max(0, Math.min(1, (t - 0.25 - k * 0.18) / 0.9)); if (q <= 0 || q >= 1) continue; g.globalAlpha = A * (1 - q); g.strokeStyle = k % 2 ? '#ffffff' : C; g.lineWidth = 10 * (1 - q) + 1; g.beginPath(); g.arc(cx, cy, 60 + q * Math.min(W2, H2) * 0.6, 0, Math.PI * 2); g.stroke(); }
+    // 파티클 (영생은 무지개)
+    for (const pt of parts) { const q = Math.max(0, t - 0.25 - pt.d); if (q <= 0) continue; const d = pt.sp * q * (1 - Math.min(0.6, q * 0.25)); g.globalAlpha = A * Math.max(0, 1 - q / 2.2); g.fillStyle = idx === 9 ? `hsl(${pt.hue + t * 120},90%,70%)` : (Math.random() < 0.3 ? '#fff' : C); g.beginPath(); g.arc(cx + Math.cos(pt.a) * d, cy + Math.sin(pt.a) * d + (idx >= 2 ? -20 * q : 0), pt.r, 0, Math.PI * 2); g.fill(); }
+    // 마스터 이상: 엠블럼 주위 번개
+    if (idx >= 5 && Math.random() < 0.5) { g.globalAlpha = A; g.strokeStyle = idx >= 6 ? '#ffd0e0' : '#e0c0ff'; g.lineWidth = 2; g.beginPath(); let a = Math.random() * Math.PI * 2, r = 90; g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); for (let i = 0; i < 6; i++) { a += (Math.random() - 0.5) * 0.6; r += 25; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.stroke(); }
+    g.restore();
+    // 엠블럼: 튀어나오며 커졌다가 자리 잡음
+    const pop = t < 0.25 ? 0 : t < 0.55 ? (t - 0.25) / 0.3 * 1.25 : 1.25 - Math.min(0.25, (t - 0.55) * 0.8), S = Math.min(W2, H2) * 0.42 * pop;
+    if (S > 2) { g.globalAlpha = A; drawTierEmblem(g, cx, cy + Math.sin(t * 2) * 4, S, idx, t); }
+    // 글자
+    if (t > 0.5) { const q = Math.min(1, (t - 0.5) / 0.3); g.globalAlpha = A * q; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `900 ${Math.min(64, W2 / 9)}px ${FONT}`; g.lineWidth = 8; g.strokeStyle = '#000'; const ty = cy + Math.min(W2, H2) * 0.32 + (1 - q) * 20;
+      g.strokeText(T.n, cx, ty); g.shadowColor = C; g.shadowBlur = 30; g.fillStyle = C; g.fillText(T.n, cx, ty); g.shadowBlur = 0;
+      g.font = `700 ${Math.min(22, W2 / 22)}px ${FONT}`; g.fillStyle = '#e8e4ff'; g.fillText(label || '티어 승급!', cx, ty + Math.min(56, W2 / 10)); }
+    requestAnimationFrame(frame);
+  })();
+}
 function pvpSeasonCheck() {
   const cur = pvpSeasonOf();
   if (!save.pvpRank) { save.pvpRank = { season: cur, rp: 0, g: 0 }; persist(); return; }
@@ -6529,10 +6610,10 @@ function renderPvp() {
   const R = save.pvpRank, ti = pvpTierIdx(R.rp), T = PVP_TIERS[ti], nx = PVP_TIERS[ti + 1], end = pvpSeasonEnd(R.season), into = R.rp - ti * PVP_STEP;
   let h = `<div style="border:1px solid ${T.c}55;border-radius:8px;padding:7px;margin-bottom:7px;background:linear-gradient(90deg,${T.c}22,transparent)">
     <div style="font-size:11px;color:#9ab">🏅 PVP - 시즌 ${R.season} · ${end.getMonth() + 1}월 ${end.getDate()}일까지</div>
-    <div style="font-size:16px;font-weight:800;color:${T.c};text-shadow:0 0 8px ${T.c}88">${T.n} <span style="font-size:12px;color:#ddd">${R.rp}점</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><img src="${tierImg(ti, 64)}" data-tier="${ti}" title="눌러서 연출 보기" style="width:56px;height:56px;cursor:pointer"><div style="font-size:16px;font-weight:800;color:${T.c};text-shadow:0 0 8px ${T.c}88">${T.n} <span style="font-size:12px;color:#ddd">${R.rp}점</span></div></div>
     <div style="height:6px;background:#1a2030;border-radius:3px;margin:4px 0"><div style="height:100%;width:${nx ? into / PVP_STEP * 100 : 100}%;background:${T.c};border-radius:3px"></div></div>
     <div style="font-size:11px;color:#aab">${nx ? `다음 티어 <b style="color:${nx.c}">${nx.n}</b>까지 ${PVP_STEP - into}점` : '최고 티어!'} · 승리 +${PVP_WIN_RP} · 패배 -${PVP_LOSE_RP}<br>시즌 종료 보상 🪙 ${T.coin.toLocaleString()} (이번 시즌 ${R.g || 0}판)</div>
-    <details style="margin-top:4px"><summary style="cursor:pointer;color:#9fd8ff;font-size:11px">티어별 시즌 보상</summary>${PVP_TIERS.map((x, i) => `<div style="font-size:11px${i === ti ? ';font-weight:800' : ''}"><span style="color:${x.c}">${x.n}</span> <span style="color:#777">${i * PVP_STEP}점~</span> · 🪙 ${x.coin.toLocaleString()}</div>`).join('')}</details></div>`;
+    <details style="margin-top:4px"><summary style="cursor:pointer;color:#9fd8ff;font-size:11px">티어별 시즌 보상 (엠블럼을 누르면 연출)</summary>${PVP_TIERS.map((x, i) => `<div style="font-size:11px;display:flex;align-items:center;gap:4px${i === ti ? ';font-weight:800' : ''}"><img src="${tierImg(i, 32)}" data-tier="${i}" style="width:26px;height:26px;cursor:pointer"><span style="color:${x.c}">${x.n}</span> <span style="color:#777">${i * PVP_STEP}점~</span> · 🪙 ${x.coin.toLocaleString()}</div>`).join('')}</details></div>`;
   h += `<div style="margin-bottom:6px">내 전적 <b style="color:#7dffb0">${save.pvp.w}승</b> <b style="color:#ff8080">${save.pvp.l}패</b> · 승리 시 🪙 ${PVP_WIN_COIN}</div>`;
   h += `<button id="pvpReg" style="width:100%;padding:7px;font-weight:700;margin-bottom:6px">🛡 지금 레드 팀을 방어 팀으로 등록 (${nmT(myPvpTeam()) || '비어 있음'})</button>`;
   if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) h += '<div style="color:#aaa">PVP는 웹 주소(GitHub Pages)에서만 돼요.</div>';
@@ -6540,12 +6621,13 @@ function renderPvp() {
   else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
-    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <span style="color:${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).c};font-size:11px">${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).n}</span>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <img src="${tierImg(pvpTierIdx((o.season || 1) === pvpSeasonOf() ? o.rp : 0), 24)}" style="width:20px;height:20px;vertical-align:middle"><span style="color:${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).c};font-size:11px">${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).n}</span>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
   }
   el.innerHTML = h;
 }
 document.getElementById('pvpPanel').addEventListener('click', e => {
   if (e.target.id === 'pvpReg') return pvpRegister();
+  if (e.target.dataset.tier !== undefined) return tierCutscene(+e.target.dataset.tier, '티어 연출 미리보기');
   const id = e.target.dataset.pvp; if (!id || !pvp.list) return;
   const o = pvp.list.find(x => x.id === id); if (!o) return;
   const mine = myPvpTeam().map(type => ({ type, team: 0 }));
@@ -6565,7 +6647,7 @@ function pvpResult(win) {
   const after = pvpTierIdx(R.rp), T = PVP_TIERS[after];
   persist();
   log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패 · <b style="color:${T.c}">${T.n}</b> ${R.rp}점 (${win ? '+' + PVP_WIN_RP : '-' + PVP_LOSE_RP})`, 'kill');
-  if (after > before) { showBig(`${T.n} 승급!`, T.c, 2.0); doFlash(T.c, 0.4); toast(`🏅 PVP 티어 승급 — ${T.n}`); }
+  if (after > before) { showBig(`${T.n} 승급!`, T.c, 2.0); doFlash(T.c, 0.4); toast(`🏅 PVP 티어 승급 — ${T.n}`); setTimeout(() => tierCutscene(after, 'PVP 티어 승급!'), 1400); }
   else if (after < before) toast(`PVP 티어 강등 — ${T.n}`);
   try { if (rank.uid) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l, rp: R.rp, season: R.season }).catch(() => {}); } catch (e) {}
 }
@@ -6709,6 +6791,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
 <h4>모델</h4><canvas id="scModel" width="260" height="200"></canvas><div id="scInfo"></div>
 <h4>스킬</h4><div id="scSkills"></div>
 <h4>연출</h4><div class="chips" id="scFx"></div>
+<h4>PVP 티어 연출</h4><div class="chips" id="scTiers"></div>
 <h4>재생 속도</h4><div class="chips" id="scSpeed"></div>
 <h4>배경</h4><div class="chips"><button id="scReset">🔄 다시 배치</button><button id="scClear">🧹 이펙트 지우기</button></div>`;
   $('left').prepend(P);
@@ -6746,6 +6829,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   P.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.t) return setup(b.dataset.t);
+    if (b.dataset.tier !== undefined) return tierCutscene(+b.dataset.tier, '티어 연출 미리보기');
     if (b.dataset.k) return useSkill(b.dataset.k);
     if (b.dataset.sp) { setSpeed(+b.dataset.sp); for (const x of $('scSpeed').children) x.classList.toggle('on', x === b); return; }
     const f = subj();
@@ -6761,6 +6845,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
     if (b.id === 'scClear') { slashes.length = 0; particles.length = 0; timeFx.length = 0; }
   });
   $('scChars').innerHTML = types.map(t => `<button data-t="${t}" style="border-color:${CHAR[t].color}">${CHAR[t].name}</button>`).join('');
+  $('scTiers').innerHTML = PVP_TIERS.map((x, i) => `<button data-tier="${i}" style="display:flex;align-items:center;gap:3px;border-color:${x.c}"><img src="${tierImg(i, 24)}" style="width:20px;height:20px">${x.n}</button>`).join('');
   $('scSpeed').innerHTML = [0.25, 0.5, 1, 2].map(v => `<button data-sp="${v}"${v === 1 ? ' class="on"' : ''}>${v}x</button>`).join('');
   // 모델 미리보기: 실제 전투 그림 함수로 크게 그림
   const mc = $('scModel'), mctx = mc.getContext('2d');
