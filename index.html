@@ -320,6 +320,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="raid3Info" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
     <button id="raid4Btn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#ff2a6a,#2affe0);border:none;color:#100010;text-shadow:1px 0 #ff2a6a,-1px 0 #00ffff">📼 레이드 4단계: 과거의 강주원</button>
     <div id="raid4Info" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
+    <button id="srBtn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#3a0010,#ff2a6a,#ffe14d,#2affe0);border:none;color:#fff;text-shadow:0 0 6px #000,1px 0 #ff2a6a,-1px 0 #00ffff">🌐 서버 레이드: 과다 폭주 - 과거의 강주원</button>
+    <div id="srInfo" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
     <div style="display:flex;gap:8px;margin-top:8px"><select id="dgFloor" style="flex:0 0 84px;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:14px"></select><button id="dungeonBtn" class="big" style="flex:1;background:linear-gradient(90deg,#7a5cff,#3ad0c0);border:none;color:#0a0620">🏰 던전 입장</button></div>
     <label id="dgWeekLabel" style="display:flex;gap:6px;align-items:center;font-size:12px;margin-top:6px"><input type="checkbox" id="dgWeek"><span id="dgWeekText"></span></label>
     <label id="dgHiddenLabel" style="display:none;font-size:12px;margin-top:4px"><input type="checkbox" id="dgHidden"> 🧪 히든 보스 확정 — 3~5층 · 11층 (테스트 서버 전용)</label>
@@ -1098,7 +1100,8 @@ function rewindStep(f, dt) {
 function pjGlitch(f) {
   const L = [30, 60, 80, 100], D = [40, 80, 100, 190];
   f.level = L[(Math.random() * 4) | 0]; f.glDef = D[(Math.random() * 4) | 0]; f.glIdx = (Math.random() * 4) | 0;
-  floatText(f.x, f.y - f.r - 46, `LV.${f.level} · 방어 ${f.glDef} · 공격 ${SKILLS.pjA.glitch[f.glIdx]}`, '#ff6a9a', 15, { life: 1.2 });
+  if (f.overdrive) { f.level += 50; f.glDef += 100; } // 과다 폭주: 기본 레벨 +50 · 방어 레벨 +100 (공격 레벨 +60은 offLv)
+  floatText(f.x, f.y - f.r - 46, `LV.${f.level} · 방어 ${f.glDef} · 공격 ${SKILLS.pjA.glitch[f.glIdx] + (f.overdrive ? 60 : 0)}`, '#ff6a9a', 15, { life: 1.2 });
 }
 const pjWeights = f => ({ pjA: 3, pjB: 3, pjDrink: 3, pjSmoke: Math.max(0, 3 - 2 * (f.smokeLoss || 0)) }); // 슈뻘맨펀치는 호흡 99일 때만 사용
 const songWeights = { sAng: 3, sHahat: 3, sAni: 8, sGuard: 3 };
@@ -1445,7 +1448,7 @@ function chooseTarget(f, key) {
 // ---- 레벨 / 버프 / 정신력 ----
 function buffVal(f, key) { const b = f.buffs[key]; return b && b.until > simTime ? b.v : 0; }
 function addBuff(f, key, v) { f.buffs[key] = { v: buffVal(f, key) + v, until: simTime + TURN }; }
-function offLv(f, sk) { if (f.type === 'pastjuwon' && SKILLS[sk].glitch) return SKILLS[sk].glitch[f.glIdx || 0] + buffVal(f, 'offUp') - buffVal(f, 'offDown'); return f.level + (SKILLS[sk].lvMod || 0) - (uguLow(f) ? 50 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0) + (f.wing || 0) * 3; } // 쐐기의 창: 수치 1당 공격 레벨 +1
+function offLv(f, sk) { if (f.type === 'pastjuwon' && SKILLS[sk].glitch) return SKILLS[sk].glitch[f.glIdx || 0] + (f.overdrive ? 60 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown'); return f.level + (SKILLS[sk].lvMod || 0) - (uguLow(f) ? 50 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0) + (f.wing || 0) * 3; } // 쐐기의 창: 수치 1당 공격 레벨 +1
 function defLv(f) { if (f.type === 'pastjuwon') return (f.glDef || 80) + buffVal(f, 'defUp'); return -(f.wing || 0) * 3 + f.level - buffVal(f, 'defDown') - (uguLow(f) ? 50 : 0) + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
 function headsChance(f) { return clamp(0.5 + f.sp / 100, 0, 1); }
 function flip(f) { return Math.random() < headsChance(f); }
@@ -1980,6 +1983,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (isRedGlow(t)) mods.push(0.9);     // 붉은 노을: 보호 10
     if (src && isTargetRace(src) && hasArt(t, 'crown')) mods.push(0.9); // 깨진 왕관: 과녁에게 받는 피해량 -10%
     if (buffVal(t, 'vuln')) mods.push(1 + buffVal(t, 'vuln') / 100); // 취약
+    if (t.overdrive) mods.push(2);                        // 과다 폭주: 받는 피해량 +100%
     if (uguLow(t)) mods.push(2);                          // 나를 우구라 불러주어서 고마워: 받는 피해량 +100%
     if (t.hatredUntil > simTime) mods.push(1.1);         // 맺힌 증오: 받는 피해량 +10%
     if (t.pride) mods.push(1 + 0.05 * t.pride);          // 무너져 내린 긍지: 받는 피해량 +5%
@@ -3164,7 +3168,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
     addStack(f, 'poise', 3, 0, '호흡', '#9fe8ff'); // 호흡 획득 3배
   } else if (u.sk === 'pjSmoke') {
     addStack(f, 'poise', 6, 0, '호흡', '#9fe8ff'); addStack(t, 'bleed', 4, 0, '출혈', '#ff4060'); // 호흡 획득 3배
-    if (!u.lost && t.alive && f.alive) { const c = f.maxHp * 0.1; f.hp = Math.max(1, f.hp - c); if (dealt > 0) dealDamage(f, t, dealt * 0.25, 'magic', '가셀로의담배연기 추가 피해', `체력 ${Math.round(c)} 소모 → 피해량 +25% → `); }
+    if (!u.lost && t.alive && f.alive) { const c = (f.overdrive ? 10000 : f.maxHp) * 0.1; f.hp = Math.max(1, f.hp - c); if (dealt > 0) dealDamage(f, t, dealt * 0.25, 'magic', '가셀로의담배연기 추가 피해', `체력 ${Math.round(c)} 소모 → 피해량 +25% → `); }
   } else if (u.sk === 'pjDrink') {
     if (i === 0) { const v = Math.floor((1 - t.hp / t.maxHp) * 100); if (v > 0) addStack(t, 'bleed', v, 0, '출혈', '#ff4060'); }
     else if (t.bleed && t.alive) { const b = t.bleed.pot; t.bleed = null; dealDamage(f, t, t.maxHp * b / 100, 'magic', '애니의음료수벌컥벌컥', `출혈 ${b} 모두 소모 → 최대 체력의 ${b}% → `); }
@@ -3834,7 +3838,8 @@ function checkWin() {
       log(`🏰 던전 ${fl}층 클리어! 🪙 코인 +${rw}${wk ? ' <b style="color:#ffcc33">(주간 추가 보상 +100%)</b>' : ''}${fl >= DUNGEON_MAX ? ' · 최고층 정복!' : ` · ${fl + 1}층 해금`}`, 'kill');
       renderDungeon(Math.min(DUNGEON_MAX, fl + 1));
     } else if (dungeonFloor) log(`🏰 던전 ${dungeonFloor}층 도전 실패`, 'kill');
-    if (raidMode && !dungeonFloor && !pvpOpp && w === 0) {
+    if (raidMode && raidStage === 5 && !dungeonFloor && !pvpOpp && !sr.submitted) { sr.submitted = true; { const bb = fighters.find(f => f.overdrive); sr.dealt = Math.max(0, sr.startHp - (bb ? Math.max(0, bb.hp) : 0)); } log(`🌐 이번 전투에서 과다 폭주에게 준 피해 <b style="color:#ffe14d">${Math.round(sr.dealt).toLocaleString()}</b>`, 'kill'); srSubmit(sr.dealt); }
+    if (raidMode && raidStage !== 5 && !dungeonFloor && !pvpOpp && w === 0) {
       if (!save.raidCleared) save.raidCleared = {}; save.raidCleared[`${raidStage}-${raidDiff}`] = true; // 랭킹 점수용 클리어 기록
       // 레이드 클리어 코인 (난이도 배수)
       const d = RAID_DIFF[raidDiff], c = RAID_COIN[raidStage] * d.coin;
@@ -5333,7 +5338,7 @@ function drawWin() {
   const t = winInfo.t, k = Math.min(1, t / 0.5);
   ctx.fillStyle = `rgba(0,0,0,${0.55 * k})`; ctx.fillRect(0, 0, cw, ch);
   const w = winInfo.team, color = w === undefined ? '#dddddd' : TEAM[w].color;
-  const text = winInfo.pvp ? (w === 0 ? `⚔ PVP 승리! vs ${winInfo.pvp.name}` : `PVP 패배 — ${winInfo.pvp.name}`) : winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 ${RAID_DIFF[raidDiff].name} 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
+  const text = winInfo.pvp ? (w === 0 ? `⚔ PVP 승리! vs ${winInfo.pvp.name}` : `PVP 패배 — ${winInfo.pvp.name}`) : winInfo.dungeon ? (w === 0 ? `🏰 던전 ${winInfo.dungeon}층 클리어!` : `던전 ${winInfo.dungeon}층 실패`) : winInfo.raid && raidStage === 5 ? (w === 0 ? '🌐 과다 폭주 처치!' : `서버 레이드 종료 — 깎은 체력 ${Math.round(sr.dealt).toLocaleString()}`) : winInfo.raid ? (w === 0 ? `🏆 레이드 ${raidStage}단계 ${RAID_DIFF[raidDiff].name} 클리어!` : '레이드 실패') : w === undefined ? '무승부' : `🏆 ${TEAM[w].name} 승리!`;
   const p = Math.min(1, t / 0.45), ease = 1 + 2.2 * Math.pow(1 - p, 3);
   let size = 60; ctx.font = `900 ${size}px ${FONT}`;
   const mw = ctx.measureText(text).width; if (mw > cw * 0.88) size *= cw * 0.88 / mw;
@@ -5851,6 +5856,63 @@ document.getElementById('raid3Btn').onclick = () => {
   showBig('레이드 3단계: 강우주 - 암흑진화', '#8a5aff', 2.2); doFlash('#5a2aaa', 0.6); shake = Math.max(shake, 22); darkenT = 1.2;
   log('🌑 <b style="color:#8a5aff">레이드 3단계 — 강우주 - 암흑진화</b> 시작!', 'kill');
 };
+
+// ================== 서버 레이드: 과다 폭주 - 과거의 강주원 ==================
+// 모든 플레이어가 체력 1,000,000을 함께 깎음 (Firestore: serverRaid/overdrive1 · players/{uid})
+const SR_ID = 'overdrive1', SR_MAX = 10000 + 990000;
+var sr = { dmg: null, top: [], mine: 0, dealt: 0, err: '' };
+const srOn = () => !!(rank.db && rank.uid && !TEST_SERVER);
+const srDoc = () => rank.db.collection('serverRaid').doc(SR_ID);
+async function srRefresh() {
+  if (!rank.db) return renderSr();
+  try {
+    const d = await srDoc().get(); sr.dmg = d.exists ? (d.data().dmg || 0) : 0;
+    sr.top = (await srDoc().collection('players').orderBy('dmg', 'desc').limit(5).get()).docs.map(x => ({ id: x.id, ...x.data() }));
+    if (rank.uid) { const m = await srDoc().collection('players').doc(rank.uid).get(); sr.mine = m.exists ? (m.data().dmg || 0) : 0; }
+    sr.err = '';
+  } catch (e) { console.error(e); sr.err = '서버 레이드 정보를 불러오지 못했어요 (Firebase 규칙 확인)'; }
+  renderSr();
+}
+function renderSr() {
+  const el = document.getElementById('srInfo'); if (!el) return;
+  const left = sr.dmg == null ? null : Math.max(0, SR_MAX - sr.dmg), pct = left == null ? 100 : left / SR_MAX * 100;
+  let h = `받는 피해량 +100% · 레벨 +50 · 공격 레벨 +60 · 방어 레벨 +100 · 강주원 편성 불가<br>`;
+  h += `<div style="height:9px;background:#1a0a14;border-radius:5px;overflow:hidden;margin:3px 0;border:1px solid #5a1a30"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#ff2a6a,#ffe14d)"></div></div>`;
+  h += left == null ? (sr.err || (rank.db ? '불러오는 중…' : '서버 레이드는 웹 주소(GitHub Pages)에서 구글 로그인 후 참여할 수 있어요 — 여기서는 연습 모드')) : left <= 0 ? '<b style="color:#7dffb0">🎉 서버 전체가 과다 폭주를 쓰러뜨렸어요!</b>' : `남은 체력 <b style="color:#ff9ab0">${Math.ceil(left).toLocaleString()}</b> / ${SR_MAX.toLocaleString()} · 내 누적 피해 <b style="color:#ffe14d">${Math.round(sr.mine).toLocaleString()}</b>`;
+  if (sr.top.length) h += '<br>' + sr.top.map((p, i) => `<span style="color:${i ? '#aab' : '#ffcc33'}">${i + 1}. ${titleHTML(p.title)}${escH(p.name || '이름 없음')} ${Math.round(p.dmg).toLocaleString()}</span>`).join(' · ');
+  if (TEST_SERVER) h += '<br><span style="color:#7dffb0">🧪 테스트 서버: 연습 모드 (피해가 서버에 기록되지 않아요)</span>';
+  el.innerHTML = h;
+}
+async function srSubmit(v) {
+  v = Math.round(v); if (!v || !srOn()) return;
+  try {
+    const inc = firebase.firestore.FieldValue.increment(v);
+    await srDoc().set({ dmg: inc, max: SR_MAX }, { merge: true });
+    await srDoc().collection('players').doc(rank.uid).set({ name: dispName(), title: titleName(), dmg: inc, t: Date.now() }, { merge: true });
+    log(`🌐 서버 레이드 기록: 피해 <b style="color:#ffe14d">${v.toLocaleString()}</b> 반영`, 'kill');
+  } catch (e) { console.error(e); toast('서버 레이드 피해를 기록하지 못했어요'); }
+  srRefresh();
+}
+async function startServerRaid() {
+  if (roster.some(r => r.team === 0 && r.type === 'juwon')) toast('서버 레이드에는 강주원을 편성할 수 없어요 — 빼고 시작할게요');
+  const team = roster.filter(r => r.team === 0 && r.type !== 'dummy' && r.type !== 'juwon');
+  if (!team.length) { toast('레드 팀에 서버 레이드에 도전할 캐릭터를 넣어주세요 (강주원 · 과녁 제외)'); return; }
+  if (srOn()) await srRefresh();
+  const left = sr.dmg == null || !srOn() ? SR_MAX : Math.max(0, SR_MAX - sr.dmg);
+  if (left <= 0) { toast('🎉 과다 폭주는 이미 쓰러졌어요!'); return; }
+  roster = team.concat([{ type: 'pastjuwon', team: 1 }]);
+  pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 5; raidDiff = 0; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
+  sr.dealt = 0; sr.submitted = false;
+  const b = fighters.find(f => f.type === 'pastjuwon');
+  if (b) {
+    b.overdrive = true; b.timeUsed = true; // 불완전한 시간 구현은 서버 레이드에서 발동하지 않음 (체력 공유)
+    b.label = '과다 폭주 - 과거의 강주원'; b.maxHp = SR_MAX; b.hp = b.dispHp = b.lagHp = left; sr.startHp = left; b.staggerHit = (b.staggerTh || []).map(th => left < SR_MAX * th);
+    pjGlitch(b);
+  }
+  showBig('서버 레이드: 과다 폭주', '#ff2a6a', 2.4); doFlash('#ff2a6a', 0.7); shake = Math.max(shake, 26); darkenT = 1.4;
+  log(`🌐 <b style="color:#ff6a9a">서버 레이드 — 과다 폭주 - 과거의 강주원</b> 시작! 남은 체력 ${Math.ceil(left).toLocaleString()}${srOn() ? '' : ' (연습 모드: 기록되지 않음)'}`, 'kill');
+}
+document.getElementById('srBtn').onclick = startServerRaid;
 function updateRaidInfo() {
   { let d2 = false, d3 = false; try { d2 = !!save.raid2; d3 = !!save.raid3; } catch (e) {}
     let d4 = false; try { d4 = !!save.raid4; } catch (e) {}
@@ -5903,7 +5965,7 @@ document.getElementById('dungeonBtn').onclick = () => {
 };
 document.getElementById('tbSpeed').onclick = () => { const l = [0.5, 1, 2, 4, 8, 32]; setSpeed(l[(l.indexOf(speed) + 1) % l.length]); };
 document.querySelectorAll('.recBtn').forEach(b => b.onclick = () => rec ? stopRec() : startRec(false));
-document.getElementById('againBtn').onclick = start;
+document.getElementById('againBtn').onclick = () => (raidMode && raidStage === 5 && !dungeonFloor && !pvpOpp) ? startServerRaid() : start();
 document.getElementById('resetBtn').onclick = () => { pvpOpp = null; dedupeRoster(); dungeonFloor = 0; raidMode = false; setTestLock(false); renderRoster(); build(); };
 document.getElementById('pauseBtn').onclick = () => {
   if (simTime === 0 && !running) { start(); return; }
@@ -5990,6 +6052,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.5', date: '2026-11-21', items: ['🌐 서버 레이드 추가: 과다 폭주 - 과거의 강주원 — 모든 플레이어가 체력 1,000,000을 함께 깎아요 (구글 로그인 필요)', '과거의 강주원 대비 체력 +990,000 · 기본 레벨 +50 · 공격 레벨 +60 · 방어 레벨 +100 · 받는 피해량 +100% · 강주원 편성 불가', '전투가 끝나면 준 피해만큼 서버 체력이 줄고, 피해량 상위 5명이 표시돼요'] },
   { v: '9.4', date: '2026-11-21', items: ['🎬 연출 구경 서버에 칭호 연출 추가: 모든 칭호의 연출과 얻는 방법을 한 번에 볼 수 있어요'] },
   { v: '9.3', date: '2026-11-21', items: ['✨ 칭호 연출 추가: 칭호마다 고유한 색과 움직임 (빛나는 광택 · 일렁이는 물결 · 불꽃 · 글리치 · 유령처럼 깜빡임 · 무지갯빛 · 반짝이 등)', '채팅 · 주간 랭킹 · PVP 랭킹 · PVP 상대 목록 · 친구 목록 · 프로필에서 모두 보여요'] },
   { v: '9.2', date: '2026-11-21', items: ['🎖 PVP 티어 칭호 10종 추가: 브론즈 도전자 · 실버 검객 · 황금의 투사 · 에메랄드 수호자 · 다이아몬드 정예 · PVP 마스터 · 그랜드 마스터 · 빛나는 자 · 한계를 넘은 자 · 영원히 군림하는 자', '한 번이라도 달성한 최고 티어의 칭호까지 모두 얻고, 시즌이 바뀌어도 유지돼요 (프로필에서 장착)'] },
@@ -6519,6 +6582,7 @@ function renderRank() {
 }
 document.getElementById('rankBtn').onclick = () => { const on = document.getElementById('rankPanel').classList.toggle('on'); renderRank(); if (on) rankRefresh(); };
 if (FIREBASE_CONFIG && account) rankInit().then(rankRefresh);
+renderSr(); if (FIREBASE_CONFIG && account) rankInit().then(srRefresh);
 // ================== 채팅 ==================
 var chat = { unsub: null, last: 0 };
 const escH = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
