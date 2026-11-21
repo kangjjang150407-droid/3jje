@@ -5962,6 +5962,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '8.8', date: '2026-11-21', items: ['🏅 PVP 티어 추가 — PVP 시즌 1 (11.21 ~ 12.20)', '승리 +25점 · 패배 -15점, 100점마다 티어 상승: 브론즈 · 실버 · 골드 · 에메랄드 · 다이아몬드 · 마스터 · 그랜드 마스터 · 레디언트 · 초월자 · 영생', '시즌 종료 시 최종 티어 보상이 우편으로 도착: 브론즈 2,000 ~ 영생 20,000 코인 (시즌 중 PVP를 1판 이상 한 경우)', 'PVP 상대 목록에 상대의 티어 표시'] },
   { v: '8.7', date: '2026-11-21', items: ['노윤 상태 이름 변경: 보랏빛 날개 → 부엉이'] },
   { v: '8.6', date: '2026-11-21', items: ['노윤 강화 효과 추가: 파탄을 장착한 턴에 정신력 25 감소 (기존 강화 반격 마지막 일격 해금과 함께 적용)'] },
   { v: '8.5', date: '2026-11-21', items: ['노윤 보랏빛 날개를 부엉이 날개로 변경 (갈색 줄무늬 깃털 · 탑승 연출과 상태 아이콘)'] },
@@ -6482,13 +6483,36 @@ document.getElementById('chatInput').addEventListener('keydown', e => { if (e.ke
 if (!save.pvp) save.pvp = { w: 0, l: 0 };
 var pvp = { list: null, err: '' };
 const PVP_WIN_COIN = 100;
+// ---- PVP 티어 (시즌제) ----
+// 시즌 1: 2026-11-21 ~ 2026-12-20 (30일 단위). 승리 +25점 · 패배 -15점, 100점마다 한 티어 위. 시즌이 끝나면 최종 티어 보상이 우편으로 옴
+const PVP_TIERS = [
+  { n: '브론즈', c: '#c88a5a', coin: 2000 }, { n: '실버', c: '#c8d2e0', coin: 4000 }, { n: '골드', c: '#ffd04a', coin: 6000 },
+  { n: '에메랄드', c: '#3ae0a0', coin: 8000 }, { n: '다이아몬드', c: '#7ad8ff', coin: 10000 }, { n: '마스터', c: '#c070ff', coin: 12000 },
+  { n: '그랜드 마스터', c: '#ff5a7a', coin: 14000 }, { n: '레디언트', c: '#fff09a', coin: 16000 }, { n: '초월자', c: '#ff8a3a', coin: 18000 }, { n: '영생', c: '#ffffff', coin: 20000 },
+];
+const PVP_STEP = 100, PVP_WIN_RP = 25, PVP_LOSE_RP = 15, PVP_SEASON0 = new Date(2026, 10, 21).getTime(), PVP_SEASON_DAYS = 30;
+const pvpSeasonOf = (t = Date.now()) => Math.max(1, Math.floor((t - PVP_SEASON0) / (PVP_SEASON_DAYS * 864e5)) + 1);
+const pvpSeasonEnd = n => new Date(PVP_SEASON0 + (n * PVP_SEASON_DAYS - 1) * 864e5); // 마지막 날
+const pvpTierIdx = rp => Math.min(PVP_TIERS.length - 1, Math.floor((rp || 0) / PVP_STEP));
+const pvpTier = rp => PVP_TIERS[pvpTierIdx(rp)];
+function pvpSeasonCheck() {
+  const cur = pvpSeasonOf();
+  if (!save.pvpRank) { save.pvpRank = { season: cur, rp: 0, g: 0 }; persist(); return; }
+  const r = save.pvpRank; if (r.season >= cur) return;
+  if (r.g > 0 && !(save.inbox || []).some(m => m.id === 'pvp-s' + r.season)) { // 지난 시즌에 PVP를 한 판이라도 했다면 최종 티어 보상
+    const T = pvpTier(r.rp), end = new Date(); end.setDate(end.getDate() + 7);
+    save.inbox.push({ id: 'pvp-s' + r.season, title: `🏅 PVP 시즌 ${r.season} ${T.n} 보상`, body: `시즌 ${r.season} 최종 티어 ${T.n} (${r.rp}점)`, coin: T.coin, from: dayStr(), to: dayStr(end) });
+    setTimeout(() => toast(`📬 PVP 시즌 ${r.season} ${T.n} 보상이 우편함에 도착했어요!`), 1500);
+  }
+  save.pvpRank = { season: cur, rp: 0, g: 0 }; persist(); try { renderMail(); } catch (e) {}
+}
 const pvpCol = () => rank.db.collection('pvp');
 function myPvpTeam() { return [...new Set(roster.filter(r => r.team === 0 && r.type !== 'dummy').map(r => r.type))]; }
 async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
   try {
-    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, t: Date.now() });
+    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, rp: (save.pvpRank || {}).rp || 0, season: (save.pvpRank || {}).season || 1, t: Date.now() });
     toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
   } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
 }
@@ -6500,14 +6524,22 @@ async function pvpRefresh() {
 function renderPvp() {
   const el = document.getElementById('pvpPanel'); if (!el) return;
   const nmT = t => (t || []).map(k => CHAR[k] ? CHAR[k].name : k).join(', ');
-  let h = `<div style="margin-bottom:6px">내 전적 <b style="color:#7dffb0">${save.pvp.w}승</b> <b style="color:#ff8080">${save.pvp.l}패</b> · 승리 시 🪙 ${PVP_WIN_COIN}</div>`;
+  pvpSeasonCheck();
+  const R = save.pvpRank, ti = pvpTierIdx(R.rp), T = PVP_TIERS[ti], nx = PVP_TIERS[ti + 1], end = pvpSeasonEnd(R.season), into = R.rp - ti * PVP_STEP;
+  let h = `<div style="border:1px solid ${T.c}55;border-radius:8px;padding:7px;margin-bottom:7px;background:linear-gradient(90deg,${T.c}22,transparent)">
+    <div style="font-size:11px;color:#9ab">🏅 PVP - 시즌 ${R.season} · ${end.getMonth() + 1}월 ${end.getDate()}일까지</div>
+    <div style="font-size:16px;font-weight:800;color:${T.c};text-shadow:0 0 8px ${T.c}88">${T.n} <span style="font-size:12px;color:#ddd">${R.rp}점</span></div>
+    <div style="height:6px;background:#1a2030;border-radius:3px;margin:4px 0"><div style="height:100%;width:${nx ? into / PVP_STEP * 100 : 100}%;background:${T.c};border-radius:3px"></div></div>
+    <div style="font-size:11px;color:#aab">${nx ? `다음 티어 <b style="color:${nx.c}">${nx.n}</b>까지 ${PVP_STEP - into}점` : '최고 티어!'} · 승리 +${PVP_WIN_RP} · 패배 -${PVP_LOSE_RP}<br>시즌 종료 보상 🪙 ${T.coin.toLocaleString()} (이번 시즌 ${R.g || 0}판)</div>
+    <details style="margin-top:4px"><summary style="cursor:pointer;color:#9fd8ff;font-size:11px">티어별 시즌 보상</summary>${PVP_TIERS.map((x, i) => `<div style="font-size:11px${i === ti ? ';font-weight:800' : ''}"><span style="color:${x.c}">${x.n}</span> <span style="color:#777">${i * PVP_STEP}점~</span> · 🪙 ${x.coin.toLocaleString()}</div>`).join('')}</details></div>`;
+  h += `<div style="margin-bottom:6px">내 전적 <b style="color:#7dffb0">${save.pvp.w}승</b> <b style="color:#ff8080">${save.pvp.l}패</b> · 승리 시 🪙 ${PVP_WIN_COIN}</div>`;
   h += `<button id="pvpReg" style="width:100%;padding:7px;font-weight:700;margin-bottom:6px">🛡 지금 레드 팀을 방어 팀으로 등록 (${nmT(myPvpTeam()) || '비어 있음'})</button>`;
   if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) h += '<div style="color:#aaa">PVP는 웹 주소(GitHub Pages)에서만 돼요.</div>';
   else if (pvp.err) h += `<div style="color:#ff8080">${pvp.err}</div>`;
   else if (!pvp.list) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const ops = pvp.list.filter(o => o.id !== rank.uid && (o.team || []).some(k => CHAR[k]));
-    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
+    h += ops.length ? ops.map(o => `<div class="op">${o.title ? `<span style="color:#d8b8ff">[${escH(o.title)}]</span> ` : ''}<b style="color:#9fd8ff">${escH(o.name || '이름 없음')}</b> <span style="color:${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).c};font-size:11px">${pvpTier((o.season || 1) === pvpSeasonOf() ? o.rp : 0).n}</span>${o.tester ? ' <span style="color:#7dffb0">🧪 테스터</span>' : ''} <span style="color:#8a8aa8">${o.w || 0}승 ${o.l || 0}패</span><br>${escH(nmT(o.team))}${Object.keys(o.upg || {}).filter(k => o.upg[k]).length ? ` <span style="color:#d8b8ff">· ★강화 ${Object.keys(o.upg).filter(k => o.upg[k]).map(k => CHAR[k] ? CHAR[k].name : k).join(', ')}</span>` : ''}<button data-pvp="${o.id}">⚔ 도전</button></div>`).join('') : '<div style="color:#777">아직 등록된 상대가 없어요.</div>';
   }
   el.innerHTML = h;
 }
@@ -6526,10 +6558,17 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
 });
 function pvpResult(win) {
   if (win) { save.pvp.w++; addCoins(PVP_WIN_COIN, `PVP 승리 vs ${pvpOpp.name}`); } else save.pvp.l++;
+  pvpSeasonCheck();
+  const R = save.pvpRank, before = pvpTierIdx(R.rp);
+  R.g = (R.g || 0) + 1; R.rp = Math.max(0, R.rp + (win ? PVP_WIN_RP : -PVP_LOSE_RP));
+  const after = pvpTierIdx(R.rp), T = PVP_TIERS[after];
   persist();
-  log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패`, 'kill');
-  try { if (rank.uid) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l }).catch(() => {}); } catch (e) {}
+  log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패 · <b style="color:${T.c}">${T.n}</b> ${R.rp}점 (${win ? '+' + PVP_WIN_RP : '-' + PVP_LOSE_RP})`, 'kill');
+  if (after > before) { showBig(`${T.n} 승급!`, T.c, 2.0); doFlash(T.c, 0.4); toast(`🏅 PVP 티어 승급 — ${T.n}`); }
+  else if (after < before) toast(`PVP 티어 강등 — ${T.n}`);
+  try { if (rank.uid) pvpCol().doc(rank.uid).update({ w: save.pvp.w, l: save.pvp.l, rp: R.rp, season: R.season }).catch(() => {}); } catch (e) {}
 }
+pvpSeasonCheck();
 document.getElementById('pvpBtn').onclick = async () => { if (!document.getElementById('pvpPanel').classList.toggle('on')) return; renderPvp(); await rankInit(); pvpRefresh(); };
 renderDungeon();
 if (!save.stones) save.stones = {}; if (!save.upg) save.upg = {};
