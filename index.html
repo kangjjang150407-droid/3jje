@@ -5962,6 +5962,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.1', date: '2026-11-21', items: ['PVP 점수 변화 표시: 전투가 끝나면 점수 카드가 떠서 점수가 실시간으로 오르내리고 게이지가 차요 (티어 경계를 넘으면 엠블럼이 바뀌며 번쩍임 → 승급 시 티어 연출)', 'PVP 랭킹 탭을 열어둔 채 대전하면 결과가 바로 반영돼요'] },
   { v: '9.0', date: '2026-11-21', items: ['🏆 PVP 랭킹 추가: PVP 패널의 랭킹 탭에서 이번 시즌 티어 순으로 볼 수 있어요 (같은 티어는 점수 순 · 티어별로 구분 · 엠블럼 표시)', 'PVP를 한 판이라도 하면 방어 팀을 등록하지 않아도 랭킹에 올라가요'] },
   { v: '8.9', date: '2026-11-21', items: ['PVP 티어 엠블럼 추가: 티어마다 다른 엠블럼 (실버부터 칼날 · 다이아몬드부터 왕관 · 마스터부터 날개 · 레디언트부터 후광 · 초월자부터 궤도 고리 · 영생은 무지갯빛)', 'PVP 티어 승급 연출 추가: 티어가 높을수록 빛줄기 · 충격파 · 파티클 · 번개가 화려해져요 (PVP 패널이나 연출 구경 서버에서 엠블럼을 눌러 미리 볼 수 있어요)'] },
   { v: '8.8', date: '2026-11-21', items: ['🏅 PVP 티어 추가 — PVP 시즌 1 (11.21 ~ 12.20)', '승리 +25점 · 패배 -15점, 100점마다 티어 상승: 브론즈 · 실버 · 골드 · 에메랄드 · 다이아몬드 · 마스터 · 그랜드 마스터 · 레디언트 · 초월자 · 영생', '시즌 종료 시 최종 티어 보상이 우편으로 도착: 브론즈 2,000 ~ 영생 20,000 코인 (시즌 중 PVP를 1판 이상 한 경우)', 'PVP 상대 목록에 상대의 티어 표시'] },
@@ -6577,6 +6578,33 @@ function tierCutscene(idx, label) {
     requestAnimationFrame(frame);
   })();
 }
+// PVP 결과 점수 카드: 점수가 실시간으로 올라가거나 내려가고, 게이지가 차며, 티어 경계를 넘으면 엠블럼이 바뀜
+function pvpScorePopup(from, to, win, done) {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%) scale(.85);z-index:2900;width:min(340px,88vw);padding:14px 16px;border-radius:14px;background:rgba(10,10,22,.94);border:2px solid #555;box-shadow:0 10px 40px rgba(0,0,0,.7);color:#eee;font-family:inherit;text-align:center;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none';
+  box.innerHTML = `<div style="font-size:13px;font-weight:800;color:${win ? '#7dffb0' : '#ff8080'}">${win ? '⚔ PVP 승리' : '⚔ PVP 패배'}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0"><img class="em" style="width:64px;height:64px"><div style="text-align:left"><div class="tn" style="font-size:18px;font-weight:900"></div><div><span class="sc" style="font-size:26px;font-weight:900"></span><span style="font-size:13px;color:#aaa"> 점</span> <b class="dl" style="font-size:18px;color:${win ? '#7dffb0' : '#ff8080'}">${win ? '+' : ''}${to - from}</b></div></div></div>
+    <div style="height:10px;background:#1a2030;border-radius:5px;overflow:hidden"><div class="bar" style="height:100%;width:0;border-radius:5px"></div></div>
+    <div class="nx" style="font-size:11px;color:#aab;margin-top:5px"></div>`;
+  document.body.appendChild(box);
+  requestAnimationFrame(() => { box.style.opacity = 1; box.style.transform = 'translateX(-50%) scale(1)'; });
+  const q = sel => box.querySelector(sel), t0 = performance.now() + 450, DUR = 1300;
+  let lastTi = -1;
+  (function frame() {
+    const k = Math.max(0, Math.min(1, (performance.now() - t0) / DUR)), e = 1 - Math.pow(1 - k, 3), v = Math.round(from + (to - from) * e);
+    const ti = pvpTierIdx(v), T = PVP_TIERS[ti], nx = PVP_TIERS[ti + 1], into = v - ti * PVP_STEP;
+    if (ti !== lastTi) {
+      if (lastTi !== -1) { box.animate([{ boxShadow: `0 0 0 0 ${T.c}` }, { boxShadow: `0 0 60px 20px ${T.c}` }, { boxShadow: '0 10px 40px rgba(0,0,0,.7)' }], { duration: 700 }); q('.em').animate([{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 500, easing: 'ease-out' }); }
+      lastTi = ti; q('.em').src = tierImg(ti, 64); q('.tn').textContent = T.n; q('.tn').style.color = T.c; q('.bar').style.background = T.c; box.style.borderColor = T.c;
+    }
+    q('.sc').textContent = v; q('.sc').style.color = T.c;
+    q('.bar').style.width = (nx ? into / PVP_STEP * 100 : 100) + '%';
+    q('.nx').innerHTML = nx ? `다음 티어 <b style="color:${nx.c}">${nx.n}</b>까지 ${PVP_STEP - into}점` : '최고 티어!';
+    if (k < 1) return requestAnimationFrame(frame);
+    q('.dl').animate([{ transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 300 });
+    setTimeout(() => { box.style.opacity = 0; box.style.transform = 'translateX(-50%) scale(.9)'; setTimeout(() => { box.remove(); if (done) done(); }, 300); }, 1300);
+  })();
+}
 function pvpSeasonCheck() {
   const cur = pvpSeasonOf();
   if (!save.pvpRank) { save.pvpRank = { season: cur, rp: 0, g: 0 }; persist(); return; }
@@ -6662,14 +6690,15 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
 function pvpResult(win) {
   if (win) { save.pvp.w++; addCoins(PVP_WIN_COIN, `PVP 승리 vs ${pvpOpp.name}`); } else save.pvp.l++;
   pvpSeasonCheck();
-  const R = save.pvpRank, before = pvpTierIdx(R.rp);
+  const R = save.pvpRank, before = pvpTierIdx(R.rp), rp0 = R.rp;
   R.g = (R.g || 0) + 1; R.rp = Math.max(0, R.rp + (win ? PVP_WIN_RP : -PVP_LOSE_RP));
   const after = pvpTierIdx(R.rp), T = PVP_TIERS[after];
   persist();
   log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패 · <b style="color:${T.c}">${T.n}</b> ${R.rp}점 (${win ? '+' + PVP_WIN_RP : '-' + PVP_LOSE_RP})`, 'kill');
-  if (after > before) { showBig(`${T.n} 승급!`, T.c, 2.0); doFlash(T.c, 0.4); toast(`🏅 PVP 티어 승급 — ${T.n}`); setTimeout(() => tierCutscene(after, 'PVP 티어 승급!'), 1400); }
-  else if (after < before) toast(`PVP 티어 강등 — ${T.n}`);
-  try { if (rank.uid) pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), picture: dispPic(), tester: !!(TESTER || TEST_SERVER), w: save.pvp.w, l: save.pvp.l, rp: R.rp, season: R.season }, { merge: true }).catch(() => {}); } catch (e) {} // 방어 팀을 등록하지 않아도 PVP 랭킹에 표시
+  setTimeout(() => pvpScorePopup(rp0, R.rp, win, () => { if (after > before) tierCutscene(after, 'PVP 티어 승급!'); else if (after < before) toast(`PVP 티어 강등 — ${T.n}`); }), 900);
+  if (after > before) { showBig(`${T.n} 승급!`, T.c, 2.0); doFlash(T.c, 0.4); }
+  try { renderPvp(); } catch (e) {}
+  try { if (rank.uid) pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), picture: dispPic(), tester: !!(TESTER || TEST_SERVER), w: save.pvp.w, l: save.pvp.l, rp: R.rp, season: R.season }, { merge: true }).then(() => { if (pvp.tab === 'rank' && document.getElementById('pvpPanel').classList.contains('on')) pvpRefresh(); }).catch(() => {}); } catch (e) {} // 방어 팀을 등록하지 않아도 PVP 랭킹에 표시
 }
 pvpSeasonCheck();
 document.getElementById('pvpBtn').onclick = async () => { if (!document.getElementById('pvpPanel').classList.toggle('on')) return; renderPvp(); await rankInit(); pvpRefresh(); };
