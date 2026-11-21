@@ -5962,6 +5962,7 @@ const UPG_FX = {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.2', date: '2026-11-21', items: ['🎖 PVP 티어 칭호 10종 추가: 브론즈 도전자 · 실버 검객 · 황금의 투사 · 에메랄드 수호자 · 다이아몬드 정예 · PVP 마스터 · 그랜드 마스터 · 빛나는 자 · 한계를 넘은 자 · 영원히 군림하는 자', '한 번이라도 달성한 최고 티어의 칭호까지 모두 얻고, 시즌이 바뀌어도 유지돼요 (프로필에서 장착)'] },
   { v: '9.1', date: '2026-11-21', items: ['PVP 점수 변화 표시: 전투가 끝나면 점수 카드가 떠서 점수가 실시간으로 오르내리고 게이지가 차요 (티어 경계를 넘으면 엠블럼이 바뀌며 번쩍임 → 승급 시 티어 연출)', 'PVP 랭킹 탭을 열어둔 채 대전하면 결과가 바로 반영돼요'] },
   { v: '9.0', date: '2026-11-21', items: ['🏆 PVP 랭킹 추가: PVP 패널의 랭킹 탭에서 이번 시즌 티어 순으로 볼 수 있어요 (같은 티어는 점수 순 · 티어별로 구분 · 엠블럼 표시)', 'PVP를 한 판이라도 하면 방어 팀을 등록하지 않아도 랭킹에 올라가요'] },
   { v: '8.9', date: '2026-11-21', items: ['PVP 티어 엠블럼 추가: 티어마다 다른 엠블럼 (실버부터 칼날 · 다이아몬드부터 왕관 · 마스터부터 날개 · 레디언트부터 후광 · 초월자부터 궤도 고리 · 영생은 무지갯빛)', 'PVP 티어 승급 연출 추가: 티어가 높을수록 빛줄기 · 충격파 · 파티클 · 번개가 화려해져요 (PVP 패널이나 연출 구경 서버에서 엠블럼을 눌러 미리 볼 수 있어요)'] },
@@ -6202,7 +6203,11 @@ const TITLES = [
   { id: 'collector', name: '수집가', how: '모든 캐릭터 보유', ok: () => GACHA.every(k => save.owned && save.owned[k]) },
   { id: 'upgrader', name: '강화의 달인', how: '캐릭터 5명 강화', ok: () => GACHA.filter(k => save.upg && save.upg[k]).length >= 5 },
   { id: 'pvp', name: 'PVP 투사', how: 'PVP 10승', ok: () => ((save.pvp || {}).w || 0) >= 10 },
+  // PVP 티어 칭호: 한 번이라도 달성한 최고 티어 기준 (시즌이 바뀌어도 유지)
+  ...[['브론즈 도전자', '브론즈'], ['실버 검객', '실버'], ['황금의 투사', '골드'], ['에메랄드 수호자', '에메랄드'], ['다이아몬드 정예', '다이아몬드'], ['PVP 마스터', '마스터'], ['그랜드 마스터', '그랜드 마스터'], ['빛나는 자', '레디언트'], ['한계를 넘은 자', '초월자'], ['영원히 군림하는 자', '영생']]
+    .map(([name, tier], i) => ({ id: 'tier' + i, name, how: `PVP 티어 ${tier} 달성`, ok: () => (save.pvpBestTier ?? -1) >= i })),
 ];
+const TIER_TITLE_NAMES = TITLES.filter(t => t.id.startsWith('tier')).map(t => t.name);
 const NICK_DAYS = 7;
 var prof = {};
 try { if (account) prof = JSON.parse(localStorage.getItem('ballfight-profile-' + account.sub) || '{}') || {}; } catch (e) { prof = {}; }
@@ -6608,7 +6613,9 @@ function pvpScorePopup(from, to, win, done) {
 function pvpSeasonCheck() {
   const cur = pvpSeasonOf();
   if (!save.pvpRank) { save.pvpRank = { season: cur, rp: 0, g: 0 }; persist(); return; }
-  const r = save.pvpRank; if (r.season >= cur) return;
+  const r = save.pvpRank;
+  if (r.g > 0 && pvpTierIdx(r.rp) > (save.pvpBestTier ?? -1)) { save.pvpBestTier = pvpTierIdx(r.rp); persist(); } // 이미 달성한 티어도 칭호에 반영
+  if (r.season >= cur) return;
   if (r.g > 0 && !(save.inbox || []).some(m => m.id === 'pvp-s' + r.season)) { // 지난 시즌에 PVP를 한 판이라도 했다면 최종 티어 보상
     const T = pvpTier(r.rp), end = new Date(); end.setDate(end.getDate() + 7);
     save.inbox.push({ id: 'pvp-s' + r.season, title: `🏅 PVP 시즌 ${r.season} ${T.n} 보상`, body: `시즌 ${r.season} 최종 티어 ${T.n} (${r.rp}점)`, coin: T.coin, from: dayStr(), to: dayStr(end) });
@@ -6693,6 +6700,7 @@ function pvpResult(win) {
   const R = save.pvpRank, before = pvpTierIdx(R.rp), rp0 = R.rp;
   R.g = (R.g || 0) + 1; R.rp = Math.max(0, R.rp + (win ? PVP_WIN_RP : -PVP_LOSE_RP));
   const after = pvpTierIdx(R.rp), T = PVP_TIERS[after];
+  if (after > (save.pvpBestTier ?? -1)) { const old = save.pvpBestTier ?? -1; save.pvpBestTier = after; for (let i = old + 1; i <= after; i++) setTimeout(() => toast(`🎖 칭호 획득: ${TIER_TITLE_NAMES[i]}`), 5200 + (i - old) * 900); log(`🎖 PVP 티어 칭호 획득: <b style="color:${T.c}">${TIER_TITLE_NAMES[after]}</b>`, 'kill'); }
   persist();
   log(`⚔ PVP ${win ? '<b style="color:#7dffb0">승리</b>' : '<b style="color:#ff8080">패배</b>'} · 전적 ${save.pvp.w}승 ${save.pvp.l}패 · <b style="color:${T.c}">${T.n}</b> ${R.rp}점 (${win ? '+' + PVP_WIN_RP : '-' + PVP_LOSE_RP})`, 'kill');
   setTimeout(() => pvpScorePopup(rp0, R.rp, win, () => { if (after > before) tierCutscene(after, 'PVP 티어 승급!'); else if (after < before) toast(`PVP 티어 강등 — ${T.n}`); }), 900);
