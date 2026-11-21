@@ -76,6 +76,9 @@
   #mailPanel button{margin-top:4px;width:100%;padding:7px;font-weight:700}
   #artPanel{display:none;border:1px solid #8a3a3a;border-radius:10px;padding:8px;margin-bottom:10px;background:#180a0c;font-size:12px;line-height:1.5}
   #artPanel.on{display:block}
+  #shopPanel{display:none;border:1px solid #3a7a8a;border-radius:10px;padding:8px;margin-bottom:10px;background:#081418;font-size:12px;line-height:1.5}
+  #shopPanel.on{display:block}
+  #shopPanel .item{border:1px solid #1e3a44;border-radius:8px;padding:7px;margin-bottom:6px;background:#0a1a20}
   #artPanel .art{padding:6px 0;border-bottom:1px solid #2a1418}
   #artPanel .art:last-child{border-bottom:none}
   #artPanel select{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:6px;padding:4px;margin-top:4px;width:100%}
@@ -269,7 +272,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
 <div id="app">
   <aside id="left">
     <h1>⚔ 볼 파이트 시뮬레이터</h1>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="profBtn" style="flex:1 1 40%;font-size:12px">👤 프로필</button><button id="friendBtn" style="flex:1 1 40%;font-size:12px">👥 친구</button><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px"><button id="profBtn" style="flex:1 1 40%;font-size:12px">👤 프로필</button><button id="friendBtn" style="flex:1 1 40%;font-size:12px">👥 친구</button><button id="rankBtn" style="flex:1 1 40%;font-size:12px">🏆 랭킹</button><button id="chatBtn" style="flex:1 1 40%;font-size:12px">💬 채팅</button><button id="pvpBtn" style="flex:1 1 40%;font-size:12px">⚔ PVP</button><button id="mailBtn" style="flex:1 1 40%;font-size:12px">📬 우편함</button><button id="patchBtn" style="flex:1 1 40%;font-size:12px">📋 패치 노트</button><button id="tutBtn" style="flex:1 1 40%;font-size:12px">❓ 튜토리얼</button><button id="artBtn" style="flex:1 1 40%;font-size:12px">💍 아티팩트</button><button id="shopBtn" style="flex:1 1 40%;font-size:12px">🛒 상점</button></div>
     <div id="profPanel"></div>
     <div id="friendPanel"></div>
     <div id="rankPanel"></div>
@@ -278,6 +281,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="mailPanel"></div>
     <div id="couponBox" style="display:none;gap:6px;margin:-4px 0 10px"><input id="couponInput" maxlength="20" placeholder="🎟 쿠폰 코드 입력" style="flex:1;min-width:0;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px"><button id="couponUse">사용</button></div>
     <div id="artPanel"></div>
+    <div id="shopPanel"></div>
     <div id="accountBar" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-size:12px;min-height:32px">
       <img id="accPic" alt="" style="display:none;width:26px;height:26px;border-radius:50%">
       <b id="accName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9aa0b0">게스트</b>
@@ -3039,6 +3043,14 @@ function hitCoin(u, t, pow, i, heads, crit) {
     slashes.push({ glass: true, x: t.x, y: t.y, tr: t.r, shards: Array.from({ length: big ? 18 : 11 }, () => ({ a: Math.random() * TAU, v: rand(220, 560), s: rand(5, 13), rot: rand(-12, 12), k: Math.random() })), life: 0.8, max: 0.8 });
     burst(t.x, t.y, '#b070ff', big ? 24 : 14, 420, 9, 0.5, { kind: 'spark' });
     shake = Math.max(shake, big ? 18 : 10); if (big) doFlash('#8a3aff', 0.25);
+  } else if (f.type === 'gunmin' && skinOn('gunmin_abyss')) {
+    // 스킨 심연의 해변: 바닷물과 잉크가 뭉쳐 휘둘러지는 검기
+    const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'dawn', dir = Math.random() < 0.5 ? 1 : -1, R = t.r * 2.9 + (big ? 45 : 0), sw = sweepInfo(f);
+    const asl = { abyss: true, img: gunminSwordImg, x: t.x, y: t.y, tr: t.r, ang, dir, r: R, life: 0.78, max: 0.78, big, seed: Math.random() * 10 };
+    if (sw && !sw.skip) Object.assign(asl, { x: sw.x, y: sw.y, ang: sw.ang, r: sw.r, sweep: sw.sweep, life: 0.9, max: 0.9 });
+    if (!sw || !sw.skip) slashes.push(asl);
+    abyssBurst(t, ang, big);
+    shake = Math.max(shake, big ? 16 : 11); if (big) doFlash('#0a3a5a', 0.3);
   } else if (f.type === 'juwon' || f.type === 'juwon2' || f.type === 'gunmin' || f.type === 'wooju') {
     // 이글거리는 붉은 검이 휘둘러지는 검기
     const ang = Math.atan2(t.y - f.y, t.x - f.x);
@@ -4208,6 +4220,63 @@ function noyunTurnEnd() {
     if (du || spd || cu) log(`${nm(f)} 바위 조각 ${r}: 피해량 증가 ${du}${spd ? ` · 속도 +${spd}` : ''}${cu ? ` · 합 위력 +${cu}` : ''}`);
   }
 }
+// 이건민 스킨: 심연의 해변 — 깊은 바닷물과 거뭇한 잉크가 뭉쳐 휘둘러지는 검기
+function abyssBurst(t, ang, big) {
+  for (let k = 0; k < Math.round((big ? 30 : 18) * QUALITY) + 6; k++) { const a = Math.random() * TAU, sp = rand(200, big ? 650 : 480); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, life: rand(0.4, 0.8), max: 0.8, size: rand(2.5, 5.5), color: Math.random() < 0.6 ? '#7ae8f0' : '#e8ffff', drag: 0.95, g: 520, kind: 'spark', rot: 0 }); }
+  for (let k = 0; k < (big ? 9 : 5); k++) { const a = Math.random() * TAU, sp = rand(40, 160); particles.push({ x: t.x + rand(-12, 12), y: t.y + rand(-12, 12), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.8, 1.4), max: 1.4, size: rand(18, 34), color: '#06040e', drag: 0.94, g: -20, kind: 'smoke', rot: 0, a: 0.75 }); }
+  for (let k = 0; k < (big ? 6 : 3); k++) { const a = Math.random() * TAU, sp = rand(60, 200); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.8, 1.2), max: 1.2, size: rand(14, 24), color: '#0a3a5a', drag: 0.94, g: -10, kind: 'smoke', rot: 0, a: 0.6 }); }
+  ring(t.x, t.y, '#3ab0d0', t.r * (big ? 3.4 : 2.6), 0.5, 8); ring(t.x, t.y, '#0a2a4a', t.r * 2, 0.4, 12);
+}
+function drawAbyssSlash(sl, k, a0, a1) {
+  const lo = Math.min(a0, a1), hi = Math.max(a0, a1), p = 1 - k, R = sl.r, fl = simTime * 6 + sl.seed;
+  ctx.save(); ctx.translate(sl.x, sl.y);
+  if (hi - lo > 0.05) {
+    // 바닷빛 발광 (잉크가 어두운 배경에서도 보이도록 뒤에 청록 빛)
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const [rr, wd, al] of [[0.95, 46, 0.22], [1.0, 22, 0.35]]) { ctx.globalAlpha = k * al; ctx.strokeStyle = '#1aa0c8'; ctx.lineWidth = wd; ctx.beginPath(); ctx.arc(0, 0, R * rr, lo, hi); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over';
+    // 깊은 바닷물 초승달 (짙은 남색 → 청록 → 물거품)
+    const g = ctx.createRadialGradient(0, 0, R * 0.5, 0, 0, R * 1.14); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, 'rgba(2,10,28,0.9)'); g.addColorStop(0.72, '#0c5a90'); g.addColorStop(0.9, '#4ad0e8'); g.addColorStop(1, 'rgba(200,250,255,0)');
+    ctx.globalAlpha = k * 0.95; ctx.fillStyle = g; ctx.beginPath(); const N = 30;
+    for (let i = 0; i <= N; i++) { const a = lo + (hi - lo) * i / N, w = Math.sin(a * 9 + fl) * 0.025; ctx.lineTo(Math.cos(a) * R * (1.1 + w), Math.sin(a) * R * (1.1 + w)); }
+    for (let i = N; i >= 0; i--) { const a = lo + (hi - lo) * i / N, th = Math.pow(Math.sin(Math.PI * i / N), 0.7); ctx.lineTo(Math.cos(a) * R * (1.1 - 0.5 * th), Math.sin(a) * R * (1.1 - 0.5 * th)); }
+    ctx.closePath(); ctx.fill();
+    // 물결 줄기
+    ctx.lineCap = 'round';
+    for (const [rr, col, wd, ph] of [[1.06, '#d8ffff', 2.5, 0], [1.02, '#7ae8f0', 4, 0.6], [0.9, '#2a9ac0', 6, 1.7], [0.78, '#3ab8d8', 2.5, 3.1]]) {
+      ctx.globalAlpha = k * 0.9; ctx.strokeStyle = col; ctx.lineWidth = wd * (0.5 + k * 0.6); ctx.beginPath();
+      for (let a = lo; a <= hi + 0.001; a += 0.06) { const r2 = R * rr + Math.sin(a * 13 + fl * 1.6 + ph) * 6; ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); } ctx.stroke(); }
+    // 거뭇한 잉크 덩어리: 칼날을 따라 뭉쳤다가 뒤로 번져 흩어짐
+    for (let a = lo; a <= hi; a += 0.13) {
+      const tr = Math.abs(a - a1) / (hi - lo + 0.001), rr = R * (0.86 + Math.sin(a * 7 + sl.seed) * 0.12) + tr * 22 * p, sz = (10 + Math.sin(a * 11 + sl.seed) * 5) * (0.6 + tr * 0.9) * (0.5 + k);
+      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+      const ig = ctx.createRadialGradient(x, y, 0, x, y, sz); ig.addColorStop(0, 'rgba(4,3,10,0.95)'); ig.addColorStop(0.6, 'rgba(10,8,24,0.7)'); ig.addColorStop(1, 'rgba(10,8,24,0)');
+      ctx.globalAlpha = k * (0.6 + 0.4 * (1 - tr)); ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(x, y, sz, 0, TAU); ctx.fill();
+      ctx.globalAlpha = k * 0.5; ctx.strokeStyle = '#3ab8d8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, sz * 0.75, 0, TAU); ctx.stroke();
+    }
+    // 잉크 실 (가는 꼬리)
+    ctx.strokeStyle = 'rgba(6,4,14,0.85)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 5; i++) { const a = lo + (hi - lo) * ((i * 0.37 + sl.seed) % 1), r0 = R * 0.9; ctx.globalAlpha = k * 0.8; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); ctx.quadraticCurveTo(Math.cos(a + 0.2) * (r0 + 30), Math.sin(a + 0.2) * (r0 + 30) + 10 * p, Math.cos(a + 0.35) * (r0 + 18 + 40 * p), Math.sin(a + 0.35) * (r0 + 18 + 40 * p) + 25 * p); ctx.stroke(); }
+    // 물거품 · 기포
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 18; i++) { const a = lo + (hi - lo) * ((i * 0.618 + sl.seed) % 1), rr = R * (1.02 + ((i * 0.31) % 0.12)), x = Math.cos(a) * rr, y = Math.sin(a) * rr - p * 30 * ((i % 3) + 1) / 3;
+      ctx.globalAlpha = k * 0.9; ctx.strokeStyle = '#bff8ff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 1.5 + (i % 3), 0, TAU); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // 타격: 잉크가 터지는 물보라
+  if (p < 0.5) { const q = p / 0.5; ctx.globalAlpha = (1 - q) * 0.85;
+    for (let i = 0; i < 10; i++) { const a = sl.seed + i * TAU / 10, d = R * (0.2 + q * 0.7), sz = (12 + (i % 3) * 6) * (1 - q * 0.5); const x = Math.cos(a) * d, y = Math.sin(a) * d;
+      const ig = ctx.createRadialGradient(x, y, 0, x, y, sz); ig.addColorStop(0, i % 2 ? 'rgba(4,3,10,0.9)' : 'rgba(10,60,100,0.9)'); ig.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(x, y, sz, 0, TAU); ctx.fill(); }
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - q); ctx.drawImage(glow('#5ad0e8'), -R * 0.5, -R * 0.5, R, R); ctx.globalCompositeOperation = 'source-over'; }
+  // 검 (잔상 + 청록 빛)
+  const L = sl.sweep ? Math.min(R * 0.55, 150) : R, img = sl.img, hasImg = img && img.complete && img.naturalWidth;
+  const drawSword = al => { ctx.globalAlpha = al; if (hasImg) { const ih = L * 1.7, iw = ih * img.naturalWidth / img.naturalHeight; ctx.save(); ctx.rotate(Math.PI / 2); ctx.drawImage(img, -iw / 2, -L * 1.15, iw, ih); ctx.restore(); } };
+  const span = a1 - a0;
+  for (let gk = 3; gk >= 1; gk--) { ctx.save(); ctx.rotate(a1 - span * 0.15 * gk); drawSword(Math.min(1, k * 1.6) * 0.16 * (4 - gk) / 3); ctx.restore(); }
+  ctx.rotate(a1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, k * 1.6) * 0.8; ctx.drawImage(glow('#2a9ac0'), L * 0.05, -30, L * 1.15, 60); ctx.restore();
+  drawSword(Math.min(1, k * 1.6));
+  ctx.restore();
+}
 // 여러 대상 동시 공격: 검 하나가 시전자를 중심으로 모든 대상을 휩쓸듯 휘둘러짐
 let sweepCtx = null;
 function sweepInfo(f) {
@@ -5199,6 +5268,7 @@ function render() {
     }
     if (sl.fire) { drawFireSlash(sl, k, a0, a1); continue; }
     if (sl.despairSl) { drawDespairSlash(sl, k, a0, a1); continue; }
+    if (sl.abyss) { drawAbyssSlash(sl, k, a0, a1); continue; }
     if (sl.gunshot) { drawGunshot(sl, k); continue; }
     if (sl.qMagic) { drawQueenMagic(sl, k); continue; }
     ctx.save(); ctx.translate(sl.x, sl.y);
@@ -6061,9 +6131,44 @@ const UPG_FX = {
   noyun: '강화 반격 마지막 일격 해금 · 파탄을 장착한 턴에 정신력 25 감소',
   sunwoo: '연 스킬의 피해량 +50% · 패시브 호위 (이도윤 흐트러짐 시 원호방어 1) · 강화 반격 물러서도록. 해금',
 };
+
+// ================== 상점 (이펙트 스킨) ==================
+const SHOP = [
+  { id: 'gunmin_abyss', type: 'gunmin', name: '이건민 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기' },
+];
+if (!save.skins) save.skins = {}; if (!save.skinOn) save.skinOn = {};
+const skinOn = id => !!(save.skins[id] && save.skinOn[SHOP.find(x => x.id === id).type] === id);
+function renderShop() {
+  const el = document.getElementById('shopPanel'); if (!el) return;
+  el.innerHTML = `<div style="font-weight:800;color:#7ad8e8;margin-bottom:6px">🛒 상점 <span style="color:#889;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>` + SHOP.map(it => {
+    const own = !!save.skins[it.id], on = skinOn(it.id);
+    return `<div class="item"><b style="color:#9fe8f0">${it.name}</b><div style="color:#9ab">${it.desc}</div>
+      <div style="display:flex;gap:6px;margin-top:5px">${own ? `<button data-skin="${it.id}" style="flex:1;padding:6px;${on ? 'background:#1a5a6a;color:#fff' : ''}">${on ? '✔ 장착 중 (눌러서 해제)' : '장착하기'}</button>` : `<button data-buy="${it.id}" style="flex:1;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>`}<button data-prev="${it.id}" style="padding:6px">미리 보기</button></div></div>`;
+  }).join('') + '<div style="color:#667;font-size:11px">스킨은 내 화면에서 해당 캐릭터의 공격 이펙트를 바꿔요 (능력치는 그대로)</div>';
+}
+document.getElementById('shopBtn').onclick = () => { document.getElementById('shopPanel').classList.toggle('on'); renderShop(); };
+document.getElementById('shopPanel').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.buy) {
+    const it = SHOP.find(x => x.id === b.dataset.buy); if (!it || save.skins[it.id]) return;
+    if (save.coins < it.price) return toast(`코인이 부족해요 (필요 ${it.price.toLocaleString()}, 보유 ${save.coins.toLocaleString()})`);
+    save.coins -= it.price; save.skins[it.id] = true; save.skinOn[it.type] = it.id; persist(); try { renderQuests(); renderStones(); } catch (e2) {}
+    toast(`🛒 ${it.name} 구매 · 장착 완료!`); log(`🛒 상점: <b style="color:#9fe8f0">${it.name}</b> 구매 (🪙 -${it.price.toLocaleString()})`, 'kill');
+  } else if (b.dataset.skin) {
+    const it = SHOP.find(x => x.id === b.dataset.skin); save.skinOn[it.type] = skinOn(it.id) ? null : it.id; persist();
+  } else if (b.dataset.prev) {
+    const it = SHOP.find(x => x.id === b.dataset.prev), t = fighters.find(f => f.alive && f.type !== it.type) || fighters[0];
+    if (!t) return toast('전투 화면에 공이 있어야 미리 볼 수 있어요');
+    const fake = { x: t.x - 160, y: t.y, r: 37 };
+    slashes.push({ abyss: true, img: gunminSwordImg, x: t.x, y: t.y, tr: t.r, ang: Math.random() * TAU, dir: 1, r: t.r * 2.9 + 45, life: 0.9, max: 0.9, big: true, seed: Math.random() * 10 });
+    abyssBurst(t, 0, true); if (!running) { const loop = () => { if (!slashes.some(s2 => s2.abyss)) return; render(); requestAnimationFrame(loop); }; loop(); }
+  }
+  renderShop();
+});
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '9.7', date: '2026-11-21', items: ['🛒 상점 추가: 코인으로 이펙트 스킨을 살 수 있어요', '첫 스킨 — 이건민 이펙트 스킨 "심연의 해변" (🪙 1,000): 심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기 · 물보라 · 잉크 번짐 · 기포'] },
   { v: '9.6', date: '2026-11-21', items: ['🎟 서버 레이드 보상 추가: 과다 폭주에게 입힌 누적 피해 100,000당 10회 뽑기권 1장 (전투가 끝나면 바로 지급)'] },
   { v: '9.5', date: '2026-11-21', items: ['🌐 서버 레이드 추가: 과다 폭주 - 과거의 강주원 — 모든 플레이어가 체력 1,000,000을 함께 깎아요 (구글 로그인 필요)', '과거의 강주원 대비 체력 +990,000 · 기본 레벨 +50 · 공격 레벨 +60 · 방어 레벨 +100 · 받는 피해량 +100% · 강주원 편성 불가', '전투가 끝나면 준 피해만큼 서버 체력이 줄고, 피해량 상위 5명이 표시돼요'] },
   { v: '9.4', date: '2026-11-21', items: ['🎬 연출 구경 서버에 칭호 연출 추가: 모든 칭호의 연출과 얻는 방법을 한 번에 볼 수 있어요'] },
