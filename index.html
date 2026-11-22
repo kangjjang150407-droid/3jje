@@ -1008,9 +1008,13 @@ const ARTIFACTS = {
   hatred: { name: '다한 쓸모, 맺힌 증오', color: '#ff6ab0', how: '절망의 기사 클리어 시 획득', desc: '공격 스킬로 충전 횟수를 소모하면 다음 턴에 (소모한 충전 횟수 / 2)만큼 공격 레벨 증가 (턴당 최대 10 · 특수 충전 포함) · 턴 종료 시 이번 턴에 정신력이 감소한 아군은 다음 턴에 공격 위력 +1, 받는 피해량 +10%' },
   ashstar: { name: '잿빛 별자리의 가호', color: '#8ab0ff', how: '절망의 기사 클리어 시 획득', desc: '1을 초과하는 내성이 1로 조정됨 (흐트러짐 상태 제외)' },
   crown: { name: '깨진 왕관', color: '#ffcc33', how: '레이드 1단계 - 과녁의 왕 클리어 시 획득', desc: '종족이 과녁인 적(과녁 · 던전 과녁 · 과녁의 왕)을 상대로 가하는 피해량 +40% · 받는 피해량 -10% · 합 위력 +3' },
+  inyeon: { name: '인연', color: '#c8a0ff', how: '서버 레이드 - 과다 폭주 처치 시 획득 (피해를 준 모든 참여자)', desc: '<b>노윤 전용</b>: 강우주와 함께 편성 시 가하는 피해량 +100% · 강주원과 함께 편성 시 받는 피해량 -50% · 곽시율과 함께 편성 시 침잠 부여량 2배 · 유환과 함께 편성 시 출혈 부여량 2배' },
   pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
 };
 const isTargetRace = f => !!f && (f.type === 'dummy' || f.type === 'dgdummy' || f.type === 'targetking'); // 종족: 과녁
+// 인연 (노윤 전용): 함께 편성된 아군에 따라 효과
+const inyeonWith = (f, ...types) => f && f.type === 'noyun' && hasArt(f, 'inyeon') && fighters.some(a => a !== f && a.team === f.team && types.includes(a.type));
+const nyMul = (f, key) => (key === 'sinking' && inyeonWith(f, 'kwak')) || (key === 'bleed' && inyeonWith(f, 'yuhwan')) ? 2 : 1;
 const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; const o = pvpOpp && f.team === 1 ? pvpOpp : save; return !!(o.artifacts || {})[id] && (o.equip || {})[id] === b; } catch (e) { return false; } };
 // 반격 스킬 (곽시율의 넌 나가라는 강화 시 해금)
 const counterOf = f => f.type === 'noyun' ? (up('noyun', f) ? 'nyLast' : null) : f.type === 'kwak' ? (up('kwak', f) ? 'getout' : null) : CHAR[f.type].counter;
@@ -2007,6 +2011,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (isRedGlow(t)) mods.push(0.9);     // 붉은 노을: 보호 10
     if (src && isTargetRace(src) && hasArt(t, 'crown')) mods.push(0.9); // 깨진 왕관: 과녁에게 받는 피해량 -10%
     if (buffVal(t, 'vuln')) mods.push(1 + buffVal(t, 'vuln') / 100); // 취약
+    if (inyeonWith(t, 'juwon', 'juwon2')) mods.push(0.5); // 인연: 강주원과 함께면 노윤이 받는 피해량 -50%
     if (t.overdrive) mods.push(2);                        // 과다 폭주: 받는 피해량 +100%
     if (uguLow(t)) mods.push(2);                          // 나를 우구라 불러주어서 고마워: 받는 피해량 +100%
     if (t.hatredUntil > simTime) mods.push(1.1);         // 맺힌 증오: 받는 피해량 +10%
@@ -2962,7 +2967,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'ani') pct += Math.floor(((t.bleed ? t.bleed.pot : 0) + f.cola) / 5);
   if (u.sk === 'cheobun' && isPrey(t, f)) pct += 100;
   pct += buffVal(f, 'dmgUp');
-  if (f.type === 'noyun') pct += Math.min(15, t.sinking ? t.sinking.pot : 0); // 깨진 유리의 도시: 대상의 침잠 1당 피해량 +1% (최대 15%)
+  if (f.type === 'noyun') pct += Math.min(15, t.sinking ? t.sinking.pot : 0) + (inyeonWith(f, 'wooju') ? 100 : 0); // 인연: 강우주와 함께면 피해량 +100% // 깨진 유리의 도시: 대상의 침잠 1당 피해량 +1% (최대 15%)
   if (u.sk === 'ha' && i === 1) pct += f.poise ? f.poise.pot : 0; // 호흡 1당 이 코인의 피해량 +1%
   if (u.sk === 'gisup') pct += Math.floor(f.charge / 4) * 20;
   if (u.sk === 'gwanmun') pct += Math.floor(stackSum(f.poise) / 10) * 100;
@@ -3249,19 +3254,19 @@ function hitCoin(u, t, pow, i, heads, crit) {
     if (i === 0) { for (let k = 0; k < 10 && t.alive; k++) genericTremorBurst(f, t); if (t.alive) tremorAnyCount(t, -4); }
     else if ((u.walkReuse || 0) < 7) { u.walkReuse = (u.walkReuse || 0) + 1; return true; } // 이 코인 재사용 (최대 7회)
   } else if (u.sk === 'nyAbyss') {
-    if (i === 0) addStack(t, 'sinking', 3, 3, '침잠', '#6a8cff');
+    const m = nyMul(f, 'sinking'); if (i === 0) addStack(t, 'sinking', 3 * m, 3 * m, '침잠', '#6a8cff');
   } else if (u.sk === 'nyFall') {
-    if (i === 0) addStack(t, 'sinking', 3, 3, '침잠', '#6a8cff');
-    else if (i === 1) { const sp = t.sinking ? t.sinking.pot : 0; addStack(t, 'bleed', 3 + sp, 0, '출혈', '#ff4060'); }
+    if (i === 0) { const m = nyMul(f, 'sinking'); addStack(t, 'sinking', 3 * m, 3 * m, '침잠', '#6a8cff'); }
+    else if (i === 1) { const sp = t.sinking ? t.sinking.pot : 0; addStack(t, 'bleed', (3 + sp) * nyMul(f, 'bleed'), 0, '출혈', '#ff4060'); }
   } else if (u.sk === 'nyRuin') {
     if (i === 0) {
-      addStack(t, 'sinking', 5, 2, '침잠', '#6a8cff');
+      { const m = nyMul(f, 'sinking'); addStack(t, 'sinking', 5 * m, 2 * m, '침잠', '#6a8cff'); }
       if (t.alive && dealt > 0 && staggerable(t)) { const idx = t.staggerTh.findIndex((th, i2) => !t.staggerHit[i2]); if (idx !== -1) { const v = dealt * 0.3 / t.maxHp; t.staggerTh[idx] += v; log(`${nm(t)} 흐트러짐 손상 ${Math.round(dealt * 0.3)} (피해량의 30%)`); checkStagger(t); } }
     } else if (i === 1) {
       const sp = t.sinking ? t.sinking.pot : 0;
       if (t.alive && sp) dealDamage(f, t, Math.min(30, sp), 'physical', '파탄 2번째 코인 추가 피해', `침잠 ${sp} → `);
       if (!t.alive && !u.nySpread) {
-        u.nySpread = true; const v = Math.min(8, Math.floor(sp / 2));
+        u.nySpread = true; const v = Math.min(8, Math.floor(sp / 2)) * nyMul(f, 'sinking');
         const es = enemies(f).filter(x => x !== t).sort(() => Math.random() - 0.5).slice(0, 2);
         if (v) for (const e2 of es) { addStack(e2, 'sinking', v, 0, '침잠', '#6a8cff'); lightning(t.x, t.y, e2.x, e2.y, '#9a6aff', 5, 0.4); }
         changeSp(f, 15, '파탄 처치'); log(`${nm(f)} ${sk('nyRuin')} 처치 → 무작위 적 ${es.length}명 침잠 ${v} · 정신력 +15`);
@@ -6024,7 +6029,7 @@ function renderSr() {
   if (sr.top.length) h += '<br>' + sr.top.map((p, i) => `<span style="color:${i ? '#aab' : '#ffcc33'}">${i + 1}. ${titleHTML(p.title)}${escH(p.name || '이름 없음')} ${Math.round(p.dmg).toLocaleString()}</span>`).join(' · ');
   if (TEST_SERVER) h += '<br><span style="color:#7dffb0">🧪 테스트 서버: 연습 모드 (피해가 서버에 기록되지 않아요)</span>';
   el.innerHTML = h;
-  srReward(); // 못 받은 보상이 있으면 지급 (전투 종료 · 접속 시)
+  srReward(); srClearReward(); // 못 받은 보상이 있으면 지급 (전투 종료 · 접속 시)
 }
 async function srSubmit(v) {
   v = Math.round(v); if (!v || !srOn()) return;
@@ -6038,6 +6043,13 @@ async function srSubmit(v) {
 }
 // 보상: 누적으로 입힌 피해 100,000당 10회 뽑기권 1장 (서버에 기록된 내 누적 피해 기준, 이미 받은 만큼은 제외)
 const SR_TIX_STEP = 100000;
+function srClearReward() { // 서버 보스 처치: 피해를 준 참여자에게 칭호 + 아티팩트 인연
+  if (!srOn() || sr.dmg == null || sr.dmg < SR_MAX || !(sr.mine > 0) || save.srCleared) return;
+  save.srCleared = true; const first = !save.artifacts.inyeon; save.artifacts.inyeon = true; persist(); try { renderArtifacts(); } catch (e) {}
+  showBig('과다 폭주 처치!', '#ff6a9a', 2.4); doFlash('#ffffff', 0.6);
+  log(`🌐 서버 보스 과다 폭주 처치! 🎖 칭호 <b style="color:#ff6a9a">폭주를 멈춘 자</b> · 💍 아티팩트 <b style="color:#c8a0ff">인연</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
+  toast('🎖 칭호 폭주를 멈춘 자 · 💍 아티팩트 인연 획득!');
+}
 function srReward() {
   if (!srOn() || !sr.mine) return;
   const earned = Math.floor(sr.mine / SR_TIX_STEP), given = save.srTix || 0;
@@ -6242,6 +6254,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '10.4', date: '2026-11-22', items: ['🌐 서버 보스 과다 폭주 처치 보상 추가 (피해를 준 모든 참여자): 칭호 "폭주를 멈춘 자" · 아티팩트 "인연"', '💍 인연 (노윤 전용): 강우주와 함께 편성 시 가하는 피해량 +100% · 강주원과 함께 편성 시 받는 피해량 -50% · 곽시율과 함께 편성 시 침잠 부여량 2배 · 유환과 함께 편성 시 출혈 부여량 2배'] },
   { v: '10.3', date: '2026-11-22', items: ['과거의 강주원은 레벨이 올라도 체력이 오르지 않아요 (레이드 난이도 체력 배수는 그대로 적용)'] },
   { v: '10.2', date: '2026-11-22', items: ['레벨이 오르면 체력도 증가: 기본 레벨보다 1 높을 때마다 체력 +1% (레이드 난이도 · 송재범 강화 · 과거의 강주원 레벨 변화 · 테스트 모드 레벨 수정)', '체력과 피해량의 소수점을 버려요 (모든 피해 · 회복 · 보호막 흡수가 정수)'] },
   { v: '10.1', date: '2026-11-21', items: ['🛒 상점에 강주원 이펙트 스킨 "심연의 해변" 추가 (🪙 1,000): 바닷물과 거뭇한 잉크가 뭉쳐 휘둘러지는 검기 · 2페이즈 [불타는 울음]에도 적용 · 두 검 모두 바닷빛으로 다시 칠함 (균열은 청록으로 빛남)'] },
@@ -6494,6 +6507,7 @@ const TITLES = [
   { id: 'collector', name: '수집가', how: '모든 캐릭터 보유', ok: () => GACHA.every(k => save.owned && save.owned[k]) },
   { id: 'upgrader', name: '강화의 달인', how: '캐릭터 5명 강화', ok: () => GACHA.filter(k => save.upg && save.upg[k]).length >= 5 },
   { id: 'pvp', name: 'PVP 투사', how: 'PVP 10승', ok: () => ((save.pvp || {}).w || 0) >= 10 },
+  { id: 'srKill', name: '폭주를 멈춘 자', how: '서버 레이드 과다 폭주 처치 (피해를 준 참여자)', ok: () => !!save.srCleared },
   // PVP 티어 칭호: 한 번이라도 달성한 최고 티어 기준 (시즌이 바뀌어도 유지)
   ...[['브론즈 도전자', '브론즈'], ['실버 검객', '실버'], ['황금의 투사', '골드'], ['에메랄드 수호자', '에메랄드'], ['다이아몬드 정예', '다이아몬드'], ['PVP 마스터', '마스터'], ['그랜드 마스터', '그랜드 마스터'], ['빛나는 자', '레디언트'], ['한계를 넘은 자', '초월자'], ['영원히 군림하는 자', '영생']]
     .map(([name, tier], i) => ({ id: 'tier' + i, name, how: `PVP 티어 ${tier} 달성`, ok: () => (save.pvpBestTier ?? -1) >= i })),
@@ -6518,6 +6532,7 @@ const TITLE_FX = {
   collector: { c: '#fff', fx: 'rainbow' },
   upgrader: { c: '#ffe08a', fx: 'shine', },
   pvp: { c: '#9fd8ff', fx: 'pulse glow', g: '#3a9aff' },
+  srKill: { c: '#ff6a9a', fx: 'glitch glow', g: '#ff2a6a' },
   tier0: { c: '#d89a6a', fx: 'glow', g: '#a0603a' },
   tier1: { c: '#dfe6f0', fx: 'shine' },
   tier2: { c: '#ffd04a', fx: 'shine glow', g: '#ffaa00' },
