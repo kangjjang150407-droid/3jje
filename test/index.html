@@ -952,13 +952,22 @@ const RAID_DIFF = [
   { name: '하드', color: '#ffb84a', coin: 10, hp: 2.5, lv: 15 },
   { name: '익스트림', color: '#ff3a5a', coin: 50, hp: 5, lv: 30 },
 ];
+// 레벨 1당 체력 +1% (기본 레벨 기준) · 소수점 버림. full이면 체력을 가득 채우고, 아니면 체력 비율 유지
+function lvHp(f, full) {
+  if (!f || f.overdrive || f.hpBase == null) return;
+  const old = f.maxHp, nm = Math.max(1, Math.floor(f.hpBase * (1 + 0.01 * (f.level - f.lvBase))));
+  if (nm === old && !full) return;
+  f.maxHp = nm;
+  if (full) f.hp = f.dispHp = f.lagHp = nm;
+  else { const r = old ? nm / old : 1; f.hp = f.hp > 0 ? Math.max(1, Math.floor(f.hp * r)) : 0; f.dispHp = Math.min(nm, (f.dispHp || 0) * r); f.lagHp = Math.min(nm, (f.lagHp || 0) * r); }
+}
 const RAID_COIN = { 1: 300, 2: 500, 3: 1000, 4: 2000 }; // 레이드 단계별 기본 클리어 코인 (보통)
 let raidDiff = 0;
 function applyRaidDiff() {
   raidDiff = +document.getElementById('raidDiff').value || 0;
   const d = RAID_DIFF[raidDiff]; if (!raidDiff) return;
   for (const f of fighters) if (f.team === 1) {
-    f.maxHp = f.hp = f.dispHp = f.lagHp = Math.round(f.maxHp * d.hp); f.level += d.lv;
+    f.hpBase = Math.floor((f.hpBase || f.maxHp) * d.hp); f.level += d.lv; lvHp(f, true); // 체력 배수 + 레벨 1당 체력 +1%
     if (f.shield) { f.shield.v = Math.round(f.shield.v * d.hp); f.shield.max = f.shield.v; }
   }
   log(`⚠ 레이드 난이도 <b style="color:${d.color}">${d.name}</b>: 적 체력 ×${d.hp} · 레벨 +${d.lv} · 클리어 코인 ×${d.coin}`, 'kill');
@@ -1113,6 +1122,7 @@ function rewindStep(f, dt) {
 function pjGlitch(f) {
   const L = [30, 60, 80, 100], D = [40, 80, 100, 190];
   f.level = L[(Math.random() * 4) | 0]; f.glDef = D[(Math.random() * 4) | 0]; f.glIdx = (Math.random() * 4) | 0;
+  lvHp(f);
   if (f.overdrive) { f.level += 50; f.glDef += 100; } // 과다 폭주: 기본 레벨 +50 · 방어 레벨 +100 (공격 레벨 +60은 offLv)
   floatText(f.x, f.y - f.r - 46, `LV.${f.level} · 방어 ${f.glDef} · 공격 ${SKILLS.pjA.glitch[f.glIdx] + (f.overdrive ? 60 : 0)}`, '#ff6a9a', 15, { life: 1.2 });
 }
@@ -1248,6 +1258,8 @@ class Fighter {
     if (type === 'song' && up('song', this)) { this.maxHp += 30; this.level += 5; } // 강화: 체력 +30, 레벨 +5
     if (type === 'targetking' && dungeonFloor) this.maxHp = Math.round(d.maxHp * dungeonFloor / DUNGEON_MAX); // 던전의 과녁의 왕: 층에 비례한 체력
     if (type === 'dgdummy') { const fl = dungeonFloor || 1; this.maxHp = 300 + fl * 60; this.level = 30 + fl * 5; }
+    this.hpBase = this.maxHp; this.lvBase = (type === 'song' && up('song', this)) ? d.level : this.level; // 송재범 강화 레벨 +5도 체력에 반영
+    this.maxHp = Math.max(1, Math.floor(this.hpBase * (1 + 0.01 * (this.level - this.lvBase))));
     this.hp = this.maxHp; this.dispHp = this.hp; this.lagHp = this.hp;
     this.static = type === 'dummy' && !settings.dummyMove;
     this.baseSpeed = d.speed;
@@ -1937,7 +1949,7 @@ function transformJuwon2(f, force) {
   const num = f.label.replace('강주원', '');
   f.type = 'juwon2'; f.label = '강주원 [불타는 울음]' + num; f.phase = 2;
   const d = CHAR.juwon2;
-  f.maxHp = d.maxHp; f.hp = d.maxHp; f.dispHp = f.lagHp = d.maxHp; f.level = d.level; f.r = d.radius; f.baseSpeed = d.speed; f.m = d.mass;
+  f.maxHp = d.maxHp; f.hp = d.maxHp; f.dispHp = f.lagHp = d.maxHp; f.level = d.level; f.hpBase = d.maxHp; f.lvBase = d.level; f.r = d.radius; f.baseSpeed = d.speed; f.m = d.mass;
   resetStagger(f);
   f.cast = null; f.cd = 1.5; f.ready = pickReady(f); f.wingT = 0;
   if (f.sp < 0) f.sp = 0; f.panic = 0;
@@ -2004,7 +2016,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (t.indomUsed) mods.push(0.8);      // 불굴의 정선우: 받는 피해량 -20%
     if (buffVal(t, 'protect')) mods.push(Math.max(0, 1 - buffVal(t, 'protect') / 100)); // 보호
   }
-  let dmg = amount * mult * mods.reduce((a, b) => a * b, 1);
+  let dmg = Math.floor(amount * mult * mods.reduce((a, b) => a * b, 1)); // 피해량 소수점 버림
   if (dmg <= 0) return 0;
   // 보호막
   let absorbed = 0;
@@ -2014,7 +2026,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     if (t.waxBurnCount < 2) { t.waxBurnCount++; addStack(src, 'burn', 2, 0, '화상', '#ff8a3a'); }
   }
   if (sh > 0 && kind !== 'true') {
-    absorbed = Math.min(sh, dmg); t.shield.v -= absorbed; dmg -= absorbed;
+    absorbed = Math.min(Math.floor(sh), dmg); t.shield.v -= absorbed; dmg -= absorbed;
     floatText(t.x - 20, t.y - t.r - 6, `🛡-${Math.round(absorbed * 10) / 10}`, '#9cc4ff', 18);
     burst(t.x, t.y, '#7fb2ff', 12, 260, 9, 0.4, { kind: 'spark' });
   }
@@ -2079,7 +2091,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     log(`💪 ${nm(t)} <b style="color:#7fe8d0">불굴의 정선우</b>: 치명적인 피해 무효 · 이번 턴 체력 1 미만으로 감소하지 않음 · 턴 종료 시 최대 체력 50% 회복 · 이번 전투 동안 받는 피해량 -20%`, 'kill');
     return 0;
   }
-  if (t.lastJustice && t.hp < t.maxHp * 0.05) t.hp = t.maxHp * 0.05; // 하나 남은 정의: 체력이 5% 미만으로 떨어지지 않음
+  if (t.lastJustice && t.hp < t.maxHp * 0.05) t.hp = Math.max(1, Math.floor(t.maxHp * 0.05)); // 하나 남은 정의: 체력이 5% 미만으로 떨어지지 않음
   // 곽시율 패시브 [최강]: 체력이 1 미만으로 내려가지 않고 다음 턴에 체력 50% 회복 (전투당 1회)
   if (t.type === 'kwak' && !t.kwUsed && t.hp < 1) {
     t.kwUsed = true; t.hp = 1; t.kwHeal = true;
@@ -2111,7 +2123,7 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
 }
 
 function heal(f, v, why) {
-  if (!f.alive || v <= 0) return;
+  v = Math.floor(v); if (!f.alive || v <= 0) return;
   const before = f.hp; f.hp = Math.min(f.maxHp, f.hp + v);
   if (f.hp - before <= 0) return;
   floatText(f.x, f.y - f.r - 10, `+${Math.round((f.hp - before) * 100) / 100}`, '#7dff9a', 26);
@@ -2582,7 +2594,7 @@ function transformYoru(f, force) {
   const num = f.label.replace('송재범', '');
   f.type = 'yoru'; f.label = '송재범 - [요루]' + num;
   const d = CHAR.yoru;
-  f.maxHp = d.maxHp; f.hp = d.maxHp; f.dispHp = f.lagHp = d.maxHp; f.level = d.level; f.r = d.radius; f.baseSpeed = d.speed;
+  f.maxHp = d.maxHp; f.hp = d.maxHp; f.dispHp = f.lagHp = d.maxHp; f.level = d.level; f.hpBase = d.maxHp; f.lvBase = d.level; f.r = d.radius; f.baseSpeed = d.speed;
   resetStagger(f);
   f.usagi = false; f.ammo = d.maxAmmo; f.reloadNext = false; f.cast = null;
   f.ready = pickReady(f); f.ready2 = pickReady(f); f.cd = 1.2;
@@ -3786,6 +3798,7 @@ function update(dt) {
   simTime += dt;
   const ti = turnIdx();
   if (ti !== lastTurnIdx) { lastTurnIdx = ti; onTurnEnd(); }
+  for (const f of fighters) if (f.alive && f.hp % 1) f.hp = Math.max(1, Math.floor(f.hp)); // 체력 소수점 버림 (비율 피해 · 회복 등)
   for (let i = respawns.length - 1; i >= 0; i--) {
     const r = respawns[i]; r.t -= dt;
     if (r.t <= 0) {
@@ -5777,7 +5790,7 @@ function testSet(inp) {
     else if (k === 'dawnGreet') f.dawnGreet = clamp(v, 0, 3);
     else if (k === 'wedgeSpear') f.wedgeSpear = clamp(v, 0, 3);
     else if (k === 'momentum') f.momentum = clamp(v, 0, 30);
-    else f[k] = Math.max(k === 'level' ? 1 : 0, v);
+    else { f[k] = Math.max(k === 'level' ? 1 : 0, v); if (k === 'level') lvHp(f); }
     log(`🧪 ${nm(f)} ${T_FIELDS.find(x => x[0] === k)[1]} → ${Math.round(f[k] * 100) / 100}`);
   } else {
     const k = inp.dataset.s, part = inp.dataset.p;
@@ -6230,6 +6243,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '10.2', date: '2026-11-22', items: ['레벨이 오르면 체력도 증가: 기본 레벨보다 1 높을 때마다 체력 +1% (레이드 난이도 · 송재범 강화 · 과거의 강주원 레벨 변화 · 테스트 모드 레벨 수정)', '체력과 피해량의 소수점을 버려요 (모든 피해 · 회복 · 보호막 흡수가 정수)'] },
   { v: '10.1', date: '2026-11-21', items: ['🛒 상점에 강주원 이펙트 스킨 "심연의 해변" 추가 (🪙 1,000): 바닷물과 거뭇한 잉크가 뭉쳐 휘둘러지는 검기 · 2페이즈 [불타는 울음]에도 적용 · 두 검 모두 바닷빛으로 다시 칠함 (균열은 청록으로 빛남)'] },
   { v: '10.0', date: '2026-11-21', items: ['강우주 공격 이펙트 변경: 휘두르기 대신 검으로 찌름 (한낮의 흰 열기 · 정오 · 낙인은 더 크게)', '🛒 상점에 강우주 이펙트 스킨 "심연의 해변" 추가 (🪙 1,000): 바닷물 줄기와 거뭇한 잉크가 뭉쳐 꿰뚫는 찌르기 · 바닷빛으로 다시 칠한 강우주 검'] },
   { v: '9.9', date: '2026-11-21', items: ['이건민 "심연의 해변" 스킨 검을 다시 그림: 이건민의 원래 검 모양 그대로 깊은 바닷빛 칼날 · 청록으로 빛나는 문양 · 흘러내리는 잉크 얼룩'] },
