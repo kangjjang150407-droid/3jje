@@ -954,7 +954,7 @@ const RAID_DIFF = [
 // 레벨 1당 체력 +1% (기본 레벨 기준) · 소수점 버림. full이면 체력을 가득 채우고, 아니면 체력 비율 유지
 function lvHp(f, full) {
   if (!f || f.overdrive || f.hpBase == null) return;
-  const old = f.maxHp, nm = Math.max(1, Math.floor(f.hpBase * (1 + 0.01 * (f.level - f.lvBase))));
+  const old = f.maxHp, nm = Math.max(1, Math.floor(f.hpBase * (f.type === 'pastjuwon' ? 1 : 1 + 0.01 * (f.level - f.lvBase)))); // 과거의 강주원은 레벨이 바뀌어도 체력 그대로
   if (nm === old && !full) return;
   f.maxHp = nm;
   if (full) f.hp = f.dispHp = f.lagHp = nm;
@@ -6242,6 +6242,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '10.3', date: '2026-11-22', items: ['과거의 강주원은 레벨이 올라도 체력이 오르지 않아요 (레이드 난이도 체력 배수는 그대로 적용)'] },
   { v: '10.2', date: '2026-11-22', items: ['레벨이 오르면 체력도 증가: 기본 레벨보다 1 높을 때마다 체력 +1% (레이드 난이도 · 송재범 강화 · 과거의 강주원 레벨 변화 · 테스트 모드 레벨 수정)', '체력과 피해량의 소수점을 버려요 (모든 피해 · 회복 · 보호막 흡수가 정수)'] },
   { v: '10.1', date: '2026-11-21', items: ['🛒 상점에 강주원 이펙트 스킨 "심연의 해변" 추가 (🪙 1,000): 바닷물과 거뭇한 잉크가 뭉쳐 휘둘러지는 검기 · 2페이즈 [불타는 울음]에도 적용 · 두 검 모두 바닷빛으로 다시 칠함 (균열은 청록으로 빛남)'] },
   { v: '10.0', date: '2026-11-21', items: ['강우주 공격 이펙트 변경: 휘두르기 대신 검으로 찌름 (한낮의 흰 열기 · 정오 · 낙인은 더 크게)', '🛒 상점에 강우주 이펙트 스킨 "심연의 해변" 추가 (🪙 1,000): 바닷물 줄기와 거뭇한 잉크가 뭉쳐 꿰뚫는 찌르기 · 바닷빛으로 다시 칠한 강우주 검'] },
