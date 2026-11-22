@@ -1037,6 +1037,7 @@ const ARTIFACTS = {
   crown: { name: '깨진 왕관', color: '#ffcc33', how: '레이드 1단계 - 과녁의 왕 클리어 시 획득', desc: '종족이 과녁인 적(과녁 · 던전 과녁 · 과녁의 왕)을 상대로 가하는 피해량 +40% · 받는 피해량 -10% · 합 위력 +3' },
   inyeon: { name: '인연', color: '#c8a0ff', how: '서버 레이드 - 과다 폭주 처치 시 획득 (피해를 준 모든 참여자)', desc: '<b>노윤 전용</b>: 강우주와 함께 편성 시 가하는 피해량 +100% · 강주원과 함께 편성 시 받는 피해량 -50% · 곽시율과 함께 편성 시 침잠 부여량 2배 · 유환과 함께 편성 시 출혈 부여량 2배' },
   needle: { name: '날카로운 실과 바늘', color: '#ff6a5a', how: '던전 2층 히든 보스 봉이 아빠 처치 시 획득', desc: '장착한 대상이 매 턴 처음으로 피해를 입힌 스킬의 (피해량 / 2)만큼 추가 고정 피해를 입힘' },
+  mirror: { name: '명경지수', color: '#bfe8ff', how: '🛒 상점에서 구매 (🪙 5,000)', desc: '치명타로 가하는 피해량이 1.2배에서 2.5배로 증가 · 치명타가 발생해 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)' },
   pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
 };
 const isTargetRace = f => !!f && (f.type === 'dummy' || f.type === 'dgdummy' || f.type === 'targetking'); // 종족: 과녁
@@ -1782,6 +1783,7 @@ function onTurnEnd() {
   for (const f of fighters.slice()) if (f.type === 'despair') { if (f.alive && dungeonFloor && !f.queenSpawned) { f.qTurns = (f.qTurns || 0) + 1; if (f.qTurns >= 1) spawnQueen(f); } despairTurn(f); }
   // 차갑고 검은 눈물: 턴 시작 시 합 위력 감소 1
   for (const f of fighters) if (f.alive && f.blackTear > 0) addBuff(f, 'clashDown', 1);
+  for (const f of fighters) if (f.alive && f.nextOffUp) { addBuff(f, 'offUp', f.nextOffUp); floatText(f.x, f.y - f.r - 46, `공격 레벨 +${f.nextOffUp}`, '#bfe8ff', 15); f.nextOffUp = 0; } // 명경지수
   for (const f of fighters) if (f.paralysis) f.paralysis = 0; // 마비: 한 턴 동안만 유지
   for (const f of fighters) if (f.alive && f.type === 'bongdad') changeSp(f, -5, '끄그극..'); // 봉이 아빠 패시브: 턴 종료 시 정신력 5 감소
   for (const f of fighters) if (f.alive && f.nextPoise) { addStack(f, 'poise', f.nextPoise, 0, '호흡', '#9fe8ff'); f.nextPoise = 0; }
@@ -1919,7 +1921,8 @@ const stackSum = b => b ? b.pot + b.cnt : 0;
 function rollCrit(f) {
   const p = f.poise; if (!p || p.cnt <= 0) return false;
   if (Math.random() >= Math.min(1, p.pot * 0.05)) return false;
-  p.cnt--; if (p.cnt <= 0 && f.type !== 'pastjuwon') f.poise = null; // 과거의 강주원: 횟수가 0이 돼도 호흡 위력은 남음 (호흡 99를 모으기 위해)
+  p.cnt--; if (p.cnt <= 0 && f.type !== 'pastjuwon') f.poise = null;
+  if (hasArt(f, 'mirror')) { const tk = turnIdx() + '@' + turnBase; if (f.mirrorTurn !== tk) { f.mirrorTurn = tk; f.nextOffUp = (f.nextOffUp || 0) + 15; floatText(f.x, f.y - f.r - 50, '명경지수 — 다음 턴 공격 레벨 +15', '#bfe8ff', 14, { life: 1.2 }); log(`💍 ${nm(f)} <b style="color:#bfe8ff">명경지수</b>: 치명타로 호흡 횟수 소모 → 다음 턴 공격 레벨 +15`); } } // 과거의 강주원: 횟수가 0이 돼도 호흡 위력은 남음 (호흡 99를 모으기 위해)
   return true;
 }
 // 침잠: 피격 시 위력만큼 정신력 감소 (정신력이 없으면 고정 피해), 횟수 -1
@@ -3021,7 +3024,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (isTargetRace(t) && hasArt(f, 'crown')) pct += 40; // 깨진 왕관: 과녁에게 가하는 피해량 +40%
   if (u.sk === 'ttuk' && i === 2) pct += 100; // 세번째 코인: 피해량 +100%
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
-  const dm = Math.max(0, 1 + pct / 100) * (crit ? (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
+  const dm = Math.max(0, 1 + pct / 100) * (crit ? Math.max(hasArt(f, 'mirror') ? 2.5 : 0, (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2)) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
   if (f.type === 'yuhwan' && u.sk !== 'heuhaha') {
     // 노랗게 물든 송곳들이 진동하다가 꽂힘
@@ -3162,7 +3165,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
     floatText(t.x, t.y - t.r - 46, '크리티컬!', '#9fe8ff', 24, { life: 0.9 });
     ring(t.x, t.y, '#9fe8ff', t.r * 3, 0.4, 6); burst(t.x, t.y, '#ffffff', 20, 500, 8, 0.4, { kind: 'spark' });
   }
-  const extra = `위력 ${pow} × 레벨 ${lm.toFixed(3)} [${ol} vs ${dl}]${pct ? ` × 피해량 ${pct > 0 ? '+' : ''}${pct}%` : ''}${crit ? ' × 크리티컬 1.2' : ''} → `;
+  const extra = `위력 ${pow} × 레벨 ${lm.toFixed(3)} [${ol} vs ${dl}]${pct ? ` × 피해량 ${pct > 0 ? '+' : ''}${pct}%` : ''}${crit ? ` × 크리티컬 ${hasArt(f, 'mirror') ? '2.5 (명경지수)' : '1.2'}` : ''} → `;
   if (u.sk === 'heuhaha') {
     // 피해 0 고정: 최대 체력 25% 소모 · 합 위력 +1 · 피해량 +10% · 체력 10% 회복 · 정신력 5 회복
     const cost = t.maxHp * 0.25; t.hp = Math.max(1, t.hp - cost); t.yhClash = (t.yhClash || 0) + 1; t.yhPct = (t.yhPct || 0) + 10;
@@ -6357,15 +6360,17 @@ document.getElementById('adminPanel').addEventListener('click', async e => {
 // ================== 상점 (이펙트 스킨) ==================
 const SHOP = [
   { id: 'gunmin_abyss', type: 'gunmin', name: '이건민 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기' },
+  { id: 'mirror', art: true, name: '💍 아티팩트 — 명경지수', price: 5000, desc: '치명타로 가하는 피해량이 1.2배에서 2.5배로 증가 · 치명타가 발생해 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)' },
   { id: 'juwon_abyss', type: 'juwon', name: '강주원 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기 (2페이즈 [불타는 울음] 포함)' },
   { id: 'wooju_abyss', type: 'wooju', name: '강우주 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 꿰뚫는 찌르기' },
 ];
 if (!save.skins) save.skins = {}; if (!save.skinOn) save.skinOn = {};
-const skinOn = id => !!(save.skins[id] && save.skinOn[SHOP.find(x => x.id === id).type] === id);
+const skinOn = id => { const it = SHOP.find(x => x.id === id); return !!(it && !it.art && save.skins[id] && save.skinOn[it.type] === id); };
 function renderShop() {
   const el = document.getElementById('shopPanel'); if (!el) return;
   el.innerHTML = `<div style="font-weight:800;color:#7ad8e8;margin-bottom:6px">🛒 상점 <span style="color:#889;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>` + SHOP.map(it => {
-    const own = !!save.skins[it.id], on = skinOn(it.id);
+    const own = it.art ? !!save.artifacts[it.id] : !!save.skins[it.id], on = skinOn(it.id);
+    if (it.art) return `<div class="item" style="border-color:#3a4a6a"><b style="color:#bfe8ff">${it.name}</b><div style="color:#9ab">${it.desc}</div><div style="margin-top:5px">${own ? '<span style="color:#7dffb0">✔ 보유 중 — 💍 아티팩트 창에서 장착하세요</span>' : `<button data-buy="${it.id}" style="width:100%;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>`}</div></div>`;
     return `<div class="item"><b style="color:#9fe8f0">${it.name}</b><div style="color:#9ab">${it.desc}</div>
       <div style="display:flex;gap:6px;margin-top:5px">${own ? `<button data-skin="${it.id}" style="flex:1;padding:6px;${on ? 'background:#1a5a6a;color:#fff' : ''}">${on ? '✔ 장착 중 (눌러서 해제)' : '장착하기'}</button>` : `<button data-buy="${it.id}" style="flex:1;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>`}<button data-prev="${it.id}" style="padding:6px">미리 보기</button></div></div>`;
   }).join('') + '<div style="color:#667;font-size:11px">스킨은 내 화면에서 해당 캐릭터의 공격 이펙트를 바꿔요 (능력치는 그대로)</div>';
@@ -6374,10 +6379,10 @@ document.getElementById('shopBtn').onclick = () => { document.getElementById('sh
 document.getElementById('shopPanel').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.buy) {
-    const it = SHOP.find(x => x.id === b.dataset.buy); if (!it || save.skins[it.id]) return;
+    const it = SHOP.find(x => x.id === b.dataset.buy); if (!it || (it.art ? save.artifacts[it.id] : save.skins[it.id])) return;
     if (save.coins < it.price) return toast(`코인이 부족해요 (필요 ${it.price.toLocaleString()}, 보유 ${save.coins.toLocaleString()})`);
-    save.coins -= it.price; save.skins[it.id] = true; save.skinOn[it.type] = it.id; persist(); try { renderQuests(); renderStones(); } catch (e2) {}
-    toast(`🛒 ${it.name} 구매 · 장착 완료!`); log(`🛒 상점: <b style="color:#9fe8f0">${it.name}</b> 구매 (🪙 -${it.price.toLocaleString()})`, 'kill');
+    save.coins -= it.price; if (it.art) { save.artifacts[it.id] = true; try { renderArtifacts(); } catch (e2) {} } else { save.skins[it.id] = true; save.skinOn[it.type] = it.id; } persist(); try { renderQuests(); renderStones(); } catch (e2) {}
+    toast(it.art ? `🛒 ${it.name} 구매 완료! 아티팩트 창에서 장착하세요` : `🛒 ${it.name} 구매 · 장착 완료!`); log(`🛒 상점: <b style="color:#9fe8f0">${it.name}</b> 구매 (🪙 -${it.price.toLocaleString()})`, 'kill');
   } else if (b.dataset.skin) {
     const it = SHOP.find(x => x.id === b.dataset.skin); save.skinOn[it.type] = skinOn(it.id) ? null : it.id; persist();
   } else if (b.dataset.prev) {
@@ -6392,6 +6397,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '11.1', date: '2026-11-22', items: ['🛒 상점에 아티팩트 판매 추가 — 💍 명경지수 (🪙 5,000): 치명타로 가하는 피해량 1.2배 → 2.5배 · 치명타로 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)'] },
   { v: '11.0', date: '2026-11-22', items: ['🎵 봉이 아빠 전용 배경음악 추가'] },
   { v: '10.9', date: '2026-11-22', items: ['🎵 히든 보스 전용 배경음악: 흉탄의 사수 · 절망의 기사와 싸울 때 전용 곡이 재생돼요'] },
   { v: '10.8', date: '2026-11-22', items: ['🐔 던전 2층 히든 보스 봉이 아빠 추가 (등장 확률 35% · LV.60 · 체력 779): 끄 · 끅 · 닭들의 종말 (파괴불가 · 최대 8회 재사용) · 패시브 끄그극..', '새 상태 마비: 한 턴 동안 수치만큼 코인 위력이 0으로 고정 (코인 1개당 1 소모 · 턴 종료 시 제거)', '💍 처치 보상 아티팩트 날카로운 실과 바늘: 매 턴 처음으로 피해를 입힌 스킬의 (피해량 / 2)만큼 추가 고정 피해'] },
@@ -7386,7 +7392,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   });
   $('scChars').innerHTML = types.map(t => `<button data-t="${t}" style="border-color:${CHAR[t].color}">${CHAR[t].name}</button>`).join('');
   $('scTiers').innerHTML = PVP_TIERS.map((x, i) => `<button data-tier="${i}" style="display:flex;align-items:center;gap:3px;border-color:${x.c}"><img src="${tierImg(i, 24)}" style="width:20px;height:20px">${x.n}</button>`).join('');
-  const renderScSkins = () => { $('scSkins').innerHTML = SHOP.map(it => `<button data-scskin="${it.id}" class="${skinOn(it.id) ? 'on' : ''}">${skinOn(it.id) ? '✔ ' : ''}${it.name}</button>`).join(''); };
+  const renderScSkins = () => { $('scSkins').innerHTML = SHOP.filter(it => !it.art).map(it => `<button data-scskin="${it.id}" class="${skinOn(it.id) ? 'on' : ''}">${skinOn(it.id) ? '✔ ' : ''}${it.name}</button>`).join(''); };
   renderScSkins();
   P.addEventListener('click', e => { const b = e.target.closest('[data-scskin]'); if (!b) return; const it = SHOP.find(x => x.id === b.dataset.scskin);
     save.skins[it.id] = true; save.skinOn[it.type] = skinOn(it.id) ? null : it.id; persist(); renderScSkins(); if (cur !== it.type) setup(it.type); toast(skinOn(it.id) ? `${it.name} 켜짐 — 스킬을 눌러 보세요` : '스킨 꺼짐 (기본 이펙트)'); });
