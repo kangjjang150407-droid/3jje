@@ -4770,6 +4770,16 @@ function drawFighter(f) {
     ctx.save(); ctx.fillStyle = s.color; ctx.fillRect(bx, cy, bw * p, 5); ctx.restore();
     ctx.font = `700 11px ${FONT}`; ctx.strokeText(s.name, x, cy + 20); ctx.fillStyle = s.color; ctx.fillText(s.name, x, cy + 20);
   }
+  // 볼 옆 정신력 원: 수치에 따라 색이 바뀜
+  if (CHAR[f.type].ai) {
+    const v = Math.round(f.sp), c = v >= 40 ? '#1438d8' : v >= 35 ? '#2f6cff' : v >= 30 ? '#4aa8ff' : v >= 1 ? '#a8dcff' : v === 0 ? '#8a8a94' : v >= -29 ? '#ffa8a8' : v >= -39 ? '#ff4a4a' : '#a8000e';
+    const light = (v >= 1 && v <= 29) || (v <= -1 && v >= -29), cr = 12, cx = x + r + cr * 0.9, cy = y - r * 0.55;
+    ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = Math.abs(v) >= 30 ? 10 : 4;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(cx, cy, cr - 2, 0, TAU); ctx.stroke();
+    ctx.font = `800 ${Math.abs(v) >= 10 ? 11 : 12}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = light ? '#10101a' : '#ffffff'; ctx.fillText(String(v), cx, cy + 0.5); ctx.restore();
+  }
   // 정신력 / 상태 / 다음 스킬
   let ly = y + r + (f.coinView ? 44 : 14);
   if (CHAR[f.type].ai) {
@@ -6397,6 +6407,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '11.4', date: '2026-11-23', items: ['볼 옆에 정신력 원 추가: 원 안에 정신력 수치가 보이고, 수치에 따라 색이 바뀌어요 (40~45 진한 파랑 · 35~39 파랑 · 30~34 하늘 · 1~29 연한 하늘 · 0 회색 · -1~-29 연한 빨강 · -30~-39 빨강 · -40~-45 진한 빨강)'] },
   { v: '11.3', date: '2026-11-22', items: ['상점의 "광고 보고 코인 받기" 삭제'] },
   { v: '11.2', date: '2026-11-22', items: ['📺 상점에 "광고 보고 코인 받기" 추가: 하루 1번 · 15초짜리 광고를 끝까지 보면 🪙 100'] },
   { v: '11.1', date: '2026-11-22', items: ['🛒 상점에 아티팩트 판매 추가 — 💍 명경지수 (🪙 5,000): 치명타로 가하는 피해량 1.2배 → 2.5배 · 치명타로 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)'] },
