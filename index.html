@@ -794,7 +794,7 @@ const CHAR = {
   // 던전 3~5층 히든 보스 (등장 확률 30%)
   despair: {
     name: '절망의 기사', maxHp: 2268, radius: 50, color: '#3a6aff', speed: 140, mass: 2.4,
-    resist: { physical: 1, magic: 1, true: 1 }, ai: true, level: 60, defMod: 5, pool: ['pourDespair', 'sharpTear'], staggerAt: [0.9, 0.1],
+    resist: { physical: 1, magic: 1, true: 1 }, ai: true, noSp: true, level: 60, defMod: 5, pool: ['pourDespair', 'sharpTear'], staggerAt: [0.9, 0.1],
   },
   // 레이드 4단계 보스 (레벨 · 방어 레벨 · 공격 레벨이 턴마다 무작위)
   pastjuwon: {
@@ -814,7 +814,7 @@ const CHAR = {
   // 절망의 기사전 조력자 (2턴부터 아군으로 등장)
   queen: {
     name: '증오의 여왕', maxHp: 210, radius: 34, color: '#ff6ab0', speed: 170, mass: 1,
-    resist: { physical: 1, magic: 1, true: 1 }, ai: true, level: 60, defMod: 0, pool: ['qLove', 'qJustice', 'qGuard'], staggerAt: [],
+    resist: { physical: 1, magic: 1, true: 1 }, ai: true, noSp: true, level: 60, defMod: 0, pool: ['qLove', 'qJustice', 'qGuard'], staggerAt: [],
   },
   // 던전 2층 히든 보스 (등장 확률 35%)
   bongdad: {
@@ -824,7 +824,7 @@ const CHAR = {
   // 던전 11층 히든 보스 (등장 확률 10%)
   marksman: {
     name: '흉탄의 사수', maxHp: 2241, radius: 50, color: '#ff2a2a', speed: 160, mass: 2.4,
-    resist: { physical: 1, magic: 1, true: 1 }, ai: true, level: 90, defMod: 0, pool: ['rearShot', 'frontShot'], staggerAt: [0.3],
+    resist: { physical: 1, magic: 1, true: 1 }, ai: true, noSp: true, level: 90, defMod: 0, pool: ['rearShot', 'frontShot'], staggerAt: [0.3],
   },
   // 던전 전용: 공격하고 합을 하는 과녁 (층이 오를수록 레벨·체력 증가)
   dgdummy: {
@@ -1556,8 +1556,9 @@ function enterStagger(f, th) {
 }
 function resetStagger(f) { f.stagger = 0; f.staggerHit = []; f.staggerTh = staggerLinesOf(f); if (f.sunset || f.burningSunset) f.staggerTh.shift(); } // 노을 / 타오르는 노을: 첫 번째 흐트러짐 구간 삭제 유지
 
+const hasSp = f => !!(f && CHAR[f.type].ai && !CHAR[f.type].noSp); // 정신력이 없는 캐릭터: 흉탄의 사수 · 절망의 기사 · 증오의 여왕
 function changeSp(f, v, why) {
-  if (!f.alive || !CHAR[f.type].ai || f.panic > 0 || !v) return;
+  if (!f.alive || !hasSp(f) || f.panic > 0 || !v) return;
   if (f.type === 'song' && f.breath > 0 && v < 0 && !f.antiScratch) { f.antiScratch = true; dealDamage(null, f, -v, 'magic', `안긁힘 (${why || '정신력 피해'} → 마법 피해)`); f.antiScratch = false; return; } // 패시브 안긁힘
   const old = f.sp; f.sp = clamp(f.sp + v, minSp(f), 45);
   if (f.sp < old) f.spDropped = true; // 이번 턴에 정신력이 감소함 (다한 쓸모, 맺힌 증오)
@@ -1947,7 +1948,7 @@ function triggerSinking(src, t) {
   const b = t.sinking; if (!t.alive || !b || b.cnt <= 0) return;
   const pot = b.pot; b.cnt--; if (b.cnt <= 0) t.sinking = null;
   floatText(t.x - 26, t.y + t.r + 10, `침잠 -${pot}`, '#6a8cff', 15, { vy: -25, life: 0.8 });
-  if (CHAR[t.type].ai) changeSp(t, -pot, '침잠'); else dealDamage(src, t, pot, 'true', '침잠');
+  if (hasSp(t)) changeSp(t, -pot, '침잠'); else dealDamage(src, t, pot, 'true', '침잠');
 }
 // 재장전: 보유한 탄환을 모두 버리고 최대치만큼 다시 얻음
 function reload(f) {
@@ -4812,7 +4813,7 @@ function drawFighter(f) {
     ctx.font = `700 11px ${FONT}`; ctx.strokeText(s.name, x, cy + 20); ctx.fillStyle = s.color; ctx.fillText(s.name, x, cy + 20);
   }
   // 볼 옆 정신력 원: 수치에 따라 색이 바뀜
-  if (CHAR[f.type].ai) {
+  if (hasSp(f)) {
     const v = Math.round(f.sp), c = v >= 40 ? '#1438d8' : v >= 35 ? '#2f6cff' : v >= 30 ? '#4aa8ff' : v >= 1 ? '#a8dcff' : v === 0 ? '#8a8a94' : v >= -29 ? '#ffa8a8' : v >= -39 ? '#ff4a4a' : '#a8000e';
     const light = (v >= 1 && v <= 29) || (v <= -1 && v >= -29), cr = 12, cx = x + r + cr * 0.9, cy = y - r * 0.55;
     ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = Math.abs(v) >= 30 ? 10 : 4;
@@ -4830,16 +4831,18 @@ function drawFighter(f) {
       ctx.fillStyle = 'rgba(200,200,255,0.6)'; ctx.fillRect(bx, ly - 4, bw * p, 3);
     }
     // 정신력 바 (-45 ~ 45)
+    if (hasSp(f)) {
     const sw = bw, sx0 = x - sw / 2;
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0, ly, sw, 5);
     const sr = f.sp / 45;
     ctx.fillStyle = f.sp >= 0 ? '#5fc8ff' : '#ff4f6f';
     ctx.fillRect(x, ly, sw / 2 * sr, 5);
     ctx.fillStyle = '#fff'; ctx.fillRect(x - 0.5, ly - 1, 1, 7);
+    }
     ly += 15;
   }
   const tags = [];
-  if (CHAR[f.type].ai) tags.push([`정신력 ${f.sp}`, f.sp >= 0 ? '#9fdcff' : '#ff8fa3']);
+  if (hasSp(f)) tags.push([`정신력 ${f.sp}`, f.sp >= 0 ? '#9fdcff' : '#ff8fa3']);
   tags.push([`방어 ${defLv(f)}`, buffVal(f, 'defUp') ? '#9cc4ff' : '#aaa']);
   if (buffVal(f, 'offDown')) tags.push([`공격↓${buffVal(f, 'offDown')}`, '#ff9f7f']);
   if (shv > 0) tags.push([`🛡${Math.round(shv)}`, '#9cc4ff']);
@@ -6451,6 +6454,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.1', date: '2026-11-24', items: ['흉탄의 사수 · 절망의 기사 · 증오의 여왕은 정신력이 없어요: 정신력이 변하지 않고(코인 앞면 확률 50% 고정) 패닉에 걸리지 않으며, 정신력 표시가 사라지고 침잠은 고정 피해로 들어가요'] },
   { v: '12.0', date: '2026-11-24', items: ['🎬 연출 구경 서버에 눈물로 벼려낸 검 추가: 모든 캐릭터의 스킬 목록에서 미리보기 · 연출에 "패닉 (절망)" 버튼 추가'] },
   { v: '11.9', date: '2026-11-24', items: ['파멸의 케로베로스 이펙트 렉 개선: 그리기 부담을 줄여 프레임당 처리 시간 약 40% 감소 (모양은 그대로)'] },
   { v: '11.8', date: '2026-11-24', items: ['눈물로 벼려낸 검 발동 조건 변경: 장착한 대상이 아니라 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면 발동'] },
