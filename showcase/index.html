@@ -1108,22 +1108,63 @@ function drawTimeFx() {
       for (let i = 0; i < 6; i++) { const yy = y + rand(-e.r * 1.6, e.r * 1.6), w = rand(e.r * 1.2, e.r * 3.4); ctx.fillStyle = Math.random() < 0.6 ? '#ffe14d' : (Math.random() < 0.5 ? 'rgba(0,255,255,0.7)' : 'rgba(255,0,120,0.7)'); ctx.fillRect(x - w / 2 + rand(-20, 20), yy, w, rand(2, 7)); }
       ctx.restore();
     } else if (e.kind === 'portal' || e.kind === 'portalOut') {
-      // 푸른 포탈: 회전하는 고리 + 소용돌이 + 빨려 들어가는 공
-      const out = e.kind === 'portalOut', open = out ? Math.min(1, p / 0.2) * (p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1) : Math.min(1, p / 0.18) * (p > 0.75 ? 1 - (p - 0.75) / 0.25 : 1);
-      const R = e.r * 1.9 * open, rot = simTime * 7 + e.seed;
-      ctx.save(); ctx.translate(x, y);
-      let g = ctx.createRadialGradient(0, 0, 0, 0, 0, R); g.addColorStop(0, '#000814'); g.addColorStop(0.55, 'rgba(10,40,120,0.95)'); g.addColorStop(0.85, 'rgba(60,160,255,0.6)'); g.addColorStop(1, 'rgba(120,220,255,0)');
-      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.92, 0, 0, TAU); ctx.fill();
-      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-      for (let i = 0; i < 5; i++) { const a0 = rot * (i % 2 ? -1 : 1) + i * 1.3, rr = R * (0.45 + i * 0.12); ctx.globalAlpha = open * 0.85; ctx.strokeStyle = i % 2 ? '#7ad8ff' : '#2a8aff'; ctx.lineWidth = 3 - i * 0.3; ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + 2.2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rr, a0 + Math.PI, a0 + Math.PI + 1.4); ctx.stroke(); }
-      ctx.globalAlpha = open * 0.9; ctx.strokeStyle = '#c8f0ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.92, 0, 0, TAU); ctx.stroke();
-      ctx.globalAlpha = open * 0.6; ctx.drawImage(glow('#3a9aff'), -R * 1.8, -R * 1.8, R * 3.6, R * 3.6);
-      // 빨려 드는 빛 입자
-      for (let i = 0; i < 14; i++) { const a = e.seed * 3 + i * TAU / 14 + rot * 0.6, d = R * (1.6 - ((p * 2 + i * 0.07) % 1) * 1.4) * (out ? -1 : 1); ctx.globalAlpha = open * 0.8; ctx.fillStyle = '#bff0ff'; ctx.beginPath(); ctx.arc(Math.cos(a) * Math.abs(d), Math.sin(a) * Math.abs(d), 2, 0, TAU); ctx.fill(); }
-      ctx.globalCompositeOperation = 'source-over';
-      // 공이 회전하며 작아져 포탈로 빨려 들어감 (이탈)
-      if (!out && e.img && e.img.complete && p < 0.6) { const q = p / 0.6, sc = 1 - q * q, ang = q * 9; ctx.save(); ctx.rotate(ang); ctx.globalAlpha = 1 - q * 0.6; const rr = e.r * sc; ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.clip(); ctx.drawImage(e.img, -rr, -rr, rr * 2, rr * 2); ctx.restore(); }
+      // 푸른 포탈 (고퀄): 마법진 → 차원의 균열이 소용돌이치며 열림 → 공이 늘어나며 빨려 듦 → 닫히며 내파
+      const out = e.kind === 'portalOut';
+      const openT = out ? 0.18 : 0.16, closeT = out ? 0.7 : 0.72;
+      const open = Math.min(1, p / openT) * (p > closeT ? Math.max(0, 1 - (p - closeT) / (1 - closeT)) : 1), eo = 1 - Math.pow(1 - open, 3);
+      const R = e.r * 2.1 * eo, rot = simTime * 6 + e.seed, sq = 0.62; // 비스듬히 누운 원 (원근)
+      ctx.save(); ctx.translate(x, y + e.r * 0.35);
+      // 1) 바닥 마법진 (룬 고리 두 겹 · 육각 별)
+      ctx.save(); ctx.scale(1, sq * 0.75); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, p * 6) * (1 - Math.max(0, (p - closeT) / (1 - closeT)));
+      const MR = e.r * 2.9; ctx.strokeStyle = '#3a9aff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, MR, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, MR * 0.84, 0, TAU); ctx.stroke();
+      ctx.save(); ctx.rotate(-rot * 0.25); ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i * TAU / 6 * 2.5; ctx.lineTo(Math.cos(a) * MR * 0.84, Math.sin(a) * MR * 0.84); } ctx.closePath(); ctx.strokeStyle = '#7ad8ff'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = '#bff0ff'; for (let i = 0; i < 24; i++) { const a = i * TAU / 24; ctx.fillRect(Math.cos(a) * MR * 0.92 - 2, Math.sin(a) * MR * 0.92 - 2, 4, (i % 3 ? 4 : 7)); } ctx.restore();
+      ctx.drawImage(glow('#1a6aff'), -MR * 1.3, -MR * 1.3, MR * 2.6, MR * 2.6); ctx.restore();
+      ctx.scale(1, sq + 0.3);
+      if (R > 1) {
+        // 2) 바깥 빛무리
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = eo * 0.75; ctx.drawImage(glow('#2a7aff'), -R * 2.2, -R * 2.2, R * 4.4, R * 4.4);
+        ctx.globalAlpha = eo * 0.5; ctx.drawImage(glow('#9ae8ff'), -R * 1.3, -R * 1.3, R * 2.6, R * 2.6);
+        // 3) 소용돌이 팔 (은하처럼 휘감는 빛줄기 4가닥)
+        ctx.lineCap = 'round';
+        for (let arm = 0; arm < 4; arm++) for (const [w, c, al] of [[7, '#1a6aff', 0.45], [3, '#7ad8ff', 0.8], [1.2, '#e8fbff', 0.95]]) {
+          ctx.globalAlpha = eo * al; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
+          for (let t2 = 0; t2 <= 1.0001; t2 += 0.05) { const a = rot * (out ? -1 : 1) + arm * TAU / 4 + t2 * 3.4 * (out ? -1 : 1), rr = R * (1.35 - t2 * 1.15); ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.stroke(); }
+        // 4) 차원의 구멍 (깊은 남색 → 검정 · 안쪽 별빛)
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R); g.addColorStop(0, '#000208'); g.addColorStop(0.5, '#020a26'); g.addColorStop(0.8, 'rgba(14,60,170,0.95)'); g.addColorStop(1, 'rgba(80,180,255,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 18; i++) { const a = (i * 2.39996 + e.seed) + rot * 0.15, d = R * 0.75 * ((i * 0.618) % 1), tw = 0.5 + 0.5 * Math.sin(simTime * 9 + i); ctx.globalAlpha = eo * tw * 0.9; ctx.fillStyle = i % 4 ? '#9ad8ff' : '#ffffff'; ctx.fillRect(Math.cos(a) * d - 1, Math.sin(a) * d - 1, 2, 2); }
+        // 5) 회전 고리 (속도·방향이 다른 다섯 겹) + 테두리
+        for (let i = 0; i < 5; i++) { const a0 = rot * (1 + i * 0.35) * (i % 2 ? -1 : 1) + i * 1.3, rr = R * (0.35 + i * 0.13); ctx.globalAlpha = eo * 0.85; ctx.strokeStyle = i % 2 ? '#7ad8ff' : '#3a8aff'; ctx.lineWidth = 2.6 - i * 0.3;
+          ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + 2.2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rr, a0 + Math.PI, a0 + Math.PI + 1.4); ctx.stroke(); }
+        ctx.globalAlpha = eo; ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = '#4aa8ff'; ctx.lineWidth = 7; ctx.globalAlpha = eo * 0.45; ctx.beginPath(); ctx.arc(0, 0, R * 1.04, 0, TAU); ctx.stroke();
+        // 6) 테두리를 타고 튀는 전기
+        ctx.globalAlpha = eo; ctx.strokeStyle = '#d8f6ff'; ctx.lineWidth = 1.4;
+        for (let k2 = 0; k2 < 3; k2++) { if (Math.random() < 0.35) continue; let a = Math.random() * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * R, Math.sin(a) * R); for (let s2 = 0; s2 < 5; s2++) { a += rand(0.05, 0.16); const rr = R * rand(0.95, 1.25); ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.stroke(); }
+        // 7) 빨려 드는(또는 뿜어지는) 빛 조각 · 파편
+        for (let i = 0; i < 26; i++) { const ph = ((p * 1.8 + i * 0.137) % 1), d = out ? R * (0.2 + ph * 1.9) : R * (2.1 - ph * 1.9), a = e.seed * 3 + i * 2.39996 + (out ? -1 : 1) * ph * 2.2;
+          ctx.globalAlpha = eo * (out ? 1 - ph : ph) * 0.9; ctx.fillStyle = i % 3 ? '#9ae8ff' : '#ffffff'; const sz = i % 5 === 0 ? 3.2 : 1.8; ctx.beginPath(); ctx.arc(Math.cos(a) * d, Math.sin(a) * d, sz, 0, TAU); ctx.fill(); }
+      }
       ctx.restore();
+      // 8) 공: 회전하며 늘어나 빨려 듦 (이탈) / 포탈에서 튀어나옴 (복귀는 실제 공이 그려짐)
+      if (!out && e.img && e.img.complete && p > 0.08 && p < 0.62) {
+        const q = (p - 0.08) / 0.54, sc = 1 - q * q, stretch = 1 + q * 1.6, ang = q * 10;
+        ctx.save(); ctx.translate(x, y + e.r * 0.35 * q); ctx.rotate(ang); ctx.scale(1 / Math.sqrt(stretch), stretch);
+        ctx.globalAlpha = 1 - q * 0.5; const rr = e.r * sc; ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.save(); ctx.clip(); ctx.drawImage(e.img, -rr, -rr, rr * 2, rr * 2);
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q * 0.8; ctx.fillStyle = '#3a8aff'; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore();
+        ctx.strokeStyle = '#bff0ff'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+        // 잔상
+        for (let gh = 1; gh <= 3; gh++) { const qq = Math.max(0, q - gh * 0.06), s3 = 1 - qq * qq; ctx.save(); ctx.translate(x, y); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 / gh; ctx.strokeStyle = '#7ad8ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, e.r * s3, 0, TAU); ctx.stroke(); ctx.restore(); }
+      }
+      // 9) 닫히는 순간 내파: 흰 섬광 + 안쪽으로 접히는 고리 + 빛기둥
+      if (p > closeT) { const q = (p - closeT) / (1 - closeT); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = Math.max(0, 1 - q * 2.2); ctx.drawImage(glow('#ffffff'), x - e.r * 2.2, y - e.r * 2.2 + e.r * 0.35, e.r * 4.4, e.r * 4.4);
+        ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#9ae8ff'; ctx.lineWidth = 3 * (1 - q) + 0.5; ctx.beginPath(); ctx.ellipse(x, y + e.r * 0.35, e.r * (2.6 - q * 2.4), e.r * (2.6 - q * 2.4) * (sq + 0.3), 0, 0, TAU); ctx.stroke();
+        const bh = 260 * (1 - q), bw = e.r * 0.9 * (1 - q); const lg = ctx.createLinearGradient(0, y - bh, 0, y); lg.addColorStop(0, 'rgba(120,220,255,0)'); lg.addColorStop(1, 'rgba(160,230,255,0.85)');
+        ctx.globalAlpha = 1 - q; ctx.fillStyle = lg; ctx.fillRect(x - bw / 2, y - bh, bw, bh); ctx.restore(); }
     } else if (e.kind === 'scorch') {
       // 바닥에 남는 그을림 + 잔불
       ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.5) * 0.5; ctx.translate(x, y); ctx.scale(1, 0.55);
@@ -2004,7 +2045,7 @@ const gunminAlly = f => fighters.some(a => a !== f && a.alive && !a.away && a.ty
 function leaveField(f) {
   f.leaving = false; f.away = true; f.cast = null; f.coinView = null;
   // 푸른 포탈이 열려 강제로 빨려 들어가듯 순간이동
-  timeFx.push({ x: f.x, y: f.y, r: f.r, img: juwonImg, life: 1.3, max: 1.3, kind: 'portal', seed: Math.random() * 10 });
+  timeFx.push({ x: f.x, y: f.y, r: f.r, img: juwonImg, life: 1.6, max: 1.6, kind: 'portal', seed: Math.random() * 10 });
   burst(f.x, f.y, '#5ac8ff', 36, 420, 7, 0.7, { kind: 'spark' }); ring(f.x, f.y, '#7ad8ff', f.r * 3.2, 0.5, 6);
   doFlash('#2a6aff', 0.25); shake = Math.max(shake, 10);
   floatText(f.x, f.y - f.r - 30, '전장 이탈', '#c9a07a', 24, { life: 1.4 });
@@ -2013,7 +2054,7 @@ function leaveField(f) {
 function returnField(f) {
   f.away = false; f.returned = true;
   placeFighter(f);
-  timeFx.push({ x: f.x, y: f.y, r: f.r, life: 0.9, max: 0.9, kind: 'portalOut', seed: Math.random() * 10 }); doFlash('#2a6aff', 0.25);
+  timeFx.push({ x: f.x, y: f.y, r: f.r, life: 1.1, max: 1.1, kind: 'portalOut', seed: Math.random() * 10 }); doFlash('#2a6aff', 0.25);
   log(`🔙 ${nm(f)} 아군이 모두 쓰러져 <b>전장 복귀</b>`, 'kill');
   transformJuwon2(f);
 }
@@ -6476,6 +6517,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.4', date: '2026-11-24', items: ['전장 이탈 포탈 연출 퀄리티 향상: 바닥 마법진 · 은하처럼 휘감는 소용돌이 팔 · 별빛이 보이는 차원의 구멍 · 테두리를 타고 튀는 전기 · 공이 늘어나며 빨려 드는 연출 · 닫힐 때 내파와 빛기둥'] },
   { v: '12.3', date: '2026-11-24', items: ['강주원 전장 이탈 조건 변경: 같은 팀에 이건민이 있을 때만 이탈해요', '전장 이탈 연출 변경: 푸른 포탈이 열려 강제로 빨려 들어가듯 순간이동 (복귀할 때도 포탈에서 나타나요)'] },
   { v: '12.2', date: '2026-11-24', items: ['📬 우편함에 감사 선물 🪙 3,000 도착 (12월 24일까지 받을 수 있어요)'] },
   { v: '12.1', date: '2026-11-24', items: ['흉탄의 사수 · 절망의 기사 · 증오의 여왕은 정신력이 없어요: 정신력이 변하지 않고(코인 앞면 확률 50% 고정) 패닉에 걸리지 않으며, 정신력 표시가 사라지고 침잠은 고정 피해로 들어가요'] },
