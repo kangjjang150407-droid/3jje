@@ -414,7 +414,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>느린 달리기</b> 파괴불가 2 · 공격 65 · 4 / +6 · 대상 화상 4당 최종 위력 +1 · 체력 15 회복 · [합 패배] 피해 -80%, 다음 턴 위력 증가 (대상 화상 ÷ 10) · 1코인 화상 5 · 2코인 화상 2회 발동, 화상 횟수 -2 (둘 다 파괴되지 않고 적중시)<br>
       <b>터헣 (회피)</b> 7 / +10 · 대상 화상 4당 코인 위력 +1 · 회피 성공 시 체력 15% 회복<br>
       <b>패닉 유형: 새벽녘</b> 패닉 중에도 무작위 대상을 공격 · 받는 피해 +10% +10% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발로 피해를 입지 않음<br>
-      <b>패시브 (스킬과 별개)</b> 아군이 있다면: 체력 50% 미만이 되거나 같은 팀 강우주의 체력이 50%가 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
+      <b>패시브 (스킬과 별개)</b> 같은 팀에 이건민이 있다면: 체력 50% 미만이 되거나 같은 팀 강우주의 체력이 50%가 되면 전장 이탈 · 아군이 모두 사망하면 전장 복귀 후 페이즈 변경<br><br>
       <b style="color:#6ad8c0;font-size:12px">정선우</b><br>
       <b>LV.80</b> · 체력 973 · 방어 레벨 89 · 모든 피해 1.2배 절감 · 흐트러짐 55% · 스킬은 마이볼·하.하.하·새벽 뒤에 꿰뚫어오는 쐐기 중 랜덤<br>
       <b>패시브: 불굴의 정선우</b> 체력이 0이 되는 피해를 받았을 때 (전투당 1회): 그 피해를 받지 않고 그 턴 동안 체력이 1 미만으로 감소하지 않음 · 턴 종료 시 최대 체력 50% 회복 · 이번 전투 동안 받는 피해량 -20%<br>
@@ -1106,6 +1106,23 @@ function drawTimeFx() {
       drawClock(x + rand(-6, 6), y, e.r * 1.35 * (1 + p * 0.4), p * 9, '#fff8b0', k * 0.5, -1);
       ctx.save(); ctx.globalAlpha = k * 0.85;
       for (let i = 0; i < 6; i++) { const yy = y + rand(-e.r * 1.6, e.r * 1.6), w = rand(e.r * 1.2, e.r * 3.4); ctx.fillStyle = Math.random() < 0.6 ? '#ffe14d' : (Math.random() < 0.5 ? 'rgba(0,255,255,0.7)' : 'rgba(255,0,120,0.7)'); ctx.fillRect(x - w / 2 + rand(-20, 20), yy, w, rand(2, 7)); }
+      ctx.restore();
+    } else if (e.kind === 'portal' || e.kind === 'portalOut') {
+      // 푸른 포탈: 회전하는 고리 + 소용돌이 + 빨려 들어가는 공
+      const out = e.kind === 'portalOut', open = out ? Math.min(1, p / 0.2) * (p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1) : Math.min(1, p / 0.18) * (p > 0.75 ? 1 - (p - 0.75) / 0.25 : 1);
+      const R = e.r * 1.9 * open, rot = simTime * 7 + e.seed;
+      ctx.save(); ctx.translate(x, y);
+      let g = ctx.createRadialGradient(0, 0, 0, 0, 0, R); g.addColorStop(0, '#000814'); g.addColorStop(0.55, 'rgba(10,40,120,0.95)'); g.addColorStop(0.85, 'rgba(60,160,255,0.6)'); g.addColorStop(1, 'rgba(120,220,255,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.92, 0, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let i = 0; i < 5; i++) { const a0 = rot * (i % 2 ? -1 : 1) + i * 1.3, rr = R * (0.45 + i * 0.12); ctx.globalAlpha = open * 0.85; ctx.strokeStyle = i % 2 ? '#7ad8ff' : '#2a8aff'; ctx.lineWidth = 3 - i * 0.3; ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + 2.2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rr, a0 + Math.PI, a0 + Math.PI + 1.4); ctx.stroke(); }
+      ctx.globalAlpha = open * 0.9; ctx.strokeStyle = '#c8f0ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.92, 0, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = open * 0.6; ctx.drawImage(glow('#3a9aff'), -R * 1.8, -R * 1.8, R * 3.6, R * 3.6);
+      // 빨려 드는 빛 입자
+      for (let i = 0; i < 14; i++) { const a = e.seed * 3 + i * TAU / 14 + rot * 0.6, d = R * (1.6 - ((p * 2 + i * 0.07) % 1) * 1.4) * (out ? -1 : 1); ctx.globalAlpha = open * 0.8; ctx.fillStyle = '#bff0ff'; ctx.beginPath(); ctx.arc(Math.cos(a) * Math.abs(d), Math.sin(a) * Math.abs(d), 2, 0, TAU); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+      // 공이 회전하며 작아져 포탈로 빨려 들어감 (이탈)
+      if (!out && e.img && e.img.complete && p < 0.6) { const q = p / 0.6, sc = 1 - q * q, ang = q * 9; ctx.save(); ctx.rotate(ang); ctx.globalAlpha = 1 - q * 0.6; const rr = e.r * sc; ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.clip(); ctx.drawImage(e.img, -rr, -rr, rr * 2, rr * 2); ctx.restore(); }
       ctx.restore();
     } else if (e.kind === 'scorch') {
       // 바닥에 남는 그을림 + 잔불
@@ -1983,16 +2000,20 @@ function addNextPowerUp(f, v, why) {
 
 // ---- 강주원: 전장 이탈 / 복귀 ----
 const realAllies = f => fighters.filter(a => a !== f && a.alive && !a.away && a.type !== 'clone' && a.team === f.team);
+const gunminAlly = f => fighters.some(a => a !== f && a.alive && !a.away && a.type === 'gunmin' && a.team === f.team); // 강주원은 이건민이 있을 때만 전장 이탈
 function leaveField(f) {
   f.leaving = false; f.away = true; f.cast = null; f.coinView = null;
-  burst(f.x, f.y, '#888899', 40, 260, 30, 1.4, { kind: 'smoke', drag: 0.95, g: -20 });
-  ring(f.x, f.y, '#c9a07a', f.r * 3, 0.6, 6);
+  // 푸른 포탈이 열려 강제로 빨려 들어가듯 순간이동
+  timeFx.push({ x: f.x, y: f.y, r: f.r, img: juwonImg, life: 1.3, max: 1.3, kind: 'portal', seed: Math.random() * 10 });
+  burst(f.x, f.y, '#5ac8ff', 36, 420, 7, 0.7, { kind: 'spark' }); ring(f.x, f.y, '#7ad8ff', f.r * 3.2, 0.5, 6);
+  doFlash('#2a6aff', 0.25); shake = Math.max(shake, 10);
   floatText(f.x, f.y - f.r - 30, '전장 이탈', '#c9a07a', 24, { life: 1.4 });
   log(`🚪 ${nm(f)} ${f.leaveWhy || '체력 50% 미만'} · <b>전장 이탈</b>`, 'kill'); f.leaveWhy = null;
 }
 function returnField(f) {
   f.away = false; f.returned = true;
   placeFighter(f);
+  timeFx.push({ x: f.x, y: f.y, r: f.r, life: 0.9, max: 0.9, kind: 'portalOut', seed: Math.random() * 10 }); doFlash('#2a6aff', 0.25);
   log(`🔙 ${nm(f)} 아군이 모두 쓰러져 <b>전장 복귀</b>`, 'kill');
   transformJuwon2(f);
 }
@@ -2102,15 +2123,15 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   log(`${nm(src)} → ${nm(t)} <span style="color:${DMG_COLOR[kind]}">${shown} ${kindName}</span>${note} · ${srcName}`);
   if (t.god && t.hp < 1) t.hp = 1; // 테스트 모드: 무적
   if (t.nonLethal && t.hp < 1) t.hp = 1; // 터헣 [합 패배]: 이 스킬로 대상이 사망하지 않음
-  // 강주원: 아군이 있으면 체력 50% 미만 시 전장 이탈
-  if (CHAR[t.type].retreat && !t.away && !t.returned && t.hp > 0 && t.hp < t.maxHp * 0.5 && realAllies(t).length) t.leaving = true;
+  // 강주원: 이건민이 있을 때만 체력 50% 미만 시 전장 이탈
+  if (CHAR[t.type].retreat && !t.away && !t.returned && t.hp > 0 && t.hp < t.maxHp * 0.5 && gunminAlly(t)) t.leaving = true;
   // 이건민의 체력이 50% 미만이면 같은 팀 강주원 전장 이탈
   if (t.type === 'gunmin' && t.hp < t.maxHp * 0.5) for (const j of fighters) {
     if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '이건민 체력 50% 미만'; }
   }
   // 강우주의 체력이 50%가 되면 같은 팀 강주원도 전장 이탈
   if (t.type === 'wooju' && t.hp <= t.maxHp * 0.5) for (const j of fighters) {
-    if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && realAllies(j).length) { j.leaving = true; j.leaveWhy = '강우주 체력 50%'; }
+    if (j.alive && CHAR[j.type].retreat && j.team === t.team && !j.away && !j.returned && !j.leaving && gunminAlly(j)) { j.leaving = true; j.leaveWhy = '강우주 체력 50%'; }
   }
   // 고독한 정오: 이번 턴에 체력이 0이 되는 피해를 받으면 흐트러짐 해제, 이번 턴 동안 체력이 1 미만으로 감소하지 않음 (전투당 1회)
   // 패시브: 불굴의 정선우 (전투당 1회) — 체력이 0이 되는 피해를 받지 않고, 그 턴 동안 체력 1 미만으로 감소하지 않음
@@ -6455,6 +6476,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.3', date: '2026-11-24', items: ['강주원 전장 이탈 조건 변경: 같은 팀에 이건민이 있을 때만 이탈해요', '전장 이탈 연출 변경: 푸른 포탈이 열려 강제로 빨려 들어가듯 순간이동 (복귀할 때도 포탈에서 나타나요)'] },
   { v: '12.2', date: '2026-11-24', items: ['📬 우편함에 감사 선물 🪙 3,000 도착 (12월 24일까지 받을 수 있어요)'] },
   { v: '12.1', date: '2026-11-24', items: ['흉탄의 사수 · 절망의 기사 · 증오의 여왕은 정신력이 없어요: 정신력이 변하지 않고(코인 앞면 확률 50% 고정) 패닉에 걸리지 않으며, 정신력 표시가 사라지고 침잠은 고정 피해로 들어가요'] },
   { v: '11.9', date: '2026-11-24', items: ['파멸의 케로베로스 이펙트 렉 개선: 그리기 부담을 줄여 프레임당 처리 시간 약 40% 감소 (모양은 그대로)'] },
@@ -7376,7 +7398,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   const types = Object.keys(CHAR).filter(k => !SKIP[k]);
   const skillsOf = t => [...new Set([].concat(T_SKILLS[t] || [], CHAR[t].pool || [], EXTRA[t] || [], ['tearSword']))].filter(k => SKILLS[k]); // 눈물로 벼려낸 검: 잿빛 별자리의 가호 강화 스킬 (누구나 미리보기)
   const SPECIAL = {
-    juwon: [['🔥 2페이즈 각성', f => transformJuwon2(f, true)]],
+    juwon: [['🔥 2페이즈 각성', f => transformJuwon2(f, true)], ['🌀 전장 이탈 (포탈)', f => { leaveField(f); setTimeout(() => { if (f.alive && f.away) { f.away = false; timeFx.push({ x: f.x, y: f.y, r: f.r, life: 0.9, max: 0.9, kind: 'portalOut', seed: 1 }); } }, 2200); }]],
     pastjuwon: [['⏩ 시간 재가동', f => pjReleaseFx(f)], ['⏪ 쓰러짐 → 되감기 부활', f => { f.god = false; f.timeUsed = false; const d = fighters.find(a => a.team === 1 && a.alive); dealDamage(d || f, f, f.hp + 100, 'true', '연출'); setTimeout(() => { f.god = true; }, 3500); }]],
     marksman: [['🎯 2페이즈 패턴', f => { f.msPhase2 = false; marksmanPattern(f); }]],
     despair: [['👑 증오의 여왕 소환', f => { f.queenSpawned = false; spawnQueen(f); }]],
