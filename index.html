@@ -6451,6 +6451,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.0', date: '2026-11-24', items: ['🎬 연출 구경 서버에 눈물로 벼려낸 검 추가: 모든 캐릭터의 스킬 목록에서 미리보기 · 연출에 "패닉 (절망)" 버튼 추가'] },
   { v: '11.9', date: '2026-11-24', items: ['파멸의 케로베로스 이펙트 렉 개선: 그리기 부담을 줄여 프레임당 처리 시간 약 40% 감소 (모양은 그대로)'] },
   { v: '11.8', date: '2026-11-24', items: ['눈물로 벼려낸 검 발동 조건 변경: 장착한 대상이 아니라 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면 발동'] },
   { v: '11.7', date: '2026-11-24', items: ['눈물로 벼려낸 검 공격 가중치 3 (대상 포함 최대 3명 공격 · 절망 패닉 중에는 아군도 포함)'] },
@@ -7374,7 +7375,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   const EXTRA = { marksman: ['hyungtan'], queen: ['arcana'], despair: ['emptyDespair'] };
   const SKIP = { dummy: 1, dgdummy: 1, clone: 1, yoru: 1 };
   const types = Object.keys(CHAR).filter(k => !SKIP[k]);
-  const skillsOf = t => [...new Set([].concat(T_SKILLS[t] || [], CHAR[t].pool || [], EXTRA[t] || []))].filter(k => SKILLS[k]);
+  const skillsOf = t => [...new Set([].concat(T_SKILLS[t] || [], CHAR[t].pool || [], EXTRA[t] || [], ['tearSword']))].filter(k => SKILLS[k]); // 눈물로 벼려낸 검: 잿빛 별자리의 가호 강화 스킬 (누구나 미리보기)
   const SPECIAL = {
     juwon: [['🔥 2페이즈 각성', f => transformJuwon2(f, true)]],
     pastjuwon: [['⏩ 시간 재가동', f => pjReleaseFx(f)], ['⏪ 쓰러짐 → 되감기 부활', f => { f.god = false; f.timeUsed = false; const d = fighters.find(a => a.team === 1 && a.alive); dealDamage(d || f, f, f.hp + 100, 'true', '연출'); setTimeout(() => { f.god = true; }, 3500); }]],
@@ -7419,7 +7420,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
     const C = CHAR[type], rs = C.resist || {};
     $('scInfo').innerHTML = `<b style="color:${C.color}">${C.name}</b> · LV ${C.level} · 체력 ${C.maxHp}${C.defMod ? ` · 방어 레벨 ${C.defMod > 0 ? '+' : ''}${C.defMod}` : ''}<br>내성 — 물리 ×${(+rs.physical || 1).toFixed(2)} · 마법 ×${(+rs.magic || 1).toFixed(2)}${C.staggerAt && C.staggerAt.length ? ` · 흐트러짐 ${C.staggerAt.map(v => Math.round(v * 100) + '%').join(' / ')}` : ''}`;
     $('scSkills').innerHTML = skillsOf(type).map(k => { const S = SKILLS[k]; return `<button class="sk" data-k="${k}"><b style="color:${S.color}">▶ ${S.name}</b><small>${S.type ? ({ physical: '물리', magic: '마법', true: '고정' }[S.type] || S.type) + ' · ' : ''}${S.coins ? `기본 ${S.base} + 코인 ${S.coinPow >= 0 ? '+' : ''}${S.coinPow} × ${S.coins}` : '수비/특수'}${S.lvMod ? ` · 공격 레벨 +${S.lvMod}` : ''}${S.unbreakable ? ' · 파괴 불가' : ''}</small></button>`; }).join('') || '<div style="color:#888">스킬 없음</div>';
-    $('scFx').innerHTML = [['💫 흐트러짐', 'stagger'], ['😱 패닉', 'panic'], ['💀 과녁 처치', 'kill'], ['🎯 과녁 흐트러짐', 'tstagger']].concat((SPECIAL[type] || []).map((x, i) => [x[0], 'sp' + i])).map(([n, k]) => `<button data-fx="${k}">${n}</button>`).join('');
+    $('scFx').innerHTML = [['💫 흐트러짐', 'stagger'], ['😱 패닉', 'panic'], ['💧 패닉 (절망)', 'dpanic'], ['💀 과녁 처치', 'kill'], ['🎯 과녁 흐트러짐', 'tstagger']].concat((SPECIAL[type] || []).map((x, i) => [x[0], 'sp' + i])).map(([n, k]) => `<button data-fx="${k}">${n}</button>`).join('');
   }
   function useSkill(k) {
     const f = subj(); if (!f) return setup(cur);
@@ -7445,6 +7446,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
       const fx = b.dataset.fx, t = target();
       if (fx === 'stagger') { if (staggerable(f)) { enterStagger(f, f.hp / f.maxHp); f.forcedStagger = true; } else toast('흐트러지지 않는 캐릭터예요'); }
       else if (fx === 'panic') { if (f.panic <= 0) { f.sp = -45; enterPanic(f); } }
+      else if (fx === 'dpanic') { f.panic = 0; f.sp = -45; f.panicOverride = 'despair'; enterPanic(f); test.aiOff = false; setTimeout(() => { test.aiOff = true; }, TURN * 1000 / Math.max(0.25, speed)); }
       else if (fx === 'kill' && t) { t.god = false; dealDamage(f, t, t.hp + 999, 'true', '연출'); setTimeout(() => { if (!fighters.some(a => a.team === 1 && a.alive)) setup(cur); }, 1800); }
       else if (fx === 'tstagger' && t) { if (staggerable(t)) { enterStagger(t, t.hp / t.maxHp); t.forcedStagger = true; } }
       else if (fx.startsWith('sp')) SPECIAL[cur][+fx.slice(2)][1](f);
