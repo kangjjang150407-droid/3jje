@@ -2380,8 +2380,12 @@ function gainCharge(f, v) {
 }
 
 // [사용시] 효과 및 조건부 수치
+const transQueue = [];
 function onUse(u) {
   const f = u.f;
+  // 이건민 초월: 강주원 느린 달리기 · 강우주 머리 때리기 / [정오] 사용 시 이건민이 그 대상에게 해줘
+  if (u.tgt && (((f.type === 'juwon' || f.type === 'juwon2') && u.sk === 'slowrun') || (f.type === 'wooju' && (u.sk === 'headhit' || u.sk === 'noon'))))
+    for (const a of fighters) if (a.type === 'gunmin' && a.alive && a.team === f.team && transOn(a)) transQueue.push({ a, t: u.tgt, by: f });
   // 잿빛 별자리의 가호 (상점 강화): 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면, 장착한 대상이 다음 턴에 눈물로 벼려낸 검
   if (u.sk !== 'tearSword' && SKILLS[u.sk].type && SKILLS[u.sk].type !== 'true') for (const w of fighters) {
     if (!w.alive || w.team !== f.team || !hasArtUp(w, 'ashstar')) continue;
@@ -3963,6 +3967,9 @@ function physics(dt) {
 
 function update(dt) {
   simTime += dt;
+  for (let i = transQueue.length - 1; i >= 0; i--) { const q2 = transQueue[i]; if (!q2.a.alive || !q2.t.alive || q2.tries > 600) { transQueue.splice(i, 1); continue; } if (!canAct(q2.a)) { q2.tries = (q2.tries || 0) + 1; continue; }
+    transQueue.splice(i, 1); const a = q2.a; a.cast = null; lightning(q2.by.x, q2.by.y, a.x, a.y, '#ffe08a', 5, 0.4); floatText(a.x, a.y - a.r - 46, '✦ 초월 — 해줘', '#ffe08a', 18, { life: 1.2 });
+    log(`✦ ${nm(a)} <b style="color:#ffe08a">초월</b>: ${nm(q2.by)}와 함께 → ${sk('haejwo')} → ${nm(q2.t)}`, 'skill'); linkedStart = true; beginEngagement(a, 'haejwo', q2.t); linkedStart = false; }
   const ti = turnIdx();
   if (ti !== lastTurnIdx) { lastTurnIdx = ti; onTurnEnd(); }
   for (const f of fighters) if (f.alive && f.hp % 1) f.hp = Math.max(1, Math.floor(f.hp)); // 체력 소수점 버림 (비율 피해 · 회복 등)
@@ -6390,6 +6397,10 @@ $('questToggle').onclick = () => $('questPanel').classList.toggle('on');
 
 // ---- 뽑기 · 영혼석 강화 ----
 const GACHA = ['song', 'jiho', 'juwon', 'wooju', 'gunmin', 'doyun', 'sunwoo', 'kwak', 'yuhwan', 'noyun'];
+// 초월: 강화한 캐릭터를 뽑기에서 다시 뽑으면 초월석 (20개면 초월)
+const TRANS_FX = { gunmin: '강주원이 느린 달리기를 쓰거나 강우주가 머리 때리기 · 머리 때리기 [정오]를 쓰면, 이건민이 그 대상에게 해줘를 사용' };
+if (!save.trans) save.trans = {}; if (!save.tstones) save.tstones = {};
+const transOn = f => { try { const o = pvpOpp && f.team === 1 ? pvpOpp : save; return !!(o.trans || {})[UP_KEY[f.type] || f.type]; } catch (e) { return false; } };
 const UPG_FX = {
   song: '체력 +30 · 레벨 +5',
   jiho: '모든 스킬이 마이너스 코인으로 변경 · 합 승리 시 정신력 10 감소',
@@ -6428,6 +6439,7 @@ function admUnlockAll() {
   for (const k of GACHA) { save.owned[k] = true; save.upg[UP_KEY[k] || k] = true; }
   for (const k of Object.keys(ARTIFACTS)) save.artifacts[k] = true;
   save.artUpg = Object.assign(save.artUpg || {}, { ashstar: true });
+  for (const k of Object.keys(TRANS_FX)) save.trans[k] = true;
   save.raid2 = save.raid3 = save.raid4 = true; save.srCleared = save.srCleared || false;
   if (!gunminUnlocked) { gunminUnlocked = true; try { localStorage.setItem('ballfight-unlock-gunmin' + SV, '1'); } catch (e) {} try { applyUnlocks(); } catch (e) {} }
   for (const t of TITLES) if (!t.adminWrapped) { const o = t.ok; t.ok = () => adm.isAdmin || o(); t.adminWrapped = true; }
@@ -6523,6 +6535,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.6', date: '2026-11-24', items: ['✦ 초월 추가 — 첫 번째: 이건민', '강화한 캐릭터를 뽑기에서 다시 뽑으면 초월석이 나와요 · 초월석 20개로 초월', '이건민 초월 효과: 강주원이 느린 달리기를 쓰거나 강우주가 머리 때리기 · 머리 때리기 [정오]를 쓰면, 이건민이 그 대상에게 해줘를 사용'] },
   { v: '12.5', date: '2026-11-24', items: ['흉탄의 사수 공격 이펙트 변경: 사수 앞에 붉은 마법진이 그려지고 그 안에서 붉은 탄환이 날아가요'] },
   { v: '12.4', date: '2026-11-24', items: ['전장 이탈 포탈 연출 퀄리티 향상: 바닥 마법진 · 은하처럼 휘감는 소용돌이 팔 · 별빛이 보이는 차원의 구멍 · 테두리를 타고 튀는 전기 · 공이 늘어나며 빨려 드는 연출 · 닫힐 때 내파와 빛기둥'] },
   { v: '12.3', date: '2026-11-24', items: ['강주원 전장 이탈 조건 변경: 같은 팀에 이건민이 있을 때만 이탈해요', '전장 이탈 연출 변경: 푸른 포탈이 열려 강제로 빨려 들어가듯 순간이동 (복귀할 때도 포탈에서 나타나요)'] },
@@ -7249,7 +7262,7 @@ async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
   try {
-    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, artUpg: save.artUpg || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, rp: (save.pvpRank || {}).rp || 0, season: (save.pvpRank || {}).season || 1, t: Date.now() });
+    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, artUpg: save.artUpg || {}, trans: save.trans || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, rp: (save.pvpRank || {}).rp || 0, season: (save.pvpRank || {}).season || 1, t: Date.now() });
     toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
   } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
 }
@@ -7307,7 +7320,7 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
   const o = pvp.list.find(x => x.id === id); if (!o) return;
   const mine = myPvpTeam().map(type => ({ type, team: 0 }));
   if (!mine.length) return toast('레드 팀에 PVP에 나갈 캐릭터를 넣어주세요');
-  pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, artUpg: o.artUpg || {}, equip: o.equip || {} };
+  pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, artUpg: o.artUpg || {}, trans: o.trans || {}, equip: o.equip || {} };
   // 같은 팀 안에서는 중복 불가, 상대 팀과 겹치는 캐릭터만 허용
   roster = mine.concat([...new Set((o.team || []).filter(k => CHAR[k] && k !== 'dummy'))].map(k => ({ type: k, team: 1 })));
   dungeonFloor = 0; raidMode = true; renderRoster(); setTestLock(true); start();
@@ -7391,10 +7404,11 @@ function pull(n, ticket) {
     got[k] = (got[k] || 0) + 1;
     // 강화했거나 이미 20개면 넘치는 영혼석 → 코인 10
     if (!save.owned[k]) { save.owned[k] = true; fresh.push(k); } // 처음 나온 캐릭터 획득
-    if (save.upg[k] || (save.stones[k] || 0) >= 20) refund += 10; else save.stones[k] = (save.stones[k] || 0) + 1;
+    if (save.upg[k] && TRANS_FX[k] && !save.trans[k] && (save.tstones[k] || 0) < 20) { save.tstones[k] = (save.tstones[k] || 0) + 1; got['t:' + k] = (got['t:' + k] || 0) + 1; got[k]--; } // 강화한 뒤에는 초월석
+    else if (save.upg[k] || (save.stones[k] || 0) >= 20) refund += 10; else save.stones[k] = (save.stones[k] || 0) + 1;
   }
   save.coins += refund; persist();
-  $('gachaResult').innerHTML = Object.entries(got).map(([k, v]) => `<span class="st" style="color:${CHAR[k].color}">${CHAR[k].name} 영혼석 ×${v}</span>`).join('') + (refund ? `<br>넘친 영혼석 ${refund / 10}개 → 🪙 ${refund}` : '') + (fresh.length ? `<br><b style="color:#ffd84a">✨ 새 캐릭터 획득: ${fresh.map(k => CHAR[k].name).join(', ')}</b>` : '');
+  $('gachaResult').innerHTML = Object.entries(got).filter(([k, v]) => v > 0).map(([k, v]) => k.startsWith('t:') ? `<span class="st" style="color:#ffe08a;text-shadow:0 0 6px #ffb000">✦ ${CHAR[k.slice(2)].name} 초월석 ×${v}</span>` : `<span class="st" style="color:${CHAR[k].color}">${CHAR[k].name} 영혼석 ×${v}</span>`).join('') + (refund ? `<br>넘친 영혼석 ${refund / 10}개 → 🪙 ${refund}` : '') + (fresh.length ? `<br><b style="color:#ffd84a">✨ 새 캐릭터 획득: ${fresh.map(k => CHAR[k].name).join(', ')}</b>` : '');
   if (fresh.length) toast(`✨ 새 캐릭터 획득: ${fresh.map(k => CHAR[k].name).join(', ')}`);
   renderQuests(); renderStones(); renderRoster();
 }
@@ -7404,7 +7418,7 @@ function renderStones() {
     return `<div class="stone ${u ? 'up' : ''}"><span><b style="color:${CHAR[k].color}">${CHAR[k].name}</b> ${u ? '<b style="color:#d8b8ff">★ 강화됨</b>' : save.owned[k] ? `영혼석 ${n}/20` : '<span style="color:#777">🔒 미획득</span>'}</span>
       <div class="bar"><i style="width:${u ? 100 : n / 20 * 100}%"></i></div>
       <button data-up="${k}" class="${!u && n >= 20 ? 'can2' : ''}" ${!u && n >= 20 ? '' : 'disabled'}>${u ? '완료' : '강화'}</button>
-      <div class="fx">${UPG_FX[k]}</div></div>`;
+      <div class="fx">${UPG_FX[k]}</div>${TRANS_FX[k] && u ? (() => { const tn = save.tstones[k] || 0, tr = save.trans[k]; return `<div style="margin-top:4px;border-top:1px dashed #5a4a20;padding-top:4px"><span style="color:#ffe08a">✦ 초월</span> ${tr ? '<b style="color:#ffe08a;text-shadow:0 0 6px #ffb000">✦ 초월됨</b>' : `초월석 ${tn}/20`}<div class="bar"><i style="width:${tr ? 100 : tn / 20 * 100}%;background:linear-gradient(90deg,#ffb000,#fff0a0)"></i></div><button data-trans="${k}" class="${!tr && tn >= 20 ? 'can2' : ''}" ${!tr && tn >= 20 ? '' : 'disabled'}>${tr ? '완료' : '초월'}</button><div class="fx" style="color:#e8d8a0">${TRANS_FX[k]}</div></div>`; })() : ''}</div>`;
   }).join('');
   $('pull1').disabled = save.coins < 200; $('pull10').disabled = save.coins < 2000;
   { const t = save.tickets10 || 0, b = $('pullTicket'); b.style.display = t > 0 ? '' : 'none'; b.textContent = `🎟 10회 뽑기권 사용 (${t}장)`; }
@@ -7412,6 +7426,8 @@ function renderStones() {
 }
 $('pull1').onclick = () => pull(1); $('pull10').onclick = () => pull(10); $('pullTicket').onclick = () => pull(10, true);
 $('stoneList').addEventListener('click', e => {
+  const bt = e.target.closest('button[data-trans]');
+  if (bt) { const k = bt.dataset.trans; if (save.trans[k] || (save.tstones[k] || 0) < 20) return; save.tstones[k] -= 20; save.trans[k] = true; persist(); renderStones(); toast(`✦ ${CHAR[k].name} 초월 완료!`); try { tierCutscene(9, `${CHAR[k].name} 초월!`); } catch (e2) {} return; }
   const b2 = e.target.closest('button[data-up]'); if (!b2) return;
   const k = b2.dataset.up;
   if (save.upg[k] || (save.stones[k] || 0) < 20) return;
