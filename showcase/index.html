@@ -492,6 +492,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>패시브 볼품없는 긍지 / 닳디 닳은 기사</b> (슬픔 이후) 매 턴 검이 자신에게 꽂힘 → 보호 -3 · 보호막 -100 · 무너져 내린 긍지 +1 (받는 피해량 +5%) · 긍지 3이면 다음 턴 흐트러짐 + 닳디 닳은 기사 (그 턴 받는 피해량 +100%)<br>
       <b>패시브 하나 남은 정의</b> 닳디 닳은 기사 상태에서 체력 600 미만으로 공격 적중 시 체력이 5% 미만으로 떨어지지 않고 턴 종료 시 자결<br>
       <b style="color:#6a8cff">차갑고 검은 눈물</b> 최대 5 · 턴 시작 시 합 위력 -1 · 피격 시 정신력 (수치 × 2) 감소 (턴당 1회, -40 아래로는 내려가지 않음)<br>
+      <b style="color:#6a9aff">눈물로 벼려낸 검</b> (잿빛 별자리의 가호 상점 강화) 마법 · 코인 3 (파괴불가) · 공격 레벨 +3 · 15 / +3 · 정신력 -15 · 대상 침잠+파열 5당 피해량 +10%, 합 위력 +1 · 정신력 -45면 패닉 유형 절망 · 1코인: 다음 턴 대상 마법 내성 0.1배 추가 피해 · 2코인: 침잠 10 · 3코인: 파열 3<br>
+      <b style="color:#6a9aff">패닉 유형 절망</b> 한 턴 동안 절망의 기사의 모습 · 눈물로 벼려낸 검만 사용 · 피아식별 불가<br>
       <b style="color:#8ab0ff">절망의 가호</b> 합 위력 +1 · 피해량 +10% · 차갑고 검은 눈물 부여량 +1 · 눈물이 없는 대상이 있으면 다음 턴 해제<br><br>
       <b style="color:#e0303a;font-size:12px">봉이 아빠</b> (던전 2층 히든 보스 · 등장 확률 35% · LV.60 · 체력 779 · 방어 레벨 65 · 물리 1.5배 추가 피해 · 마법 1.2배 절감 · 흐트러짐 40%)<br>
       <b>끄</b> 물리 · 코인 2 · 공격 67 · 5 / +3 · 1코인: 출혈 3 · 2코인: 앞면 적중 시 진동 3<br>
@@ -914,6 +916,7 @@ const SKILLS = {
   bgK:       { name: '끄',              color: '#e04a3a', type: 'physical', lvMod: 7,  base: 5,  coinPow: 3, coins: 2, cast: 0.6 },
   bgKK:      { name: '끅',              color: '#ff6a3a', type: 'physical', lvMod: 10, base: 5,  coinPow: 2, coins: 4, cast: 0.6 },
   bgEnd:     { name: '닭들의 종말',      color: '#ff2a2a', type: 'physical', lvMod: 25, base: 35, coinPow: 1, coins: 1, unbreakable: true, cast: 0.9 },
+  tearSword: { name: '눈물로 벼려낸 검', color: '#4a7aff', type: 'magic', lvMod: 3, base: 15, coinPow: 3, coins: 3, unbreakable: true, cast: 0.8 },
   rearShot:  { name: '후방 사격',       color: '#ff5a4a', type: 'magic', lvMod: 2,  base: 5, coinPow: 3, coins: 1, cast: 0.6 },
   frontShot: { name: '전방 사격',       color: '#ff3a2a', type: 'magic', lvMod: 2,  base: 5, coinPow: 6, coins: 1, cast: 0.6 },
   hyungtan:  { name: '흉탄',           color: '#ff0a0a', type: 'magic', lvMod: 10, base: 5, coinPow: 5, coins: 2, unbreakable: true, cast: 1.0 },
@@ -1044,6 +1047,7 @@ const isTargetRace = f => !!f && (f.type === 'dummy' || f.type === 'dgdummy' || 
 // 인연 (노윤 전용): 함께 편성된 아군에 따라 효과
 const inyeonWith = (f, ...types) => f && f.type === 'noyun' && hasArt(f, 'inyeon') && fighters.some(a => a !== f && a.team === f.team && types.includes(a.type));
 const nyMul = (f, key) => (key === 'sinking' && inyeonWith(f, 'kwak')) || (key === 'bleed' && inyeonWith(f, 'yuhwan')) ? 2 : 1;
+const hasArtUp = (f, id) => { try { const o = pvpOpp && f.team === 1 ? pvpOpp : save; return hasArt(f, id) && !!(o.artUpg || {})[id]; } catch (e) { return false; } };
 const hasArt = (f, id) => { try { const b = UP_KEY[f.type] || f.type; const o = pvpOpp && f.team === 1 ? pvpOpp : save; return !!(o.artifacts || {})[id] && (o.equip || {})[id] === b; } catch (e) { return false; } };
 // 반격 스킬 (곽시율의 넌 나가라는 강화 시 해금)
 const counterOf = f => f.type === 'noyun' ? (up('noyun', f) ? 'nyLast' : null) : f.type === 'kwak' ? (up('kwak', f) ? 'getout' : null) : CHAR[f.type].counter;
@@ -1488,6 +1492,7 @@ function updatePrey() {
 }
 function chooseTarget(f, key) {
   if (key === 'heuhaha') { const al = fighters.filter(a => a !== f && a.alive && !a.away && a.team === f.team && a.type !== 'clone'); return al.length ? nearest(f, al) : null; }
+  if (key === 'tearSword' && isDespairPanic(f)) { const all = fighters.filter(a => a !== f && a.alive && !a.away && a.type !== 'clone'); if (all.length) return all[(Math.random() * all.length) | 0]; } // 절망: 피아식별 불가
   const list = enemies(f);
   if (isWrath(f) && list.length) return list[(Math.random() * list.length) | 0]; // 새벽녘: 무작위 대상
   // 굶주린 북극곰의 사냥감: 윤지호의 모든 공격 스킬의 타겟으로 지정됨
@@ -1569,11 +1574,13 @@ function changeSp(f, v, why) {
   if (f.sp <= -45) enterPanic(f);
 }
 // 패닉 유형: 새벽녘 — 패닉 중에도 행동 (무작위 대상), 받는 피해 +20%, 가하는 피해 +10%, 공격 위력 +2, 진동폭발로 피해를 입지 않음
-const isWrath = f => f && f.panic > 0 && CHAR[f.type].panicType === 'wrath';
+const panicTypeOf = f => (f && f.panicOverride) || CHAR[f.type].panicType; // 눈물로 벼려낸 검: 패닉 유형을 절망으로 바꿀 수 있음
+const isWrath = f => f && f.panic > 0 && panicTypeOf(f) === 'wrath';
 // 패닉 유형: 붉은 노을 (강주원 2페이즈) — 가하는 피해 -7.5%, 보호 10 (받는 피해 -10%)
-const isRedGlow = f => f && f.panic > 0 && CHAR[f.type].panicType === 'redglow';
-const panicActs = f => f && f.panic > 0 && !!CHAR[f.type].panicType; // 패닉 유형이 있으면 패닉 중에도 행동
-const PANIC_INFO = { wrath: { name: '새벽녘', color: '#ff3030', img: () => wrathImg }, redglow: { name: '붉은 노을', color: '#ff7040', img: () => redglowImg } };
+const isRedGlow = f => f && f.panic > 0 && panicTypeOf(f) === 'redglow';
+const isDespairPanic = f => f && f.panic > 0 && panicTypeOf(f) === 'despair';
+const panicActs = f => f && f.panic > 0 && !!panicTypeOf(f); // 패닉 유형이 있으면 패닉 중에도 행동
+const PANIC_INFO = { wrath: { name: '새벽녘', color: '#ff3030', img: () => wrathImg }, redglow: { name: '붉은 노을', color: '#ff7040', img: () => redglowImg }, despair: { name: '절망', color: '#3a6aff', img: () => graceImg } };
 function enterPanic(f) {
   if (f.burningSunset) { // 타오르는 노을: 패닉 상태가 되지 않고 정신력 10 회복
     floatText(f.x, f.y - f.r - 40, '패닉 무효 (타오르는 노을)', '#ff6a3a', 18);
@@ -1581,7 +1588,15 @@ function enterPanic(f) {
     log(`${nm(f)} 타오르는 노을: 패닉 대신 정신력 ${old} → ${f.sp}`);
     return;
   }
-  if (CHAR[f.type].panicType === 'wrath') {
+  if (panicTypeOf(f) === 'despair') { // 패닉 유형 절망: 한 턴 동안 절망의 기사의 모습 · 눈물로 벼려낸 검만 사용 (피아식별 불가)
+    f.panic = TURN; f.cast = null; f.ready = 'tearSword';
+    showBig('절망', '#3a6aff', 1.6); floatText(f.x, f.y - f.r - 40, '패닉 · 절망', '#6a9aff', 32, { life: 1.6 });
+    ring(f.x, f.y, '#3a6aff', f.r * 4, 0.9, 10); burst(f.x, f.y + f.r, '#1a2a6a', 12, 160, 16, 1.2, { kind: 'smoke', drag: 0.95, g: 40 });
+    doFlash('#0a1a5a', 0.5); shake = Math.max(shake, 14);
+    log(`💧 ${nm(f)} <b style="color:#6a9aff">패닉 (절망)</b> — ${TURN}초 · 절망의 기사의 모습 · 눈물로 벼려낸 검만 사용 · 피아식별 불가`, 'kill');
+    return;
+  }
+  if (panicTypeOf(f) === 'wrath') {
     f.panic = TURN;
     floatText(f.x, f.y - f.r - 40, '패닉 · 새벽녘!', '#ff3030', 34, { life: 1.6 });
     ring(f.x, f.y, '#ff2020', f.r * 4, 0.9, 10); burst(f.x, f.y, '#ff3020', 50, 400, 14, 1.0);
@@ -1590,7 +1605,7 @@ function enterPanic(f) {
     log(`🌅 ${nm(f)} <b style="color:#ff3030">패닉 (새벽녘)</b> — ${TURN}초 · 무작위 대상 공격 · 받는 피해 +20% · 가하는 피해 +10% · 공격 위력 +2 · 진동폭발 피해 무효`, 'kill');
     return;
   }
-  if (CHAR[f.type].panicType === 'redglow') {
+  if (panicTypeOf(f) === 'redglow') {
     f.panic = TURN;
     floatText(f.x, f.y - f.r - 40, '패닉 · 붉은 노을!', '#ff7040', 32, { life: 1.6 });
     ring(f.x, f.y, '#ff7040', f.r * 4, 0.9, 10); burst(f.x, f.y, '#ff9060', 50, 400, 14, 1.0);
@@ -1784,7 +1799,9 @@ function onTurnEnd() {
   // 차갑고 검은 눈물: 턴 시작 시 합 위력 감소 1
   for (const f of fighters) if (f.alive && f.blackTear > 0) addBuff(f, 'clashDown', 1);
   for (const f of fighters) if (f.alive && f.nextOffUp) { addBuff(f, 'offUp', f.nextOffUp); floatText(f.x, f.y - f.r - 46, `공격 레벨 +${f.nextOffUp}`, '#bfe8ff', 15); f.nextOffUp = 0; } // 명경지수
-  for (const f of fighters) if (f.paralysis) f.paralysis = 0; // 마비: 한 턴 동안만 유지
+  for (const f of fighters) if (f.paralysis) f.paralysis = 0;
+  for (const f of fighters) { if (f.pendMagVuln) { f.pendMagVuln = false; f.magVulnUntil = simTime + TURN; } }
+  for (const f of fighters) if (f.alive && f.tearNext) { f.tearNext = false; f.cast = null; f.ready = 'tearSword'; f.cd = Math.min(f.cd, 1); floatText(f.x, f.y - f.r - 46, '눈물로 벼려낸 검', '#6a9aff', 18, { life: 1.3 }); } // 마비: 한 턴 동안만 유지
   for (const f of fighters) if (f.alive && f.type === 'bongdad') changeSp(f, -5, '끄그극..'); // 봉이 아빠 패시브: 턴 종료 시 정신력 5 감소
   for (const f of fighters) if (f.alive && f.nextPoise) { addStack(f, 'poise', f.nextPoise, 0, '호흡', '#9fe8ff'); f.nextPoise = 0; }
   for (const f of fighters) if (f.alive && f.type === 'pastjuwon') pjGlitch(f);
@@ -2031,7 +2048,8 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
   // 절망의 기사: 화상·출혈·진동·파열·침잠으로 받는 피해량 -50% (소수점 버림)
   if (t.type === 'despair' && /화상|출혈|진동|파열|침잠/.test(srcName || '')) amount = Math.floor(amount * 0.5);
   let mult = kind === 'true' ? 1 : (t.stagger > 0 ? 2 : CHAR[t.type].resist[kind]);
-  if (kind !== 'true' && t.stagger <= 0 && mult > 1 && hasArt(t, 'ashstar')) mult = 1; // 잿빛 별자리의 가호: 1을 초과하는 내성 → 1 // 흐트러짐: 모든 내성 치명(2배)
+  if (kind !== 'true' && t.stagger <= 0 && mult > 1 && hasArt(t, 'ashstar')) mult = 1;
+  if (kind === 'magic' && t.magVulnUntil > simTime) mult += 0.1; // 눈물로 벼려낸 검: 마법 내성 0.1배 추가 피해 // 잿빛 별자리의 가호: 1을 초과하는 내성 → 1 // 흐트러짐: 모든 내성 치명(2배)
   // 우사기의 가호: 받는 피해 -30%, 가하는 피해 +7.5% (고정 피해는 제외)
   const mods = [];
   if (kind !== 'true') {
@@ -2301,6 +2319,18 @@ function gainCharge(f, v) {
 // [사용시] 효과 및 조건부 수치
 function onUse(u) {
   const f = u.f;
+  // 잿빛 별자리의 가호 (상점 강화): 물리 스킬 3번 · 마법 스킬 7번 사용하면 다음 턴에 눈물로 벼려낸 검
+  if (hasArtUp(f, 'ashstar') && u.sk !== 'tearSword' && SKILLS[u.sk].type) {
+    if (SKILLS[u.sk].type === 'physical') f.tearP = (f.tearP || 0) + 1; else if (SKILLS[u.sk].type === 'magic') f.tearM = (f.tearM || 0) + 1;
+    if ((f.tearP || 0) >= 3 && (f.tearM || 0) >= 7 && !f.tearNext) { f.tearP = f.tearM = 0; f.tearNext = true; floatText(f.x, f.y - f.r - 50, '다음 턴 눈물로 벼려낸 검', '#6a9aff', 15, { life: 1.3 }); log(`💍 ${nm(f)} 잿빛 별자리의 가호: 물리 3번 · 마법 7번 → 다음 턴에 <b style="color:#6a9aff">눈물로 벼려낸 검</b>`); }
+  }
+  if (u.sk === 'tearSword') {
+    changeSp(f, -15, '눈물로 벼려낸 검');
+    const tg = u.tgt, sum = tg ? (tg.sinking ? tg.sinking.pot : 0) + (tg.rupture ? tg.rupture.pot : 0) : 0, k = Math.floor(sum / 5);
+    if (k) { u.pct += k * 10; u.clashBonus += k; log(`${nm(f)} ${sk('tearSword')}: 대상 침잠+파열 ${sum} → 피해량 +${k * 10}% · 합 위력 +${k}`); }
+    if (f.sp <= -45 && panicTypeOf(f) !== 'despair') { f.panicOverride = 'despair'; log(`${nm(f)} ${sk('tearSword')}: 정신력 -45 → 패닉 유형이 <b style="color:#6a9aff">절망</b>으로 바뀜`); if (f.panic > 0 && !isDespairPanic(f)) {} }
+    showBig('눈물로 벼려낸 검', '#4a7aff', 1.2); doFlash('#1a2a7a', 0.3);
+  }
   gainCharge(f, 3);
   if (f.type === 'kwak' && f.bugBonus) u.pct += 50;
   // 벌레 컷으로 대상 사망 시 이번 전투 동안 피해량 +50%
@@ -3026,7 +3056,12 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'wedge' && i === 3) pct += burnPot(t); // 대상의 화상 위력만큼 이 코인 피해량 +1%
   const dm = Math.max(0, 1 + pct / 100) * (crit ? Math.max(hasArt(f, 'mirror') ? 2.5 : 0, (u.sk === 'wedge' && i === 4 ? 2.2 : (u.sk === 'rearShot' || u.sk === 'frontShot') ? 1.3 : u.sk === 'pjSmoke' ? 1.5 : u.sk === 'pjPunch' ? 2.2 : 1.2)) + (f.type === 'song' ? 0.1 * (f.breath || 0) + (u.sk === 'sAni' ? 0.5 : 0) : 0) : 1); // 송재범: 숨결 1당 크리티컬 피해량 +10%, 아니 +50% // 쐐기 5코인: 크리티컬 피해량 +100%
   // VFX
-  if (f.type === 'yuhwan' && u.sk !== 'heuhaha') {
+  if (u.sk === 'tearSword') {
+    // 눈물로 벼려낸 검: 절망의 기사의 검기 (시린 푸른 초승달 · 눈물)
+    const ang = Math.atan2(t.y - f.y, t.x - f.x);
+    slashes.push({ despairSl: true, img: despairSwordImg, x: t.x, y: t.y, tr: t.r, fx: f.x, fy: f.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: t.r * 2.7 + 30, big: i === 2, life: 0.7, max: 0.7, seed: Math.random() * 10 });
+    burst(t.x, t.y, '#8ab0ff', 16, 440, 8, 0.5, { kind: 'spark' }); shake = Math.max(shake, 11);
+  } else if (f.type === 'yuhwan' && u.sk !== 'heuhaha') {
     // 노랗게 물든 송곳들이 진동하다가 꽂힘
     const big = u.sk === 'admit' || u.sk === 'gamble', base = Math.atan2(f.y - t.y, f.x - t.x), n = big ? 7 : 4, spikes = [];
     for (let k = 0; k < n; k++) spikes.push({ a: base + (k - (n - 1) / 2) * (big ? 0.42 : 0.5) + rand(-0.12, 0.12), d: t.r * rand(2.6, 3.4) * (big ? 1.2 : 1), delay: k * 0.025 });
@@ -3320,6 +3355,10 @@ function hitCoin(u, t, pow, i, heads, crit) {
         changeSp(f, 15, '파탄 처치'); log(`${nm(f)} ${sk('nyRuin')} 처치 → 무작위 적 ${es.length}명 침잠 ${v} · 정신력 +15`);
       }
     }
+  } else if (u.sk === 'tearSword') {
+    if (i === 0) { t.pendMagVuln = true; floatText(t.x, t.y - t.r - 40, '다음 턴 마법 내성 +0.1', '#8ab0ff', 14); }
+    else if (i === 1) addStack(t, 'sinking', 10, 0, '침잠', '#6a8cff');
+    else if (i === 2) addRupture(t, 3, 0, f);
   } else if (u.sk === 'bgK') {
     if (i === 0) addStack(t, 'bleed', 3, 0, '출혈', '#ff4060'); else if (i === 1 && heads) addTremorBase(t, 3, 0);
   } else if (u.sk === 'bgKK') {
@@ -3799,11 +3838,12 @@ function updateFighter(f, dt) {
     f.panic -= dt;
     if (Math.random() < dt * 6) burst(f.x, f.y - f.r, '#3a0010', 1, 30, 26, 1.2, { kind: 'smoke', drag: 0.97, g: -30 });
     if (f.panic <= 0) {
-      f.panic = 0; f.sp = 0; f.ready = pickReady(f); f.cd = Math.min(f.cd, 1);
+      f.panic = 0; f.sp = 0; f.panicOverride = null; f.ready = pickReady(f); f.cd = Math.min(f.cd, 1);
       floatText(f.x, f.y - f.r - 40, '패닉 해제', '#7fd4ff', 22);
       log(`${nm(f)} 패닉 해제 · 정신력 0`);
     }
-    if (!CHAR[f.type].panicType || f.panic <= 0) return;
+    if (!panicTypeOf(f) || f.panic <= 0) return;
+    if (isDespairPanic(f) && !f.cast) f.ready = 'tearSword';
   }
   if (f.leaving && !f.busy) leaveField(f);
   if (f.away) return;
@@ -4598,7 +4638,7 @@ function drawFighter(f) {
   ctx.save();
   ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.closePath();
   ctx.save(); ctx.clip();
-  const pimg = (f.type === 'song' || f.type === 'yoru' || f.type === 'clone') ? songImg : f.type === 'jiho' ? jihoImg : f.type === 'juwon' ? juwonImg : f.type === 'juwon2' ? juwon2Img : f.type === 'wooju' ? woojuImg : f.type === 'gunmin' ? gunminImg : f.type === 'doyun' ? doyunImg : f.type === 'sunwoo' ? sunwooImg : f.type === 'kwak' ? kwakImg : f.type === 'marksman' ? marksmanImg : f.type === 'despair' ? despairImg : f.type === 'queen' ? queenImg : f.type === 'cerberus' ? cerberusImg : f.type === 'darkwooju' ? darkWoojuImg : f.type === 'yuhwan' ? yuhwanImg : f.type === 'noyun' ? noyunImg : f.type === 'bongdad' ? bongdadImg : f.type === 'pastjuwon' ? pastJuwonImg : null;
+  const pimg = isDespairPanic(f) ? despairImg : (f.type === 'song' || f.type === 'yoru' || f.type === 'clone') ? songImg : f.type === 'jiho' ? jihoImg : f.type === 'juwon' ? juwonImg : f.type === 'juwon2' ? juwon2Img : f.type === 'wooju' ? woojuImg : f.type === 'gunmin' ? gunminImg : f.type === 'doyun' ? doyunImg : f.type === 'sunwoo' ? sunwooImg : f.type === 'kwak' ? kwakImg : f.type === 'marksman' ? marksmanImg : f.type === 'despair' ? despairImg : f.type === 'queen' ? queenImg : f.type === 'cerberus' ? cerberusImg : f.type === 'darkwooju' ? darkWoojuImg : f.type === 'yuhwan' ? yuhwanImg : f.type === 'noyun' ? noyunImg : f.type === 'bongdad' ? bongdadImg : f.type === 'pastjuwon' ? pastJuwonImg : null;
   if (pimg) {
     if (pimg.complete && pimg.naturalWidth) {
       if (f.type === 'pastjuwon') {
@@ -4693,7 +4733,7 @@ function drawFighter(f) {
   }
   // 패닉 표시
   if (f.panic > 0) {
-    const PI = PANIC_INFO[CHAR[f.type].panicType];
+    const PI = PANIC_INFO[panicTypeOf(f)];
     if (PI) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + Math.sin(simTime * 8) * 0.2;
       const pg = r * 2.6; ctx.drawImage(glow(PI.color), x - pg, y - pg, pg * 2, pg * 2); ctx.restore();
@@ -6315,6 +6355,7 @@ async function admCheck() {
 function admUnlockAll() {
   for (const k of GACHA) { save.owned[k] = true; save.upg[UP_KEY[k] || k] = true; }
   for (const k of Object.keys(ARTIFACTS)) save.artifacts[k] = true;
+  save.artUpg = Object.assign(save.artUpg || {}, { ashstar: true });
   save.raid2 = save.raid3 = save.raid4 = true; save.srCleared = save.srCleared || false;
   if (!gunminUnlocked) { gunminUnlocked = true; try { localStorage.setItem('ballfight-unlock-gunmin' + SV, '1'); } catch (e) {} try { applyUnlocks(); } catch (e) {} }
   for (const t of TITLES) if (!t.adminWrapped) { const o = t.ok; t.ok = () => adm.isAdmin || o(); t.adminWrapped = true; }
@@ -6371,6 +6412,7 @@ document.getElementById('adminPanel').addEventListener('click', async e => {
 const SHOP = [
   { id: 'gunmin_abyss', type: 'gunmin', name: '이건민 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기' },
   { id: 'mirror', art: true, name: '💍 아티팩트 — 명경지수', price: 5000, desc: '치명타로 가하는 피해량이 1.2배에서 2.5배로 증가 · 치명타가 발생해 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)' },
+  { id: 'ashstar_tear', upg: 'ashstar', name: '💍 아티팩트 강화 — 잿빛 별자리의 가호: 눈물로 벼려낸 검', price: 5000, desc: '잿빛 별자리의 가호가 있어야 구매 가능 · 장착한 대상이 물리 스킬 3번 · 마법 스킬 7번을 쓰면 다음 턴에 눈물로 벼려낸 검 사용 (코인 3 파괴불가 · 마법 · 15 / +3 · 정신력 -15 · 침잠+파열 5당 피해량 +10% · 합 위력 +1 · 정신력 -45면 패닉 유형 절망)' },
   { id: 'juwon_abyss', type: 'juwon', name: '강주원 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기 (2페이즈 [불타는 울음] 포함)' },
   { id: 'wooju_abyss', type: 'wooju', name: '강우주 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 꿰뚫는 찌르기' },
 ];
@@ -6380,6 +6422,8 @@ function renderShop() {
   const el = document.getElementById('shopPanel'); if (!el) return;
   el.innerHTML = `<div style="font-weight:800;color:#7ad8e8;margin-bottom:6px">🛒 상점 <span style="color:#889;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>` + SHOP.map(it => {
     const own = it.art ? !!save.artifacts[it.id] : !!save.skins[it.id], on = skinOn(it.id);
+    if (it.upg) { const has = !!save.artifacts[it.upg], got = !!(save.artUpg || {})[it.upg];
+      return `<div class="item" style="border-color:#2a3a7a"><b style="color:#8ab0ff">${it.name}</b><div style="color:#9ab">${it.desc}</div><div style="margin-top:5px">${got ? '<span style="color:#7dffb0">✔ 강화 완료</span>' : has ? `<button data-buy="${it.id}" style="width:100%;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>` : `<button disabled style="width:100%;padding:6px;opacity:.5">🔒 ${ARTIFACTS[it.upg].name}이(가) 필요해요</button>`}</div></div>`; }
     if (it.art) return `<div class="item" style="border-color:#3a4a6a"><b style="color:#bfe8ff">${it.name}</b><div style="color:#9ab">${it.desc}</div><div style="margin-top:5px">${own ? '<span style="color:#7dffb0">✔ 보유 중 — 💍 아티팩트 창에서 장착하세요</span>' : `<button data-buy="${it.id}" style="width:100%;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>`}</div></div>`;
     return `<div class="item"><b style="color:#9fe8f0">${it.name}</b><div style="color:#9ab">${it.desc}</div>
       <div style="display:flex;gap:6px;margin-top:5px">${own ? `<button data-skin="${it.id}" style="flex:1;padding:6px;${on ? 'background:#1a5a6a;color:#fff' : ''}">${on ? '✔ 장착 중 (눌러서 해제)' : '장착하기'}</button>` : `<button data-buy="${it.id}" style="flex:1;padding:6px;font-weight:700">구매 🪙 ${it.price.toLocaleString()}</button>`}<button data-prev="${it.id}" style="padding:6px">미리 보기</button></div></div>`;
@@ -6389,10 +6433,10 @@ document.getElementById('shopBtn').onclick = () => { document.getElementById('sh
 document.getElementById('shopPanel').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.buy) {
-    const it = SHOP.find(x => x.id === b.dataset.buy); if (!it || (it.art ? save.artifacts[it.id] : save.skins[it.id])) return;
+    const it = SHOP.find(x => x.id === b.dataset.buy); if (!it || (it.upg ? (save.artUpg || {})[it.upg] || !save.artifacts[it.upg] : it.art ? save.artifacts[it.id] : save.skins[it.id])) return;
     if (save.coins < it.price) return toast(`코인이 부족해요 (필요 ${it.price.toLocaleString()}, 보유 ${save.coins.toLocaleString()})`);
-    save.coins -= it.price; if (it.art) { save.artifacts[it.id] = true; try { renderArtifacts(); } catch (e2) {} } else { save.skins[it.id] = true; save.skinOn[it.type] = it.id; } persist(); try { renderQuests(); renderStones(); } catch (e2) {}
-    toast(it.art ? `🛒 ${it.name} 구매 완료! 아티팩트 창에서 장착하세요` : `🛒 ${it.name} 구매 · 장착 완료!`); log(`🛒 상점: <b style="color:#9fe8f0">${it.name}</b> 구매 (🪙 -${it.price.toLocaleString()})`, 'kill');
+    save.coins -= it.price; if (it.upg) { save.artUpg = save.artUpg || {}; save.artUpg[it.upg] = true; } else if (it.art) { save.artifacts[it.id] = true; try { renderArtifacts(); } catch (e2) {} } else { save.skins[it.id] = true; save.skinOn[it.type] = it.id; } persist(); try { renderQuests(); renderStones(); } catch (e2) {}
+    toast(it.upg ? `🛒 ${it.name} 완료!` : it.art ? `🛒 ${it.name} 구매 완료! 아티팩트 창에서 장착하세요` : `🛒 ${it.name} 구매 · 장착 완료!`); log(`🛒 상점: <b style="color:#9fe8f0">${it.name}</b> 구매 (🪙 -${it.price.toLocaleString()})`, 'kill');
   } else if (b.dataset.skin) {
     const it = SHOP.find(x => x.id === b.dataset.skin); save.skinOn[it.type] = skinOn(it.id) ? null : it.id; persist();
   } else if (b.dataset.prev) {
@@ -6407,6 +6451,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '11.5', date: '2026-11-24', items: ['🛒 상점에 아티팩트 강화 추가 — 잿빛 별자리의 가호: 눈물로 벼려낸 검 (🪙 5,000 · 잿빛 별자리의 가호 보유 시)', '장착한 대상이 물리 스킬 3번 · 마법 스킬 7번을 쓰면 다음 턴에 눈물로 벼려낸 검 사용 (발동 시 횟수 초기화)', '눈물로 벼려낸 검: 코인 3 (파괴불가) · 마법 · 공격 레벨 +3 · 15 / +3 · 정신력 -15 · 침잠+파열 5당 피해량 +10%, 합 위력 +1 · 정신력 -45면 패닉 유형 절망 · 마법 내성 0.1배 추가 · 침잠 10 · 파열 3', '새 패닉 유형 절망: 한 턴 동안 절망의 기사의 모습으로 눈물로 벼려낸 검만 사용 (피아식별 불가)'] },
   { v: '11.4', date: '2026-11-23', items: ['볼 옆에 정신력 원 추가: 원 안에 정신력 수치가 보이고, 수치에 따라 색이 바뀌어요 (40~45 진한 파랑 · 35~39 파랑 · 30~34 하늘 · 1~29 연한 하늘 · 0 회색 · -1~-29 연한 빨강 · -30~-39 빨강 · -40~-45 진한 빨강)'] },
   { v: '11.3', date: '2026-11-22', items: ['상점의 "광고 보고 코인 받기" 삭제'] },
   { v: '11.2', date: '2026-11-22', items: ['📺 상점에 "광고 보고 코인 받기" 추가: 하루 1번 · 15초짜리 광고를 끝까지 보면 🪙 100'] },
@@ -7129,7 +7174,7 @@ async function pvpRegister() {
   if (!account || !rank.uid) return toast('구글로 로그인해야 방어 팀을 등록할 수 있어요');
   const team = myPvpTeam(); if (!team.length) return toast('레드 팀에 캐릭터를 넣어주세요');
   try {
-    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, rp: (save.pvpRank || {}).rp || 0, season: (save.pvpRank || {}).season || 1, t: Date.now() });
+    await pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), tester: !!(TESTER || TEST_SERVER), picture: dispPic(), team, upg: save.upg || {}, artifacts: save.artifacts || {}, artUpg: save.artUpg || {}, equip: save.equip || {}, w: save.pvp.w, l: save.pvp.l, rp: (save.pvpRank || {}).rp || 0, season: (save.pvpRank || {}).season || 1, t: Date.now() });
     toast('🛡 방어 팀을 등록했어요'); pvpRefresh();
   } catch (e) { console.error(e); toast('방어 팀을 등록하지 못했어요'); }
 }
@@ -7187,7 +7232,7 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
   const o = pvp.list.find(x => x.id === id); if (!o) return;
   const mine = myPvpTeam().map(type => ({ type, team: 0 }));
   if (!mine.length) return toast('레드 팀에 PVP에 나갈 캐릭터를 넣어주세요');
-  pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, equip: o.equip || {} };
+  pvpOpp = { uid: o.id, name: o.name || '상대', upg: o.upg || {}, artifacts: o.artifacts || {}, artUpg: o.artUpg || {}, equip: o.equip || {} };
   // 같은 팀 안에서는 중복 불가, 상대 팀과 겹치는 캐릭터만 허용
   roster = mine.concat([...new Set((o.team || []).filter(k => CHAR[k] && k !== 'dummy'))].map(k => ({ type: k, team: 1 })));
   dungeonFloor = 0; raidMode = true; renderRoster(); setTestLock(true); start();
@@ -7405,7 +7450,7 @@ if (window.BALLFIGHT_SHOWCASE) (function () {
   });
   $('scChars').innerHTML = types.map(t => `<button data-t="${t}" style="border-color:${CHAR[t].color}">${CHAR[t].name}</button>`).join('');
   $('scTiers').innerHTML = PVP_TIERS.map((x, i) => `<button data-tier="${i}" style="display:flex;align-items:center;gap:3px;border-color:${x.c}"><img src="${tierImg(i, 24)}" style="width:20px;height:20px">${x.n}</button>`).join('');
-  const renderScSkins = () => { $('scSkins').innerHTML = SHOP.filter(it => !it.art).map(it => `<button data-scskin="${it.id}" class="${skinOn(it.id) ? 'on' : ''}">${skinOn(it.id) ? '✔ ' : ''}${it.name}</button>`).join(''); };
+  const renderScSkins = () => { $('scSkins').innerHTML = SHOP.filter(it => !it.art && !it.upg).map(it => `<button data-scskin="${it.id}" class="${skinOn(it.id) ? 'on' : ''}">${skinOn(it.id) ? '✔ ' : ''}${it.name}</button>`).join(''); };
   renderScSkins();
   P.addEventListener('click', e => { const b = e.target.closest('[data-scskin]'); if (!b) return; const it = SHOP.find(x => x.id === b.dataset.scskin);
     save.skins[it.id] = true; save.skinOn[it.type] = skinOn(it.id) ? null : it.id; persist(); renderScSkins(); if (cur !== it.type) setup(it.type); toast(skinOn(it.id) ? `${it.name} 켜짐 — 스킬을 눌러 보세요` : '스킨 꺼짐 (기본 이펙트)'); });
