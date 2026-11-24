@@ -2319,10 +2319,11 @@ function gainCharge(f, v) {
 // [사용시] 효과 및 조건부 수치
 function onUse(u) {
   const f = u.f;
-  // 잿빛 별자리의 가호 (상점 강화): 물리 스킬 3번 · 마법 스킬 7번 사용하면 다음 턴에 눈물로 벼려낸 검
-  if (hasArtUp(f, 'ashstar') && u.sk !== 'tearSword' && SKILLS[u.sk].type) {
-    if (SKILLS[u.sk].type === 'physical') f.tearP = (f.tearP || 0) + 1; else if (SKILLS[u.sk].type === 'magic') f.tearM = (f.tearM || 0) + 1;
-    if ((f.tearP || 0) >= 3 && (f.tearM || 0) >= 7 && !f.tearNext) { f.tearP = f.tearM = 0; f.tearNext = true; floatText(f.x, f.y - f.r - 50, '다음 턴 눈물로 벼려낸 검', '#6a9aff', 15, { life: 1.3 }); log(`💍 ${nm(f)} 잿빛 별자리의 가호: 물리 3번 · 마법 7번 → 다음 턴에 <b style="color:#6a9aff">눈물로 벼려낸 검</b>`); }
+  // 잿빛 별자리의 가호 (상점 강화): 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면, 장착한 대상이 다음 턴에 눈물로 벼려낸 검
+  if (u.sk !== 'tearSword' && SKILLS[u.sk].type && SKILLS[u.sk].type !== 'true') for (const w of fighters) {
+    if (!w.alive || w.team !== f.team || !hasArtUp(w, 'ashstar')) continue;
+    if (SKILLS[u.sk].type === 'physical') w.tearP = (w.tearP || 0) + 1; else w.tearM = (w.tearM || 0) + 1;
+    if ((w.tearP || 0) >= 3 && (w.tearM || 0) >= 7 && !w.tearNext) { w.tearP = w.tearM = 0; w.tearNext = true; floatText(w.x, w.y - w.r - 50, '다음 턴 눈물로 벼려낸 검', '#6a9aff', 15, { life: 1.3 }); log(`💍 ${nm(w)} 잿빛 별자리의 가호: 아군이 물리 3번 · 마법 7번 사용 → 다음 턴에 <b style="color:#6a9aff">눈물로 벼려낸 검</b>`); }
   }
   if (u.sk === 'tearSword') {
     changeSp(f, -15, '눈물로 벼려낸 검'); u.extraTargets = (u.extraTargets || 0) + 2; // 공격 가중치 3
@@ -6412,7 +6413,7 @@ document.getElementById('adminPanel').addEventListener('click', async e => {
 const SHOP = [
   { id: 'gunmin_abyss', type: 'gunmin', name: '이건민 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기' },
   { id: 'mirror', art: true, name: '💍 아티팩트 — 명경지수', price: 5000, desc: '치명타로 가하는 피해량이 1.2배에서 2.5배로 증가 · 치명타가 발생해 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)' },
-  { id: 'ashstar_tear', upg: 'ashstar', name: '💍 아티팩트 강화 — 잿빛 별자리의 가호: 눈물로 벼려낸 검', price: 5000, desc: '잿빛 별자리의 가호가 있어야 구매 가능 · 장착한 대상이 물리 스킬 3번 · 마법 스킬 7번을 쓰면 다음 턴에 눈물로 벼려낸 검 사용 (코인 3 파괴불가 · 마법 · 15 / +3 · 정신력 -15 · 침잠+파열 5당 피해량 +10% · 합 위력 +1 · 정신력 -45면 패닉 유형 절망)' },
+  { id: 'ashstar_tear', upg: 'ashstar', name: '💍 아티팩트 강화 — 잿빛 별자리의 가호: 눈물로 벼려낸 검', price: 5000, desc: '잿빛 별자리의 가호가 있어야 구매 가능 · 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 쓰면 장착한 대상이 다음 턴에 눈물로 벼려낸 검 사용 (코인 3 파괴불가 · 마법 · 15 / +3 · 정신력 -15 · 침잠+파열 5당 피해량 +10% · 합 위력 +1 · 정신력 -45면 패닉 유형 절망)' },
   { id: 'juwon_abyss', type: 'juwon', name: '강주원 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 휘둘러지는 검기 (2페이즈 [불타는 울음] 포함)' },
   { id: 'wooju_abyss', type: 'wooju', name: '강우주 이펙트 스킨 — 심연의 해변', price: 1000, desc: '심연의 해변 속 바닷물과 거뭇한 잉크가 뭉쳐져 꿰뚫는 찌르기' },
 ];
@@ -6451,6 +6452,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '11.8', date: '2026-11-24', items: ['눈물로 벼려낸 검 발동 조건 변경: 장착한 대상이 아니라 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면 발동'] },
   { v: '11.7', date: '2026-11-24', items: ['눈물로 벼려낸 검 공격 가중치 3 (대상 포함 최대 3명 공격 · 절망 패닉 중에는 아군도 포함)'] },
   { v: '11.6', date: '2026-11-24', items: ['패닉 유형 절망 추가 효과: 흐트러짐 해제'] },
   { v: '11.5', date: '2026-11-24', items: ['🛒 상점에 아티팩트 강화 추가 — 잿빛 별자리의 가호: 눈물로 벼려낸 검 (🪙 5,000 · 잿빛 별자리의 가호 보유 시)', '장착한 대상이 물리 스킬 3번 · 마법 스킬 7번을 쓰면 다음 턴에 눈물로 벼려낸 검 사용 (발동 시 횟수 초기화)', '눈물로 벼려낸 검: 코인 3 (파괴불가) · 마법 · 공격 레벨 +3 · 15 / +3 · 정신력 -15 · 침잠+파열 5당 피해량 +10%, 합 위력 +1 · 정신력 -45면 패닉 유형 절망 · 마법 내성 0.1배 추가 · 침잠 10 · 파열 3', '새 패닉 유형 절망: 한 턴 동안 절망의 기사의 모습으로 눈물로 벼려낸 검만 사용 (피아식별 불가)'] },
