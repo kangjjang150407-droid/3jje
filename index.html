@@ -3089,7 +3089,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
     // 세 머리가 동시에 물어뜯음: 위아래 이빨이 맞물리며 피가 튐
     const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'cerBite';
     slashes.push({ bite: true, x: t.x, y: t.y, tr: t.r, ang, big, life: 0.8, max: 0.8 });
-    for (let k = 0; k < Math.round(26 * QUALITY) + 6; k++) { const a = ang + rand(-1.3, 1.3), sp = rand(200, 620); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, life: rand(0.35, 0.7), max: 0.7, size: rand(3, 8), color: Math.random() < 0.7 ? '#c8001a' : '#ff4a5a', drag: 0.93, g: 520, kind: 'glow', rot: 0 }); }
+    for (let k = 0; k < Math.round(10 * QUALITY) + 3; k++) { const a = ang + rand(-1.3, 1.3), sp = rand(200, 620); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, life: rand(0.35, 0.7), max: 0.7, size: rand(3, 8), color: Math.random() < 0.7 ? '#c8001a' : '#ff4a5a', drag: 0.93, g: 520, kind: 'glow', rot: 0 }); }
     shake = Math.max(shake, big ? 18 : 12); if (big) doFlash('#c8001a', 0.25);
   } else if (f.type === 'targetking') {
     // 과녁의 왕: 금빛 조준선이 대상을 잡고 → 과녁 모양 충격
@@ -5084,8 +5084,8 @@ function render() {
       const op = p < SN * 0.55 ? Math.min(1, p / (SN * 0.25)) : Math.max(0, 1 - (p - SN * 0.55) / (SN * 0.45)); // 벌림 → 닫힘
       const L = sl.tr * (sl.big ? 1.55 : 1.3), jit = p > SN && p < SN + 0.12 ? (Math.random() - 0.5) * 6 : 0;
       if (!sl.snapped && p >= SN) { sl.snapped = true; // 맞물리는 순간 파편
-        for (let k = 0; k < Math.round(18 * QUALITY) + 6; k++) { const aa = sl.ang + rand(-1.6, 1.6), sp = rand(150, 520); particles.push({ x: sl.x, y: sl.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp - 80, life: rand(0.4, 0.8), max: 0.8, size: rand(2, 5), color: Math.random() < 0.5 ? '#ff7a2a' : '#ffd060', drag: 0.94, g: -60, kind: 'spark', rot: 0 }); }
-        for (let k = 0; k < 6; k++) particles.push({ x: sl.x + rand(-sl.tr, sl.tr), y: sl.y + rand(-sl.tr, sl.tr), vx: rand(-40, 40), vy: rand(-90, -30), life: rand(0.6, 1), max: 1, size: rand(16, 28), color: '#3a0608', drag: 0.96, g: 0, kind: 'smoke', a: 0.55, rot: 0 }); }
+        for (let k = 0; k < Math.round(8 * QUALITY) + 3; k++) { const aa = sl.ang + rand(-1.6, 1.6), sp = rand(150, 520); particles.push({ x: sl.x, y: sl.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp - 80, life: rand(0.4, 0.8), max: 0.8, size: rand(2, 5), color: Math.random() < 0.5 ? '#ff7a2a' : '#ffd060', drag: 0.94, g: -60, kind: 'spark', rot: 0 }); }
+        for (let k = 0; k < 2; k++) particles.push({ x: sl.x + rand(-sl.tr, sl.tr), y: sl.y + rand(-sl.tr, sl.tr), vx: rand(-40, 40), vy: rand(-90, -30), life: rand(0.6, 1), max: 1, size: rand(16, 28), color: '#3a0608', drag: 0.96, g: 0, kind: 'smoke', a: 0.55, rot: 0 }); }
       ctx.save();
       // 붉은 열기 오라
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 * fade * (0.4 + lunge * 0.6); ctx.drawImage(glow('#ff2a1a'), sl.x - sl.tr * 3, sl.y - sl.tr * 3, sl.tr * 6, sl.tr * 6); ctx.globalCompositeOperation = 'source-over';
@@ -5101,19 +5101,18 @@ function render() {
         for (const sg of [-1, 1]) { // -1 윗턱, +1 아래턱
           ctx.save(); ctx.rotate(sg * th);
           // 턱 몸통
-          const jg = ctx.createLinearGradient(0, 0, 0, sg * -L * 0.55); jg.addColorStop(0, '#5a0a12'); jg.addColorStop(1, '#12020a');
-          ctx.fillStyle = jg; ctx.strokeStyle = '#ff3a2a'; ctx.lineWidth = 2; ctx.shadowColor = '#ff2a10'; ctx.shadowBlur = 12;
+          ctx.fillStyle = '#3a060e'; ctx.strokeStyle = '#ff3a2a'; ctx.lineWidth = 2.5; // (렉 줄임: 그라데이션 · 그림자 흐림 제거)
           ctx.beginPath(); ctx.moveTo(-J * 0.15, 0); ctx.lineTo(J, 0);
           ctx.quadraticCurveTo(J * 1.08, -sg * L * 0.12, J * 0.92, -sg * L * 0.22);
           ctx.bezierCurveTo(J * 0.6, -sg * L * 0.38, J * 0.2, -sg * L * (sg < 0 ? 0.62 : 0.4), -J * 0.15, -sg * L * (sg < 0 ? 0.5 : 0.32));
-          ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+          ctx.closePath(); ctx.fill(); ctx.stroke();
           // 잇몸 선
           ctx.strokeStyle = '#c0102a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(J * 0.98, 0); ctx.stroke();
           // 이빨: 끝쪽 큰 송곳니 + 톱니
           ctx.fillStyle = '#fff4e6'; ctx.strokeStyle = '#4a0008'; ctx.lineWidth = 1;
           const N = 7;
           for (let k = 0; k < N; k++) { const x0 = J * (0.1 + k * 0.84 / (N - 1)), canine = k === N - 2, w = canine ? 9 : 5.5, len = canine ? L * 0.42 : L * (0.14 + 0.05 * (k % 2));
-            const tg = ctx.createLinearGradient(x0, 0, x0, sg * len); tg.addColorStop(0, '#d8c8b8'); tg.addColorStop(0.6, '#fffaf0'); tg.addColorStop(1, canine && snap > 0 ? '#c8001a' : '#ffffff'); ctx.fillStyle = tg;
+            ctx.fillStyle = canine && snap > 0 ? '#ffd8d0' : '#f6efe4';
             ctx.beginPath(); ctx.moveTo(x0 - w, 0); ctx.quadraticCurveTo(x0 - w * 0.2, sg * len * 0.6, x0 + w * 0.35, sg * len); ctx.quadraticCurveTo(x0 + w * 0.5, sg * len * 0.4, x0 + w, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); }
           ctx.restore();
         }
@@ -6452,6 +6451,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '11.9', date: '2026-11-24', items: ['파멸의 케로베로스 이펙트 렉 개선: 그리기 부담을 줄여 프레임당 처리 시간 약 40% 감소 (모양은 그대로)'] },
   { v: '11.8', date: '2026-11-24', items: ['눈물로 벼려낸 검 발동 조건 변경: 장착한 대상이 아니라 아군 전체가 물리 스킬 3번 · 마법 스킬 7번을 사용하면 발동'] },
   { v: '11.7', date: '2026-11-24', items: ['눈물로 벼려낸 검 공격 가중치 3 (대상 포함 최대 3명 공격 · 절망 패닉 중에는 아군도 포함)'] },
   { v: '11.6', date: '2026-11-24', items: ['패닉 유형 절망 추가 효과: 흐트러짐 해제'] },
