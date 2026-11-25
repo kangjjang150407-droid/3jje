@@ -503,7 +503,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>순보</b> 마법 · 코인 2 · 공격 170 · 21 / +13 · 기본 위력이 대상보다 3 이상 높으면 코인 위력 +1 · 대상 파열 4 이상이면 코인 위력 +1 · 합 승리 시 파열 횟수 +1 · 1코인: 파열 12 · 2코인: 폭주 10 이상이면 이 코인 재사용 (스킬당 1회)<br>
       <b>순보 - [븅]</b> 마법 · 코인 2 · 공격 200 · 45 / +16 · 기본 위력이 높으면 (차이 × 폭주)% 피해량 증가 (최대 50%) · 정신력이 3 이상 높으면 코인 위력 +1 · 대상 파열 4 이상이면 코인 위력 +1 · 다음 턴 폭주 2 (턴당 1회) · 합 승리 시 파열 횟수 +1 · 2코인: 대상 파열 40 이상이면 피해량 +900%<br>
       <b>패시브 불완전한 현현</b> 파열로 피해를 받지 않음 · 공격이 적중하거나 피격 시 폭주 3 · <b>패시브 묘</b> 대상의 파열 10당 파열 부여량 +5<br>
-      <b style="color:#ffb030">폭주</b> 최대 100 · 수치당 가하는 피해량 +1% · 100이면 턴 종료 시 체력이 가장 적은 적에게 그 적의 파열만큼 마법 피해 (효과 발동 후 수치 소멸)<br>
+      <b style="color:#ffb030">폭주</b> 최대 100 · 수치당 가하는 피해량 +1% · 수치 10당 방어 레벨 -10 · 100이면 턴 종료 시 체력이 가장 적은 적에게 그 적의 파열만큼 마법 피해 (효과 발동 후 수치 소멸)<br>
       <b style="color:#ff7ac8">처치 보상</b> 아티팩트 환 - [묘] — 받는 피해량 -50% · 가하는 피해량 +40% · 이동속도 +10% · 파열 부여량 ×2 · 매 턴 호흡 3<br><br>
       <b style="color:#e0303a;font-size:12px">봉이 아빠</b> (던전 2층 히든 보스 · 등장 확률 35% · LV.60 · 체력 779 · 방어 레벨 65 · 물리 1.5배 추가 피해 · 마법 1.2배 절감 · 흐트러짐 40%)<br>
       <b>끄</b> 물리 · 코인 2 · 공격 67 · 5 / +3 · 1코인: 출혈 3 · 2코인: 앞면 적중 시 진동 3<br>
@@ -1589,7 +1589,7 @@ function chooseTarget(f, key) {
 function buffVal(f, key) { const b = f.buffs[key]; return b && b.until > simTime ? b.v : 0; }
 function addBuff(f, key, v) { f.buffs[key] = { v: buffVal(f, key) + v, until: simTime + TURN }; }
 function offLv(f, sk) { if (f.type === 'pastjuwon' && SKILLS[sk].glitch) return SKILLS[sk].glitch[f.glIdx || 0] + (f.overdrive ? 60 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown'); return f.level + (SKILLS[sk].lvMod || 0) - (uguLow(f) ? 50 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0) + (f.wing || 0) * 3; } // 쐐기의 창: 수치 1당 공격 레벨 +1
-function defLv(f) { if (f.type === 'pastjuwon') return (f.glDef || 80) + buffVal(f, 'defUp'); return -(f.wing || 0) * 3 + f.level - buffVal(f, 'defDown') - (uguLow(f) ? 50 : 0) + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
+function defLv(f) { if (f.type === 'pastjuwon') return (f.glDef || 80) + buffVal(f, 'defUp'); return -(f.wing || 0) * 3 - Math.floor((f.rampage || 0) / 10) * 10 + f.level - buffVal(f, 'defDown') - (uguLow(f) ? 50 : 0) + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
 function headsChance(f) { return clamp(0.5 + f.sp / 100, 0, 1); }
 function flip(f) { return Math.random() < headsChance(f); }
 function levelMult(ol, dl) { const d = ol - dl; return 1 + d / (Math.abs(d) + 25); }
@@ -6629,6 +6629,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.4', date: '2026-11-25', items: ['폭주 효과 추가: 수치 10당 방어 레벨 -10'] },
   { v: '13.3', date: '2026-11-25', items: ['폭주 100 효과 발동 후 폭주 수치가 소멸해요'] },
   { v: '13.2', date: '2026-11-25', items: ['🌐 서버 레이드 추가: 폭주 십이지[十二支] - 묘 김하리 (LV.150 · 체력 5,000,000 · 방어 레벨 300 · 내성 전부 12배 추가 피해 · 흐트러짐 10%마다)', '스킬 순보 · 순보 - [븅] / 패시브 불완전한 현현 (파열 피해 무효 · 적중·피격 시 폭주 3) · 묘 (대상 파열 10당 파열 부여량 +5)', '새 상태 폭주: 최대 100 · 수치당 가하는 피해량 +1% · 100이면 턴 종료 시 체력이 가장 적은 적에게 파열만큼 마법 피해', '💍 처치 보상 아티팩트 환 - [묘] (피해를 준 모든 참여자): 받는 피해량 -50% · 가하는 피해량 +40% · 이동속도 +10% · 파열 부여량 ×2 · 매 턴 호흡 3', '[이 세계선의 김하리는 모든 십이지를 다룰 수 있다. 이것이 진짜 전력일까?]'] },
   { v: '13.1', date: '2026-11-25', items: ['노윤 버프: 자신의 정신력 감소 효과(굿 다이노 · 부엉이 · 아니 진짜 · 강화 효과)로는 정신력이 -45까지 내려가지 않아요 (최저 -44)'] },
