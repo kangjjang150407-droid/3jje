@@ -1319,7 +1319,8 @@ function songSmoke(f, t, big, light) {
   if (particles.length > PARTICLE_CAP) return;
   if (light) { for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, sp = rand(60, 200); particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.8, max: 0.8, size: rand(12, 22), color: Math.random() < 0.5 ? '#8a8a94' : '#b8384a', drag: 0.95, g: -50, kind: 'smoke', rot: 0, a: 0.5 }); } return; }
   const dx = t.x - f.x, dy = t.y - f.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, px = -uy, py = ux;
-  const n = Math.round((big ? 48 : 30) * QUALITY) + 10, cols = ['#9a9aa4', '#7a7a84', '#c8404e', '#a82a3a', '#5a4a50'];
+  slashes.push({ songSmk: true, fx: f.x, fy: f.y, fr: f.r, tx: t.x, ty: t.y, tr: t.r, big, life: big ? 1.05 : 0.85, max: big ? 1.05 : 0.85, seed: Math.random() * 10 }); // 연기 줄기 · 담뱃불 · 연기 고리
+  const n = Math.round((big ? 30 : 18) * QUALITY) + 6, cols = ['#9a9aa4', '#7a7a84', '#c8404e', '#a82a3a', '#5a4a50'];
   for (let i = 0; i < n; i++) {
     // 입에서 내뿜은 연기가 출렁이며 대상까지 흘러감
     const k = Math.random(), sw = Math.sin(k * 9 + Math.random()) * rand(10, 26), sp = rand(380, 620);
@@ -5602,6 +5603,34 @@ function render() {
     if (sl.despairSl) { drawDespairSlash(sl, k, a0, a1); continue; }
     if (sl.abyss) { drawAbyssSlash(sl, k, a0, a1); continue; }
     if (sl.inkThrust) { drawInkThrust(sl, k); continue; }
+    if (sl.songSmk) {
+      // 송재범: 담뱃불에서 뿜어진 붉은 연기 줄기가 휘감아 날아가 → 연기 고리가 터지며 재가 흩날림
+      const pp = 1 - k, dx = sl.tx - sl.fx, dy = sl.ty - sl.fy, D = Math.hypot(dx, dy) || 1, ux = dx / D, uy = dy / D, nx = -uy, ny = ux;
+      const reach = Math.min(1, pp / 0.3), fade = pp < 0.45 ? 1 : 1 - (pp - 0.45) / 0.55, sx = sl.fx + ux * sl.fr * 0.8, sy = sl.fy + uy * sl.fr * 0.8;
+      ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const path = (amp, ph, w) => { ctx.beginPath(); const M = 28; for (let i = 0; i <= M * reach; i++) { const q = i / M, wv = Math.sin(q * 7 + ph + simTime * 6) * amp * Math.sin(Math.PI * q) + Math.sin(q * 17 + ph) * 4 * q, up = -q * q * 18 * pp;
+        ctx.lineTo(sx + (sl.tx - sx) * q + nx * wv, sy + (sl.ty - sy) * q + ny * wv + up); } };
+      // 겹겹의 연기 리본 (회색 · 붉은 회색 · 어두운 재)
+      for (const [amp, ph, w, col, al] of [[26, 0, sl.big ? 40 : 30, 'rgba(120,118,130,', 0.38], [18, 1.9, sl.big ? 28 : 20, 'rgba(180,70,80,', 0.45], [30, 3.7, sl.big ? 22 : 16, 'rgba(70,62,70,', 0.45], [12, 5.1, 8, 'rgba(215,205,210,', 0.5]]) {
+        ctx.globalAlpha = fade; ctx.strokeStyle = col + al + ')'; ctx.lineWidth = w * (1 + pp * 0.9); path(amp * (1 + pp * 0.6), ph + sl.seed, w); ctx.stroke(); }
+      // 연기 속 붉은 불씨 줄기
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade * 0.8; ctx.strokeStyle = '#ff4a3a'; ctx.lineWidth = 2; path(18, 1.9 + sl.seed, 2); ctx.stroke();
+      for (let i = 0; i < 14; i++) { const q = ((i * 0.618 + sl.seed) % 1) * reach, wv = Math.sin(q * 7 + 1.9 + sl.seed + simTime * 6) * 18 * Math.sin(Math.PI * q), x = sx + (sl.tx - sx) * q + nx * wv + Math.sin(i * 3) * 6, y = sy + (sl.ty - sy) * q + ny * wv - q * 20 * pp;
+        const tw = 0.5 + 0.5 * Math.sin(simTime * 20 + i * 2); ctx.globalAlpha = fade * tw; ctx.fillStyle = i % 3 ? '#ff8a3a' : '#ffd080'; ctx.beginPath(); ctx.arc(x, y, 1.6 + (i % 2), 0, TAU); ctx.fill(); }
+      // 입가의 담뱃불
+      if (pp < 0.5) { const q = pp / 0.5; ctx.globalAlpha = (1 - q); ctx.drawImage(glow('#ff6a2a'), sx - 16, sy - 16, 32, 32); ctx.fillStyle = '#ffe0a0'; ctx.beginPath(); ctx.arc(sx, sy, 3, 0, TAU); ctx.fill(); }
+      // 대상: 연기 고리가 두 겹으로 퍼지고 붉게 그을림
+      if (pp > 0.2) { const q = (pp - 0.2) / 0.8, R = sl.tr * (0.8 + q * (sl.big ? 2.8 : 2));
+        ctx.globalCompositeOperation = 'source-over';
+        for (let r2 = 0; r2 < (sl.big ? 2 : 1); r2++) { const RR = R * (1 - r2 * 0.35); ctx.globalAlpha = (1 - q) * 0.55; ctx.strokeStyle = 'rgba(150,145,155,1)'; ctx.lineWidth = (sl.big ? 16 : 11) * (1 - q * 0.5); ctx.beginPath(); ctx.ellipse(sl.tx, sl.ty - q * 14, RR, RR * 0.55, 0, 0, TAU); ctx.stroke(); }
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - q) * 0.9; ctx.strokeStyle = '#ff4a5a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(sl.tx, sl.ty - q * 14, R, R * 0.55, 0, 0, TAU); ctx.stroke();
+        ctx.globalAlpha = Math.max(0, 1 - q * 2.5) * 0.8; ctx.drawImage(glow('#ff3a3a'), sl.tx - sl.tr * 1.6, sl.ty - sl.tr * 1.6, sl.tr * 3.2, sl.tr * 3.2);
+        // 흩날리는 재 조각
+        ctx.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < (sl.big ? 16 : 10); i++) { const a = sl.seed + i * 2.39996, dd = sl.tr * (0.6 + q * (1.6 + (i % 3) * 0.5)), x = sl.tx + Math.cos(a) * dd, y = sl.ty + Math.sin(a) * dd * 0.7 - q * 30;
+          ctx.globalAlpha = (1 - q) * 0.9; ctx.fillStyle = i % 4 ? '#3a3236' : '#ff6a4a'; ctx.save(); ctx.translate(x, y); ctx.rotate(a + q * 6); ctx.fillRect(-2.5, -1, 5, 2); ctx.restore(); } }
+      ctx.restore(); continue;
+    }
     if (sl.hariFx) {
       const pp = 1 - k; ctx.save();
       // 잔상: 출발점 → 대상까지 반투명 분홍 초상이 줄지어 남음
@@ -6637,6 +6666,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.9', date: '2026-11-25', items: ['송재범 이펙트 강화: 입가의 담뱃불 → 겹겹의 붉은 연기 리본이 휘감아 날아감 (연기 속 불씨) → 대상에서 연기 고리가 퍼지고 재가 흩날림 (아니는 연기 고리 두 겹)'] },
   { v: '13.8', date: '2026-11-25', items: ['칭호가 배경과 겹쳐 안 보이던 문제 수정: 모든 칭호가 어두운 배지 위에 테두리와 함께 표시돼요'] },
   { v: '13.7', date: '2026-11-25', items: ['🎖 칭호 추가: 십이지를 꺾은 자 (서버 레이드 폭주 십이지[十二支] - 묘 김하리 처치 참여자 · 금빛 광택과 물결 연출)'] },
   { v: '13.6', date: '2026-11-25', items: ['🎖 칭호 추가: 닭을 멈춘 자 (던전 2층 히든 보스 봉이 아빠 처치 · 붉게 두근거리며 빛나는 연출)'] },
