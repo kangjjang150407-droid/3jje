@@ -6535,6 +6535,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.7', date: '2026-11-25', items: ['PVP 랭킹 수정: PVP를 하지 않았거나 예전 버전에서 기록이 저장되지 않은 계정도 접속하면 PVP 랭킹에 보여요 (기록이 없으면 브론즈 0점)'] },
   { v: '12.6', date: '2026-11-24', items: ['✦ 초월 추가 — 첫 번째: 이건민', '강화한 캐릭터를 뽑기에서 다시 뽑으면 초월석이 나와요 · 초월석 20개로 초월', '이건민 초월 효과: 강주원이 느린 달리기를 쓰거나 강우주가 머리 때리기 · 머리 때리기 [정오]를 쓰면, 이건민이 그 대상에게 해줘를 사용'] },
   { v: '12.5', date: '2026-11-24', items: ['흉탄의 사수 공격 이펙트 변경: 사수 앞에 붉은 마법진이 그려지고 그 안에서 붉은 탄환이 날아가요'] },
   { v: '12.4', date: '2026-11-24', items: ['전장 이탈 포탈 연출 퀄리티 향상: 바닥 마법진 · 은하처럼 휘감는 소용돌이 팔 · 별빛이 보이는 차원의 구멍 · 테두리를 타고 튀는 전기 · 공이 늘어나며 빨려 드는 연출 · 닫힐 때 내파와 빛기둥'] },
@@ -7024,7 +7025,7 @@ async function rankInit() {
     rank.db = firebase.firestore();
     const cred = sessionStorage.getItem('ballfight-gcred');
     if (cred && account) { sessionStorage.removeItem('ballfight-gcred'); try { await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(cred)); } catch (e) { console.error(e); } }
-    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); friendSelfUpload(); friendRefresh(true); admCheck(); } renderRank(); });
+    firebase.auth().onAuthStateChanged(u => { rank.uid = u ? u.uid : null; rank.ready = true; if (u) { rankUpload(); rankReward(); friendSelfUpload(); friendRefresh(true); admCheck(); pvpSelfSync(); } renderRank(); });
   } catch (e) { console.error(e); rank.err = '랭킹 서버에 연결하지 못했어요'; renderRank(); }
   })();
   return rank.loading;
@@ -7327,6 +7328,11 @@ document.getElementById('pvpPanel').addEventListener('click', e => {
   showBig(`PVP — vs ${pvpOpp.name}`, '#9fd8ff', 1.8);
   log(`⚔ <b style="color:#9fd8ff">PVP</b> 시작! vs ${escH(pvpOpp.name)}`, 'kill');
 });
+// 접속할 때마다 내 PVP 랭킹 정보를 올림 (PVP 기록이 없어도 PVP 랭킹에 브론즈 0점으로 표시)
+function pvpSelfSync() {
+  try { if (!rank.uid || !rank.db) return; pvpSeasonCheck(); const R = save.pvpRank || { rp: 0, season: pvpSeasonOf() };
+    pvpCol().doc(rank.uid).set({ name: dispName(), title: titleName(), picture: dispPic(), tester: !!(TESTER || TEST_SERVER), w: (save.pvp || {}).w || 0, l: (save.pvp || {}).l || 0, rp: R.rp || 0, season: R.season || pvpSeasonOf() }, { merge: true }).catch(e => console.error(e)); } catch (e) { console.error(e); }
+}
 function pvpResult(win) {
   if (win) { save.pvp.w++; addCoins(PVP_WIN_COIN, `PVP 승리 vs ${pvpOpp.name}`); } else save.pvp.l++;
   pvpSeasonCheck();
