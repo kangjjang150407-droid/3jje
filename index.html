@@ -508,8 +508,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>패시브 과녁 소환</b> 체력 75% 이하에서 패턴 변경 · 던전 과녁 소환 · 체력이 가장 낮은 대상에게 징표 · 속도 1 · 보호막 300<br>
       <b style="color:#ff4a2a">징표</b> 흉탄의 사수의 표적이 됨 · 턴 종료 시 제거<br><br>
       <b style="color:#b07aff;font-size:12px">노윤</b> (3반 · LV.87 · 체력 365 · 방어 레벨 87 · 내성 전부 1.1배 추가 피해 · 흐트러짐 78% / 45%)<br>
-      <b>심연으로 가라앉아라</b> 마법 · 코인 2 · 공격 100 · 4 / +9 · 대상 침잠 6 이상이면 합 위력 +1 · 대상 침잠 횟수 3당 코인 위력 +1 (최대 2) · 1코인: 침잠 3, 횟수 +3<br>
-      <b>낙하하는 대검</b> 마법 · 코인 3 · 공격 110 · 4 / +3 · 합 승리 시 다음 턴 공격 위력 +1, 피해량 +10% · 대상 침잠 5당 코인 위력 +1 (최대 2) · 바위 조각 4당 공격 가중치 +1 (최대 2) · 부엉이가 있으면 가중치 +1, 공격 종료 시 정신력 -10 · 1코인: 침잠 3, 횟수 +3 · 2코인: 출혈 3 + 대상 침잠만큼 출혈<br>
+      <b>앙</b> 마법 · 코인 2 · 공격 100 · 4 / +9 · 대상 침잠 6 이상이면 합 위력 +1 · 대상 침잠 횟수 3당 코인 위력 +1 (최대 2) · 1코인: 침잠 3, 횟수 +3<br>
+      <b>아니 진짜</b> 마법 · 코인 3 · 공격 110 · 4 / +3 · 합 승리 시 다음 턴 공격 위력 +1, 피해량 +10% · 대상 침잠 5당 코인 위력 +1 (최대 2) · 바위 조각 4당 공격 가중치 +1 (최대 2) · 부엉이가 있으면 가중치 +1, 공격 종료 시 정신력 -10 · 1코인: 침잠 3, 횟수 +3 · 2코인: 출혈 3 + 대상 침잠만큼 출혈<br>
       <b>파탄</b> 마법 · 코인 2 (마이너스) · 공격 180 · 31 / -13 · 정신력 -15 · 대상 침잠 5당 기본 위력 +1 (최대 4) · 정신력이 낮을수록 피해량 증가 (최대 21%) · 바위 조각 1당 피해량 +10% (최대 100%) · 부엉이 1당 +20% (최대 60%) · 바위 조각 2 · 처치 시 바위 조각 3 · 공격 종료 시 정신력이 0 미만이면 10 + 차이×2 회복 (최대 +50) · 턴 종료 시 부엉이 제거 · 1코인: 침잠 5, 횟수 +2, 피해량 30% 흐트러짐 손상 · 2코인: 대상 침잠만큼 물리 피해 (최대 30), 처치 시 무작위 적 2명 침잠 (대상 침잠/2, 최대 8) · 정신력 +15<br>
       <b>강화 효과</b> 반격 마지막 일격 해금 · 파탄을 장착한 턴에 정신력 25 감소<br>
       <b>강화 반격 마지막 일격</b> 마법 · 코인 2 · 5 / +4 · 다음 턴 부엉이 1 · 체력 20% 미만이고 아군이 있으면 아군 정신력 -25, 아군 모든 스킬 마이너스 코인, 공격 후 스스로 부서짐<br>
@@ -908,8 +908,8 @@ const SKILLS = {
   pourDespair:  { name: '쏟아지는 절망', color: '#4a7aff', type: 'magic', lvMod: 5,  base: 4,  coinPow: 3,  coins: 3, cast: 0.6 },
   sharpTear:    { name: '날카로운 눈물', color: '#6aa0ff', type: 'magic', lvMod: 10, base: 4,  coinPow: 4,  coins: 3, cast: 0.6 },
   emptyDespair: { name: '거세게 쏟아지는 텅 빈 절망', color: '#1a3aff', type: 'magic', lvMod: 20, base: 10, coinPow: 15, coins: 1, unbreakable: true, aoe: true, cast: 1.0 },
-  nyAbyss:   { name: '심연으로 가라앉아라', color: '#9a6aff', type: 'magic', lvMod: 13, base: 4, coinPow: 9, coins: 2, cast: 0.6 },
-  nyFall:    { name: '낙하하는 대검',     color: '#b07aff', type: 'magic', lvMod: 23, base: 4, coinPow: 3, coins: 3, cast: 0.6 },
+  nyAbyss:   { name: '앙', color: '#9a6aff', type: 'magic', lvMod: 13, base: 4, coinPow: 9, coins: 2, cast: 0.6 },
+  nyFall:    { name: '아니 진짜',     color: '#b07aff', type: 'magic', lvMod: 23, base: 4, coinPow: 3, coins: 3, cast: 0.6 },
   nyRuin:    { name: '파탄',             color: '#c040ff', type: 'magic', lvMod: 93, base: 31, coinPow: 13, coins: 2, minus: true, cast: 0.9 },
   nyLast:    { name: '마지막 일격',       color: '#d8a0ff', type: 'magic', lvMod: 0, base: 5, coinPow: 4, coins: 2, defense: true, counter: true },
   bgK:       { name: '끄',              color: '#e04a3a', type: 'physical', lvMod: 7,  base: 5,  coinPow: 3, coins: 2, cast: 0.6 },
@@ -3065,7 +3065,7 @@ function stepEngagement(e) {
     // 날카로운 실과 바늘: 매 턴 처음으로 피해를 입힌 스킬의 (피해량 / 2)만큼 추가 고정 피해
     if (u.dealtSum > 0 && u.f.alive && hasArt(u.f, 'needle')) { const tk = turnIdx() + '@' + turnBase; if (u.f.needleTurn !== tk) { u.f.needleTurn = tk; const tg = q.tgt.alive ? q.tgt : (u.mainT && u.mainT.alive ? u.mainT : null); if (tg) { lightning(u.f.x, u.f.y, tg.x, tg.y, '#ff6a5a', 3, 0.3); dealDamage(u.f, tg, Math.floor(u.dealtSum / 2), 'true', '날카로운 실과 바늘', `피해량 ${Math.floor(u.dealtSum)} / 2 → `); } } }
     if (u.f.type === 'noyun' && u.f.alive) {
-      if (u.sk === 'nyFall' && u.f.wing > 0) changeSp(u.f, -10, '낙하하는 대검 (부엉이)');
+      if (u.sk === 'nyFall' && u.f.wing > 0) changeSp(u.f, -10, '아니 진짜 (부엉이)');
       if (u.sk === 'nyRuin') {
         if (u.nyKilled) gainRock(u.f, 3, '파탄으로 처치');
         if (u.f.sp < 0) { const v = 10 + Math.min(50, -u.f.sp * 2); changeSp(u.f, v, '파탄 [공격 종료시]'); }
@@ -6535,6 +6535,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '12.8', date: '2026-11-25', items: ['노윤 스킬 이름 변경: 심연으로 가라앉아라 → 앙 · 낙하하는 대검 → 아니 진짜'] },
   { v: '12.7', date: '2026-11-25', items: ['PVP 랭킹 수정: PVP를 하지 않았거나 예전 버전에서 기록이 저장되지 않은 계정도 접속하면 PVP 랭킹에 보여요 (기록이 없으면 브론즈 0점)'] },
   { v: '12.6', date: '2026-11-24', items: ['✦ 초월 추가 — 첫 번째: 이건민', '강화한 캐릭터를 뽑기에서 다시 뽑으면 초월석이 나와요 · 초월석 20개로 초월', '이건민 초월 효과: 강주원이 느린 달리기를 쓰거나 강우주가 머리 때리기 · 머리 때리기 [정오]를 쓰면, 이건민이 그 대상에게 해줘를 사용'] },
   { v: '12.5', date: '2026-11-24', items: ['흉탄의 사수 공격 이펙트 변경: 사수 앞에 붉은 마법진이 그려지고 그 안에서 붉은 탄환이 날아가요'] },
