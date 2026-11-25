@@ -1614,11 +1614,13 @@ function enterStagger(f, th) {
 }
 function resetStagger(f) { f.stagger = 0; f.staggerHit = []; f.staggerTh = staggerLinesOf(f); if (f.sunset || f.burningSunset) f.staggerTh.shift(); } // 노을 / 타오르는 노을: 첫 번째 흐트러짐 구간 삭제 유지
 
+const NY_SELF_SP = new Set(['굿 다이노', '강화 — 굿 다이노 장착', '부엉이 탑승', '아니 진짜 (부엉이)', '부엉이']);
 const hasSp = f => !!(f && CHAR[f.type].ai && !CHAR[f.type].noSp); // 정신력이 없는 캐릭터: 흉탄의 사수 · 절망의 기사 · 증오의 여왕
 function changeSp(f, v, why) {
   if (!f.alive || !hasSp(f) || f.panic > 0 || !v) return;
   if (f.type === 'song' && f.breath > 0 && v < 0 && !f.antiScratch) { f.antiScratch = true; dealDamage(null, f, -v, 'magic', `안긁힘 (${why || '정신력 피해'} → 마법 피해)`); f.antiScratch = false; return; } // 패시브 안긁힘
   const old = f.sp; f.sp = clamp(f.sp + v, minSp(f), 45);
+  if (f.type === 'noyun' && v < 0 && NY_SELF_SP.has(why) && f.sp < -44) f.sp = Math.min(old, -44); // 노윤 자신의 정신력 감소 효과로는 -45까지 내려가지 않음
   if (f.sp < old) f.spDropped = true; // 이번 턴에 정신력이 감소함 (다한 쓸모, 맺힌 증오)
   if (f.sunset && v < 0 && f.sp < 25) f.sp = Math.max(f.sp, Math.min(old, 25)); // 노을: 외부 효과로 정신력이 25 미만으로 감소하지 않음
   // 정신력 하한이 0인 캐릭터(강주원 [불타는 울음])는 정신력 0이 되면 패닉
@@ -6535,6 +6537,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.1', date: '2026-11-25', items: ['노윤 버프: 자신의 정신력 감소 효과(굿 다이노 · 부엉이 · 아니 진짜 · 강화 효과)로는 정신력이 -45까지 내려가지 않아요 (최저 -44)'] },
   { v: '13.0', date: '2026-11-25', items: ['노윤 패시브 이름 변경: 패션시티 → 시티'] },
   { v: '12.9', date: '2026-11-25', items: ['노윤 스킬 이름 변경: 파탄 → 굿 다이노 · 마지막 일격 → 잘가라노 · 패시브 깨진 유리의 도시 → 패션시티'] },
   { v: '12.8', date: '2026-11-25', items: ['노윤 스킬 이름 변경: 심연으로 가라앉아라 → 앙 · 낙하하는 대검 → 아니 진짜'] },
