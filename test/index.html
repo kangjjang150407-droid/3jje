@@ -2306,6 +2306,10 @@ function dealDamage(src, t, amount, kind, srcName, extra = '') {
     log(`🌘 ${nm(t)} <b style="color:#c8a040">고독한 정오</b>: 치명적인 피해를 버팀 · 흐트러짐 해제 · 이번 턴 동안 체력 1 미만으로 감소하지 않음 (전투당 1회)`, 'kill');
     return dmg;
   }
+  if (t.srBoss && t.srClearAt && t.alive && t.hp <= t.maxHp * t.srClearAt) { // 서버 레이드: 체력 기준 이하가 되면 즉시 전투 종료 · 승리
+    t.srEndHp = Math.floor(t.maxHp * t.srClearAt); showBig(`${t.label} 격퇴!`, '#ffe08a', 2.4); doFlash('#ffffff', 0.6);
+    log(`🌐 ${nm(t)} 체력 ${Math.round(t.srClearAt * 100)}% 이하 → <b style="color:#ffe08a">즉시 전투 종료 · 승리</b>`, 'kill'); kill(t, src, `체력 ${Math.round(t.srClearAt * 100)}% 이하 — 서버 레이드 승리`); return dmg;
+  }
   if (t.graceBreath && t.graceBreath.phase === 1 && t.hp < 1) t.hp = 1; // 유예된 숨: 처음 턴 동안 체력 1 유지
   if (src && src !== t && src.team !== t.team) t.lastHitBy = src;
   if (t.hp <= 0 && graceSave(t)) return dmg;
@@ -4161,7 +4165,7 @@ function checkWin() {
       log(`🏰 던전 ${fl}층 클리어! 🪙 코인 +${rw}${wk ? ' <b style="color:#ffcc33">(주간 추가 보상 +100%)</b>' : ''}${fl >= DUNGEON_MAX ? ' · 최고층 정복!' : ` · ${fl + 1}층 해금`}`, 'kill');
       renderDungeon(Math.min(DUNGEON_MAX, fl + 1));
     } else if (dungeonFloor) log(`🏰 던전 ${dungeonFloor}층 도전 실패`, 'kill');
-    if (raidMode && raidStage === 5 && !dungeonFloor && !pvpOpp && !sr.submitted) { sr.submitted = true; { const bb = fighters.find(f => f.srBoss); sr.dealt = Math.max(0, sr.startHp - (bb ? Math.max(0, bb.hp) : 0)); } log(`🌐 이번 전투에서 ${SR_DEFS[srCur].short}에게 준 피해 <b style="color:#ffe14d">${Math.round(sr.dealt).toLocaleString()}</b>`, 'kill'); srSubmit(sr.dealt); }
+    if (raidMode && raidStage === 5 && !dungeonFloor && !pvpOpp && !sr.submitted) { sr.submitted = true; { const bb = fighters.find(f => f.srBoss); sr.dealt = Math.max(0, sr.startHp - (bb ? (bb.srEndHp != null ? bb.srEndHp : Math.max(0, bb.hp)) : 0)); } log(`🌐 이번 전투에서 ${SR_DEFS[srCur].short}에게 준 피해 <b style="color:#ffe14d">${Math.round(sr.dealt).toLocaleString()}</b>`, 'kill'); srSubmit(sr.dealt); }
     if (raidMode && raidStage !== 5 && !dungeonFloor && !pvpOpp && w === 0) {
       if (!save.raidCleared) save.raidCleared = {}; save.raidCleared[`${raidStage}-${raidDiff}`] = true; // 랭킹 점수용 클리어 기록
       // 레이드 클리어 코인 (난이도 배수)
@@ -6351,10 +6355,11 @@ document.getElementById('raid3Btn').onclick = () => {
 const SR_DEFS = {
   overdrive1: { boss: 'pastjuwon', label: '과다 폭주 - 과거의 강주원', short: '과다 폭주', max: 10000 + 990000, el: 'srInfo', color: '#ff2a6a', noJuwon: true,
     info: '받는 피해량 +100% · 레벨 +50 · 공격 레벨 +60 · 방어 레벨 +100 · 강주원 편성 불가', tix: true },
-  hari1: { boss: 'hari', label: '폭주 십이지[十二支] - 묘 김하리', short: '김하리', max: 5000000, el: 'srInfo2', color: '#ff3aa0',
-    info: 'LV.150 · 체력 5,000,000 · 방어 레벨 300 · 내성 전부 12배 추가 피해 · 흐트러짐 10%마다 · 파열로 피해를 받지 않음<br><i style="color:#a08aa8">[이 세계선의 김하리는 모든 십이지를 다룰 수 있다. 이것이 진짜 전력일까?]</i>' },
+  hari1: { boss: 'hari', label: '폭주 십이지[十二支] - 묘 김하리', short: '김하리', max: 5000000, clearAt: 0.5, el: 'srInfo2', color: '#ff3aa0', // 체력 50% 이하가 되면 즉시 승리
+    info: '<b style="color:#ffe08a">체력이 50% 이하가 되면 즉시 전투 종료 · 승리</b><br>LV.150 · 체력 5,000,000 · 방어 레벨 300 · 내성 전부 12배 추가 피해 · 흐트러짐 10%마다 · 파열로 피해를 받지 않음<br><i style="color:#a08aa8">[이 세계선의 김하리는 모든 십이지를 다룰 수 있다. 이것이 진짜 전력일까?]</i>' },
 };
 var srCur = 'overdrive1';
+const srClearHp = id => Math.floor(SR_DEFS[id].max * (SR_DEFS[id].clearAt || 0)); // 이 체력 이하가 되면 처치
 const srAll = {}; for (const k of Object.keys(SR_DEFS)) srAll[k] = { dmg: null, top: [], mine: 0, dealt: 0, err: '' };
 var sr = srAll.overdrive1;
 const srOn = () => !!(rank.db && rank.uid && !TEST_SERVER);
@@ -6375,9 +6380,9 @@ async function srRefresh(only) {
 function renderSr(only) {
   for (const id of only ? [only] : Object.keys(SR_DEFS)) {
     const D = SR_DEFS[id], S2 = srAll[id], el = document.getElementById(D.el); if (!el) continue;
-    const left = S2.dmg == null ? null : Math.max(0, D.max - S2.dmg), pct = left == null ? 100 : left / D.max * 100;
+    const left = S2.dmg == null ? null : Math.max(srClearHp(id), D.max - S2.dmg), pct = left == null ? 100 : left / D.max * 100;
     let h = `${D.info}<br><div style="height:9px;background:#1a0a14;border-radius:5px;overflow:hidden;margin:3px 0;border:1px solid #5a1a30"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${D.color},#ffe14d)"></div></div>`;
-    h += left == null ? (S2.err || (rank.db ? '불러오는 중…' : '서버 레이드는 웹 주소(GitHub Pages)에서 구글 로그인 후 참여할 수 있어요 — 여기서는 연습 모드')) : left <= 0 ? `<b style="color:#7dffb0">🎉 서버 전체가 ${D.short}을(를) 쓰러뜨렸어요!</b>` : `남은 체력 <b style="color:#ff9ab0">${Math.ceil(left).toLocaleString()}</b> / ${D.max.toLocaleString()} · 내 누적 피해 <b style="color:#ffe14d">${Math.round(S2.mine).toLocaleString()}</b>${D.tix ? `<br>🎟 보상: 피해 ${SR_TIX_STEP.toLocaleString()}당 10회 뽑기권 1장 · 다음 뽑기권까지 ${Math.ceil(SR_TIX_STEP - S2.mine % SR_TIX_STEP).toLocaleString()}` : ''}`;
+    h += left == null ? (S2.err || (rank.db ? '불러오는 중…' : '서버 레이드는 웹 주소(GitHub Pages)에서 구글 로그인 후 참여할 수 있어요 — 여기서는 연습 모드')) : left <= srClearHp(id) ? `<b style="color:#7dffb0">🎉 서버 전체가 ${D.short}을(를) 쓰러뜨렸어요!</b>` : `남은 체력 <b style="color:#ff9ab0">${Math.ceil(left).toLocaleString()}</b> / ${D.max.toLocaleString()} · 내 누적 피해 <b style="color:#ffe14d">${Math.round(S2.mine).toLocaleString()}</b>${D.tix ? `<br>🎟 보상: 피해 ${SR_TIX_STEP.toLocaleString()}당 10회 뽑기권 1장 · 다음 뽑기권까지 ${Math.ceil(SR_TIX_STEP - S2.mine % SR_TIX_STEP).toLocaleString()}` : ''}`;
     if (S2.top.length) h += '<br>' + S2.top.map((p2, i) => `<span style="color:${i ? '#aab' : '#ffcc33'}">${i + 1}. ${titleHTML(p2.title)}${escH(p2.name || '이름 없음')} ${Math.round(p2.dmg).toLocaleString()}</span>`).join(' · ');
     if (TEST_SERVER) h += '<br><span style="color:#7dffb0">🧪 테스트 서버: 연습 모드 (피해가 서버에 기록되지 않아요)</span>';
     el.innerHTML = h;
@@ -6405,7 +6410,7 @@ function srClearReward() {
     log(`🌐 서버 보스 과다 폭주 처치! 🎖 칭호 <b style="color:#ff6a9a">폭주를 멈춘 자</b> · 💍 아티팩트 <b style="color:#c8a0ff">인연</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
     toast('🎖 칭호 폭주를 멈춘 자 · 💍 아티팩트 인연 획득!');
   }
-  if (B.dmg != null && B.dmg >= SR_DEFS.hari1.max && B.mine > 0 && !save.srCleared2) {
+  if (B.dmg != null && B.dmg >= SR_DEFS.hari1.max - srClearHp('hari1') && B.mine > 0 && !save.srCleared2) {
     save.srCleared2 = true; const first = !save.artifacts.hwan; save.artifacts.hwan = true; persist(); try { renderArtifacts(); } catch (e) {}
     showBig('김하리 처치!', '#ff3aa0', 2.4); doFlash('#ffffff', 0.6);
     log(`🌐 서버 보스 폭주 십이지[十二支] - 묘 김하리 처치! 🎖 칭호 <b style="color:#ffd040">십이지를 꺾은 자</b> · 💍 아티팩트 <b style="color:#ff7ac8">환 - [묘]</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
@@ -6427,14 +6432,14 @@ async function startServerRaid(id = srCur) {
   const team = roster.filter(r => r.team === 0 && r.type !== 'dummy' && !(D.noJuwon && r.type === 'juwon'));
   if (!team.length) { toast('레드 팀에 서버 레이드에 도전할 캐릭터를 넣어주세요'); return; }
   if (srOn()) await srRefresh(id);
-  const left = sr.dmg == null || !srOn() ? D.max : Math.max(0, D.max - sr.dmg);
-  if (left <= 0) { toast(`🎉 ${D.short}은(는) 이미 쓰러졌어요!`); return; }
+  const left = sr.dmg == null || !srOn() ? D.max : Math.max(srClearHp(id), D.max - sr.dmg);
+  if (left <= srClearHp(id)) { toast(`🎉 ${D.short}은(는) 이미 쓰러졌어요!`); return; }
   roster = team.concat([{ type: D.boss, team: 1 }]);
   pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 5; raidDiff = 0; renderRoster(); setTestLock(true); start(); questEvent('raidTry');
   sr.dealt = 0; sr.submitted = false;
   const b = fighters.find(f => f.type === D.boss && f.team === 1);
   if (b) {
-    b.srBoss = true; b.label = D.label; b.maxHp = D.max; b.hp = b.dispHp = b.lagHp = left; sr.startHp = left; b.staggerHit = (b.staggerTh || []).map(th => left < D.max * th);
+    b.srBoss = true; b.srClearAt = D.clearAt || 0; b.label = D.label; b.maxHp = D.max; b.hp = b.dispHp = b.lagHp = left; sr.startHp = left; b.staggerHit = (b.staggerTh || []).map(th => left < D.max * th);
     if (id === 'overdrive1') { b.overdrive = true; b.timeUsed = true; pjGlitch(b); } // 불완전한 시간 구현은 발동하지 않음 (체력 공유)
   }
   showBig(`서버 레이드: ${D.short}`, D.color, 2.4); doFlash(D.color, 0.7); shake = Math.max(shake, 26); darkenT = 1.4;
@@ -6704,6 +6709,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.1', date: '2026-11-25', items: ['김하리 서버 레이드 종료 조건: 김하리의 체력이 50% 이하가 되면 즉시 전투 종료 · 승리 (서버 체력 기준 50%까지 깎으면 처치)'] },
   { v: '14.0', date: '2026-11-25', items: ['공간참 - 청 연출 강화: 청색 칼날의 거대한 연기 검기 → 공간이 갈라지며 별빛이 비치는 푸른 균열 → 잔격 다섯 줄 → 균열이 닫히며 폭발과 파편'] },
   { v: '13.9', date: '2026-11-25', items: ['송재범 이펙트 강화: 입가의 담뱃불 → 겹겹의 붉은 연기 리본이 휘감아 날아감 (연기 속 불씨) → 대상에서 연기 고리가 퍼지고 재가 흩날림 (아니는 연기 고리 두 겹)'] },
   { v: '13.8', date: '2026-11-25', items: ['칭호가 배경과 겹쳐 안 보이던 문제 수정: 모든 칭호가 어두운 배지 위에 테두리와 함께 표시돼요'] },
