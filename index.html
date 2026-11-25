@@ -1204,14 +1204,52 @@ function drawTimeFx() {
       const b = smokeBladePos(e), pr = Math.min(1, p * 1.3);
       drawSmokeBlade(b.x + rand(-2, 2) * (1 - pr), b.y + rand(-2, 2) * (1 - pr), b.ang, b.len * (0.5 + pr * 0.5), pr * 0.95, 14 + pr * 6);
     } else if (e.kind === 'smokeCut') {
-      // 한 번에 크게 베는 연기 검기
-      const t = e.tgt, cx = t ? t.x : e.x, cy = t ? t.y : e.y, R = 230, a0 = e.ang - 1.6, sw = 3.2 * Math.min(1, p * 2.2), a1 = a0 + sw;
-      ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.6);
-      ctx.globalCompositeOperation = 'lighter';
-      const gr = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.05); gr.addColorStop(0, 'rgba(160,160,175,0)'); gr.addColorStop(0.6, 'rgba(255,70,90,0.85)'); gr.addColorStop(1, 'rgba(200,200,210,0)');
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, a0, a1); ctx.arc(cx, cy, R * 0.6, a1, a0, true); ctx.closePath(); ctx.fill();
-      ctx.globalCompositeOperation = 'source-over'; ctx.restore();
-      if (p < 0.6) drawSmokeBlade(cx + Math.cos(a1) * R * 0.82, cy + Math.sin(a1) * R * 0.82, a1 + Math.PI / 2, 220, 1 - p, 22);
+      // 공간참 - 청: 연기 검이 크게 휩쓸고(0~30%) → 공간에 푸른 균열이 갈라져 별빛이 비침 → 잔격 다섯 줄 → 균열이 닫히며 폭발
+      const t = e.tgt, cx = t ? t.x : e.x, cy = t ? t.y : e.y, R = 230, sweepP = Math.min(1, p / 0.3), a0 = e.ang - 1.6, sw = 3.2 * (1 - Math.pow(1 - sweepP, 3)), a1 = a0 + sw;
+      const kSweep = p < 0.45 ? 1 : Math.max(0, 1 - (p - 0.45) / 0.25), seed = e.seed || 0;
+      ctx.save();
+      // 1) 큰 연기 검기 (청색 칼날 테두리)
+      if (kSweep > 0) {
+        ctx.globalAlpha = kSweep; ctx.globalCompositeOperation = 'lighter';
+        const gr = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R * 1.08); gr.addColorStop(0, 'rgba(120,130,160,0)'); gr.addColorStop(0.55, 'rgba(70,140,255,0.75)'); gr.addColorStop(0.85, 'rgba(255,90,110,0.7)'); gr.addColorStop(1, 'rgba(220,235,255,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, a0, a1); ctx.arc(cx, cy, R * 0.55, a1, a0, true); ctx.closePath(); ctx.fill();
+        for (const [rr, col, wd] of [[1.06, '#ffffff', 3], [1.0, '#6ab8ff', 7], [0.9, '#ff5a6a', 2.5]]) { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.arc(cx, cy, R * rr, a0, a1); ctx.stroke(); }
+        ctx.globalCompositeOperation = 'source-over';
+        // 연기 꼬리
+        for (let a = a0; a < a1; a += 0.14) { const rr = R * (0.95 + Math.sin(a * 9 + seed) * 0.05), x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr - (a1 - a) * 10, sz = 18 + (a1 - a) * 14;
+          const sg = ctx.createRadialGradient(x, y, 0, x, y, sz); sg.addColorStop(0, 'rgba(140,135,150,0.45)'); sg.addColorStop(1, 'rgba(140,135,150,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(x, y, sz, 0, TAU); ctx.fill(); }
+        if (p < 0.6) drawSmokeBlade(cx + Math.cos(a1) * R * 0.82, cy + Math.sin(a1) * R * 0.82, a1 + Math.PI / 2, 220, kSweep * (1 - p), 22);
+      }
+      // 2) 공간 균열: 칼이 지나간 방향으로 대상을 가로지르는 긴 틈이 열림
+      if (p > 0.22) {
+        const q = (p - 0.22) / 0.78, open = q < 0.25 ? q / 0.25 : q < 0.7 ? 1 : Math.max(0, 1 - (q - 0.7) / 0.12), L = 300 + q * 60, ta = e.ang + Math.PI / 2, W = 16 * open;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(ta);
+        if (open > 0.01) {
+          ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = open * 0.8; ctx.drawImage(glow('#3a8aff'), -L * 0.6, -60, L * 1.2, 120);
+          ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+          ctx.beginPath(); ctx.moveTo(-L / 2, 0); for (let i = 0; i <= 20; i++) { const x = -L / 2 + L * i / 20, w = W * Math.sin(Math.PI * i / 20) * (1 + 0.25 * Math.sin(i * 2.7 + seed)); ctx.lineTo(x, -w); } for (let i = 20; i >= 0; i--) { const x = -L / 2 + L * i / 20, w = W * Math.sin(Math.PI * i / 20) * (1 + 0.25 * Math.cos(i * 3.1 + seed)); ctx.lineTo(x, w); } ctx.closePath();
+          const rg = ctx.createLinearGradient(0, -W, 0, W); rg.addColorStop(0, '#9ad8ff'); rg.addColorStop(0.3, '#020818'); rg.addColorStop(0.7, '#020818'); rg.addColorStop(1, '#9ad8ff'); ctx.fillStyle = rg; ctx.fill();
+          ctx.save(); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 26; i++) { const x = -L / 2 + ((i * 0.618 + seed) % 1) * L, y = (((i * 0.377) % 1) - 0.5) * W * 1.4; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(simTime * 12 + i); ctx.fillStyle = i % 3 ? '#bfe8ff' : '#ffffff'; ctx.fillRect(x, y, 2, 2); } ctx.restore();
+          ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = open; ctx.strokeStyle = '#e0f4ff'; ctx.lineWidth = 2; ctx.stroke();
+          // 균열 가장자리 전기
+          ctx.strokeStyle = '#7ac8ff'; ctx.lineWidth = 1.3; for (let k2 = 0; k2 < 3; k2++) { if (Math.random() < 0.4) continue; let x = rand(-L / 2, L / 2), y = (Math.random() < 0.5 ? -1 : 1) * W * 0.8; ctx.beginPath(); ctx.moveTo(x, y); for (let s2 = 0; s2 < 4; s2++) { x += rand(-14, 14); y += rand(-10, 10); ctx.lineTo(x, y); } ctx.stroke(); }
+        }
+        ctx.restore();
+        // 3) 잔격: 다섯 줄의 가는 칼선이 연달아 번쩍임
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 5; i++) { const st = 0.3 + i * 0.07, qq = (p - st) / 0.12; if (qq <= 0 || qq >= 1) continue;
+          const an = e.ang + Math.PI / 2 + (i - 2) * 0.55 + Math.sin(seed + i) * 0.2, ll = 120 + i * 18; ctx.globalAlpha = 1 - qq; ctx.strokeStyle = i % 2 ? '#ffffff' : '#6ab8ff'; ctx.lineWidth = 4 * (1 - qq) + 1;
+          ctx.beginPath(); ctx.moveTo(cx - Math.cos(an) * ll, cy - Math.sin(an) * ll); ctx.lineTo(cx + Math.cos(an) * ll, cy + Math.sin(an) * ll); ctx.stroke(); }
+        // 4) 균열이 닫히는 순간 폭발: 섬광 + 푸른/붉은 충격파 + 파편
+        const cq = (q - 0.82) / 0.18; if (cq > 0 && cq < 1) {
+          ctx.globalAlpha = Math.max(0, 1 - cq * 1.6); ctx.drawImage(glow('#ffffff'), cx - 90, cy - 90, 180, 180);
+          for (const [col, rr, wd] of [['#6ab8ff', 60 + cq * 260, 8], ['#ff5a6a', 40 + cq * 180, 4]]) { ctx.globalAlpha = 1 - cq; ctx.strokeStyle = col; ctx.lineWidth = wd * (1 - cq) + 1; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke(); }
+          ctx.globalCompositeOperation = 'source-over';
+          for (let i = 0; i < 16; i++) { const an = seed + i * 2.39996, d = 30 + cq * 200 * (0.6 + (i % 3) * 0.25), x = cx + Math.cos(an) * d, y = cy + Math.sin(an) * d; ctx.save(); ctx.translate(x, y); ctx.rotate(an + cq * 8); ctx.globalAlpha = 1 - cq; ctx.fillStyle = i % 2 ? '#bfe8ff' : '#20283a';
+            ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(7, -2); ctx.lineTo(1, 5); ctx.closePath(); ctx.fill(); ctx.restore(); }
+        }
+      }
+      ctx.restore();
     } else if (e.kind === 'rewind') {
       // 시간을 되돌리는 시계 (반시계 방향으로 빠르게)
       drawClock(x, y, 150 + Math.sin(p * 12) * 6, p * 20, '#9ff0ff', Math.min(1, k * 3), -1);
@@ -2622,11 +2660,11 @@ function onUse(u) {
   } else if (u.sk === 'sSlash') {
     const b = f.breath || 0; u.pct += b * 100; u.coinPow += b * 5; u.slashBreath = b;
     log(`${nm(f)} ${sk(u.sk)}: 완성 되어가는 숨결 ${b} → 피해량 +${b * 100}% · 코인 위력 +${b * 5}`, 'skill');
-    showBig('공간참 - 청', '#ff5a6a', 1.8); doFlash('#ff3a4a', 0.5); darkenT = 1.2; shake = Math.max(shake, 26);
+    showBig('공간참 - 청', '#6ab8ff', 1.8); doFlash('#3a6aff', 0.5); darkenT = 1.4; shake = Math.max(shake, 26);
     timeFx = timeFx.filter(x => !(x.kind === 'smokeForm' && x.f === f));
     if (u.tgt) {
       const ang = Math.atan2(u.tgt.y - f.y, u.tgt.x - f.x);
-      timeFx.push({ tgt: u.tgt, x: u.tgt.x, y: u.tgt.y, ang, life: 0.9, max: 0.9, kind: 'smokeCut' });
+      timeFx.push({ tgt: u.tgt, x: u.tgt.x, y: u.tgt.y, ang, life: 1.6, max: 1.6, kind: 'smokeCut', seed: Math.random() * 10 });
       songSmoke(f, u.tgt, true);
       for (let k = 0; k < 40; k++) { const a = ang + rand(-1.4, 1.4), sp = rand(200, 520); particles.push({ x: u.tgt.x, y: u.tgt.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.7, 1.2), max: 1.2, size: rand(14, 30), color: Math.random() < 0.5 ? '#9a9aa4' : '#c8404e', drag: 0.94, g: -40, kind: 'smoke', rot: 0, a: 0.55 }); }
     }
@@ -6665,6 +6703,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.0', date: '2026-11-25', items: ['공간참 - 청 연출 강화: 청색 칼날의 거대한 연기 검기 → 공간이 갈라지며 별빛이 비치는 푸른 균열 → 잔격 다섯 줄 → 균열이 닫히며 폭발과 파편'] },
   { v: '13.9', date: '2026-11-25', items: ['송재범 이펙트 강화: 입가의 담뱃불 → 겹겹의 붉은 연기 리본이 휘감아 날아감 (연기 속 불씨) → 대상에서 연기 고리가 퍼지고 재가 흩날림 (아니는 연기 고리 두 겹)'] },
   { v: '13.8', date: '2026-11-25', items: ['칭호가 배경과 겹쳐 안 보이던 문제 수정: 모든 칭호가 어두운 배지 위에 테두리와 함께 표시돼요'] },
   { v: '13.7', date: '2026-11-25', items: ['🎖 칭호 추가: 십이지를 꺾은 자 (서버 레이드 폭주 십이지[十二支] - 묘 김하리 처치 참여자 · 금빛 광택과 물결 연출)'] },
