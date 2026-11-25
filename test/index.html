@@ -169,7 +169,8 @@
   }
 
   /* ===== 칭호 연출 ===== */
-  .tt{display:inline-block;font-weight:700;white-space:nowrap;color:#d8b8ff}
+  .ttw{display:inline-block;background:rgba(6,4,14,.82);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:0 5px;margin-right:3px;line-height:1.5;vertical-align:middle}
+  .tt{display:inline-block;font-weight:700;white-space:nowrap;color:#d8b8ff;filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)}
   .tt .ch{display:inline-block}
   .tt-shine{background:linear-gradient(100deg,var(--c1) 20%,#fff 45%,var(--c1) 70%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:ttShine 2.6s linear infinite}
   @keyframes ttShine{from{background-position:120% 0}to{background-position:-120% 0}}
@@ -182,13 +183,16 @@
   .tt-glitch{animation:ttGlitch 1.8s infinite}
   @keyframes ttGlitch{0%,86%,100%{text-shadow:none;transform:none}88%{text-shadow:-2px 0 #ff2a6a,2px 0 #2affe0;transform:translateX(1px)}91%{text-shadow:2px 0 #ff2a6a,-2px 0 #2affe0;transform:translateX(-1px) skewX(-8deg)}94%{text-shadow:-1px 0 #ff2a6a,1px 0 #2affe0;transform:none}}
   .tt-ghost{animation:ttGhost 3s ease-in-out infinite}
-  @keyframes ttGhost{0%,100%{opacity:1;filter:none}50%{opacity:.45;filter:blur(.6px)}}
+  @keyframes ttGhost{0%,100%{opacity:1}50%{opacity:.68}}
   .tt-pulse{animation:ttPulse 1.4s ease-in-out infinite}
   @keyframes ttPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
   .tt-bob{animation:ttBob 2.4s ease-in-out infinite}
   @keyframes ttBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   .tt-rainbow{background:linear-gradient(90deg,#ff5a5a,#ffcc33,#5aff8a,#5ad8ff,#b05aff,#ff5ab0,#ff5a5a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:ttRain 3s linear infinite}
   @keyframes ttRain{from{background-position:0 0}to{background-position:300% 0}}
+  .tt-shine.tt-wave{background:none;color:var(--c1)!important}
+  .tt-shine.tt-wave .ch{animation:ttWave 1.6s ease-in-out infinite,ttGleam 2.2s linear infinite;animation-delay:calc(var(--i) * -0.12s),calc(var(--i) * 0.09s)}
+  @keyframes ttGleam{0%,60%,100%{color:var(--c1)}75%{color:#ffffff;text-shadow:0 0 6px var(--c1)}}
   .tt-rainbow.tt-wave{background:none;color:#fff!important}
   .tt-rainbow.tt-wave .ch{animation:ttWave 1.6s ease-in-out infinite,ttHue 2.4s linear infinite;animation-delay:calc(var(--i) * -0.12s),calc(var(--i) * -0.2s);text-shadow:0 0 6px rgba(255,255,255,.5)}
   @keyframes ttHue{0%{color:#ff5a5a}17%{color:#ffcc33}33%{color:#5aff8a}50%{color:#5ad8ff}67%{color:#b05aff}83%{color:#ff5ab0}100%{color:#ff5a5a}}
@@ -6633,6 +6637,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.8', date: '2026-11-25', items: ['칭호가 배경과 겹쳐 안 보이던 문제 수정: 모든 칭호가 어두운 배지 위에 테두리와 함께 표시돼요'] },
   { v: '13.7', date: '2026-11-25', items: ['🎖 칭호 추가: 십이지를 꺾은 자 (서버 레이드 폭주 십이지[十二支] - 묘 김하리 처치 참여자 · 금빛 광택과 물결 연출)'] },
   { v: '13.6', date: '2026-11-25', items: ['🎖 칭호 추가: 닭을 멈춘 자 (던전 2층 히든 보스 봉이 아빠 처치 · 붉게 두근거리며 빛나는 연출)'] },
   { v: '13.5', date: '2026-11-25', items: ['김하리 이펙트를 노란색으로 변경 · 전용 검 추가 (순보: 금빛 글자가 새겨진 붉은 검 · 순보 - [븅]: 사슬에 감긴 칼집 검)'] },
@@ -6957,7 +6962,7 @@ function titleHTML(name, trailingSpace = true) {
   if (!name) return '';
   const t = TITLES.find(x => x.name === name), F = (t && TITLE_FX[t.id]) || { c: '#d8b8ff', fx: '' }, txt = `[${name}]`, esc3 = c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] || c);
   const fx = F.fx.split(' ').filter(Boolean), inner = fx.includes('wave') ? [...txt].map((c, i) => `<span class="ch" style="--i:${i}">${c === ' ' ? '&nbsp;' : esc3(c)}</span>`).join('') : [...txt].map(esc3).join('');
-  return `<span class="tt ${fx.map(x => 'tt-' + x).join(' ')}" style="color:${F.c};--c1:${F.c};--g:${F.g || F.c}">${inner}</span>${trailingSpace ? ' ' : ''}`;
+  return `<span class="ttw"><span class="tt ${fx.map(x => 'tt-' + x).join(' ')}" style="color:${F.c};--c1:${F.c};--g:${F.g || F.c}">${inner}</span></span>${trailingSpace ? ' ' : ''}`; // 어두운 배지 위에 표시해 어떤 배경에서도 잘 보이게
 }
 const titleName = () => { const t = TITLES.find(x => x.id === prof.title); return t && t.ok() ? t.name : ''; };
 function applyProfileUI(king) {
