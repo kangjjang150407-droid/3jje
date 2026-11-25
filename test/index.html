@@ -6337,8 +6337,8 @@ function srClearReward() {
   if (B.dmg != null && B.dmg >= SR_DEFS.hari1.max && B.mine > 0 && !save.srCleared2) {
     save.srCleared2 = true; const first = !save.artifacts.hwan; save.artifacts.hwan = true; persist(); try { renderArtifacts(); } catch (e) {}
     showBig('김하리 처치!', '#ff3aa0', 2.4); doFlash('#ffffff', 0.6);
-    log(`🌐 서버 보스 폭주 십이지[十二支] - 묘 김하리 처치! 💍 아티팩트 <b style="color:#ff7ac8">환 - [묘]</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
-    toast('💍 아티팩트 환 - [묘] 획득!');
+    log(`🌐 서버 보스 폭주 십이지[十二支] - 묘 김하리 처치! 🎖 칭호 <b style="color:#ffd040">십이지를 꺾은 자</b> · 💍 아티팩트 <b style="color:#ff7ac8">환 - [묘]</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
+    toast('🎖 칭호 십이지를 꺾은 자 · 💍 아티팩트 환 - [묘] 획득!');
   }
 }
 function srReward() {
@@ -6633,6 +6633,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.7', date: '2026-11-25', items: ['🎖 칭호 추가: 십이지를 꺾은 자 (서버 레이드 폭주 십이지[十二支] - 묘 김하리 처치 참여자 · 금빛 광택과 물결 연출)'] },
   { v: '13.6', date: '2026-11-25', items: ['🎖 칭호 추가: 닭을 멈춘 자 (던전 2층 히든 보스 봉이 아빠 처치 · 붉게 두근거리며 빛나는 연출)'] },
   { v: '13.5', date: '2026-11-25', items: ['김하리 이펙트를 노란색으로 변경 · 전용 검 추가 (순보: 금빛 글자가 새겨진 붉은 검 · 순보 - [븅]: 사슬에 감긴 칼집 검)'] },
   { v: '13.4', date: '2026-11-25', items: ['폭주 효과 추가: 수치 10당 방어 레벨 -10'] },
@@ -6912,6 +6913,7 @@ const TITLES = [
   { id: 'upgrader', name: '강화의 달인', how: '캐릭터 5명 강화', ok: () => GACHA.filter(k => save.upg && save.upg[k]).length >= 5 },
   { id: 'pvp', name: 'PVP 투사', how: 'PVP 10승', ok: () => ((save.pvp || {}).w || 0) >= 10 },
   { id: 'bongKill', name: '닭을 멈춘 자', how: '던전 2층 히든 보스 봉이 아빠 처치', ok: () => !!save.artifacts.needle },
+  { id: 'srKill2', name: '십이지를 꺾은 자', how: '서버 레이드 폭주 십이지[十二支] - 묘 김하리 처치 (피해를 준 참여자)', ok: () => !!save.srCleared2 },
   { id: 'srKill', name: '폭주를 멈춘 자', how: '서버 레이드 과다 폭주 처치 (피해를 준 참여자)', ok: () => !!save.srCleared },
   // PVP 티어 칭호: 한 번이라도 달성한 최고 티어 기준 (시즌이 바뀌어도 유지)
   ...[['브론즈 도전자', '브론즈'], ['실버 검객', '실버'], ['황금의 투사', '골드'], ['에메랄드 수호자', '에메랄드'], ['다이아몬드 정예', '다이아몬드'], ['PVP 마스터', '마스터'], ['그랜드 마스터', '그랜드 마스터'], ['빛나는 자', '레디언트'], ['한계를 넘은 자', '초월자'], ['영원히 군림하는 자', '영생']]
@@ -6939,6 +6941,7 @@ const TITLE_FX = {
   pvp: { c: '#9fd8ff', fx: 'pulse glow', g: '#3a9aff' },
   srKill: { c: '#ff6a9a', fx: 'glitch glow', g: '#ff2a6a' },
   bongKill: { c: '#ff5a4a', fx: 'pulse glow spark', g: '#e0303a' },
+  srKill2: { c: '#ffd040', fx: 'shine wave spark' },
   tier0: { c: '#d89a6a', fx: 'glow', g: '#a0603a' },
   tier1: { c: '#dfe6f0', fx: 'shine' },
   tier2: { c: '#ffd04a', fx: 'shine glow', g: '#ffaa00' },
