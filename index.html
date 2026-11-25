@@ -513,7 +513,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b>굿 다이노</b> 마법 · 코인 2 (마이너스) · 공격 180 · 31 / -13 · 정신력 -15 · 대상 침잠 5당 기본 위력 +1 (최대 4) · 정신력이 낮을수록 피해량 증가 (최대 21%) · 바위 조각 1당 피해량 +10% (최대 100%) · 부엉이 1당 +20% (최대 60%) · 바위 조각 2 · 처치 시 바위 조각 3 · 공격 종료 시 정신력이 0 미만이면 10 + 차이×2 회복 (최대 +50) · 턴 종료 시 부엉이 제거 · 1코인: 침잠 5, 횟수 +2, 피해량 30% 흐트러짐 손상 · 2코인: 대상 침잠만큼 물리 피해 (최대 30), 처치 시 무작위 적 2명 침잠 (대상 침잠/2, 최대 8) · 정신력 +15<br>
       <b>강화 효과</b> 반격 잘가라노 해금 · 굿 다이노를 장착한 턴에 정신력 25 감소<br>
       <b>강화 반격 잘가라노</b> 마법 · 코인 2 · 5 / +4 · 다음 턴 부엉이 1 · 체력 20% 미만이고 아군이 있으면 아군 정신력 -25, 아군 모든 스킬 마이너스 코인, 공격 후 스스로 부서짐<br>
-      <b>패시브 패션시티</b> 대상 침잠 1당 피해량 +1% (최대 15%) · 아군이 사망에 이르는 피해를 받으면 바위 조각 2를 소모해 유예된 숨 부여 (턴당 2회) · 그 아군은 다음 턴 피해량 증가 2, 공격 위력 증가 1<br>
+      <b>패시브 시티</b> 대상 침잠 1당 피해량 +1% (최대 15%) · 아군이 사망에 이르는 피해를 받으면 바위 조각 2를 소모해 유예된 숨 부여 (턴당 2회) · 그 아군은 다음 턴 피해량 증가 2, 공격 위력 증가 1<br>
       <b>패시브 부엉이</b> 턴 시작 시 부엉이가 있으면 탑승 (정신력 -5 · 흐트러짐 해제, 해제할 수 없는 흐트러짐이면 탑승 불가) · 쓰러진 아군이 3명 이상이면 다음 턴 부엉이 1 (전투당 1회) · 처치 시 바위 조각 1<br>
       <b style="color:#c8a0ff">부엉이</b> 최대 3 · 1당 공격 레벨 +3, 방어 레벨 -3 · 턴 종료 시 다음 턴 1 얻음 (정신력 -25 이하면 제거) · 턴 종료 시 정신력 -(15 - 바위 조각/2) (최소 10)<br>
       <b style="color:#c890ff">유예된 숨</b> 최대 1 · 처음 턴 동안 체력 1 유지, 턴 종료 시 체력 50% 회복 · 정신력 0 · 공격에 의해 사망 시 이번 턴 아군 공격 위력 +1, 마지막으로 공격한 대상 침잠 3 · 부활한 턴 종료 시 사망<br>
@@ -3105,7 +3105,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
   if (u.sk === 'ani') pct += Math.floor(((t.bleed ? t.bleed.pot : 0) + f.cola) / 5);
   if (u.sk === 'cheobun' && isPrey(t, f)) pct += 100;
   pct += buffVal(f, 'dmgUp');
-  if (f.type === 'noyun') pct += Math.min(15, t.sinking ? t.sinking.pot : 0) + (inyeonWith(f, 'wooju') ? 100 : 0); // 인연: 강우주와 함께면 피해량 +100% // 패션시티: 대상의 침잠 1당 피해량 +1% (최대 15%)
+  if (f.type === 'noyun') pct += Math.min(15, t.sinking ? t.sinking.pot : 0) + (inyeonWith(f, 'wooju') ? 100 : 0); // 인연: 강우주와 함께면 피해량 +100% // 시티: 대상의 침잠 1당 피해량 +1% (최대 15%)
   if (u.sk === 'ha' && i === 1) pct += f.poise ? f.poise.pot : 0; // 호흡 1당 이 코인의 피해량 +1%
   if (u.sk === 'gisup') pct += Math.floor(f.charge / 4) * 20;
   if (u.sk === 'gwanmun') pct += Math.floor(stackSum(f.poise) / 10) * 100;
@@ -4384,7 +4384,7 @@ function gainRock(f, v, why) {
   floatText(f.x + 30, f.y - f.r - 4, `바위 조각 +${f.rock - b}`, '#c8a8ff', 14, { vy: -30, life: 0.9 });
   log(`${nm(f)} 바위 조각 +${f.rock - b} (${why}) → ${f.rock}/10`);
 }
-function graceSave(t) { // 패션시티: 아군이 사망에 이르는 피해를 받으면 바위 조각 2를 소모해 유예된 숨 부여 (턴당 2회)
+function graceSave(t) { // 시티: 아군이 사망에 이르는 피해를 받으면 바위 조각 2를 소모해 유예된 숨 부여 (턴당 2회)
   if (t.graceBreath || t.type === 'clone' || !t.alive) return false;
   const ny = fighters.find(a => a.alive && !a.away && a.type === 'noyun' && a !== t && a.team === t.team && (a.rock || 0) >= 2 && (a.graceCnt || 0) < 2);
   if (!ny) return false;
@@ -4395,7 +4395,7 @@ function graceSave(t) { // 패션시티: 아군이 사망에 이르는 피해를
   floatText(t.x, t.y - t.r - 50, '유예된 숨', '#c890ff', 24, { life: 1.6 });
   ring(t.x, t.y, '#a060ff', t.r * 4, 0.8, 10); burst(t.x, t.y, '#d8b0ff', 50, 420, 10, 1.0, { kind: 'spark' }); doFlash('#6a2aff', 0.3); shake = Math.max(shake, 16);
   lightning(ny.x, ny.y, t.x, t.y, '#b070ff', 6, 0.4);
-  log(`🟣 ${nm(ny)} 패시브 <b style="color:#b070ff">패션시티</b>: 바위 조각 2 소모 → ${nm(t)}에게 <b style="color:#c890ff">유예된 숨</b> (이번 턴 체력 1 유지 · 다음 턴 피해량 증가 2 · 공격 위력 증가 1)`, 'kill');
+  log(`🟣 ${nm(ny)} 패시브 <b style="color:#b070ff">시티</b>: 바위 조각 2 소모 → ${nm(t)}에게 <b style="color:#c890ff">유예된 숨</b> (이번 턴 체력 1 유지 · 다음 턴 피해량 증가 2 · 공격 위력 증가 1)`, 'kill');
   return true;
 }
 function noyunTurnEnd() {
@@ -6535,6 +6535,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '13.0', date: '2026-11-25', items: ['노윤 패시브 이름 변경: 패션시티 → 시티'] },
   { v: '12.9', date: '2026-11-25', items: ['노윤 스킬 이름 변경: 파탄 → 굿 다이노 · 마지막 일격 → 잘가라노 · 패시브 깨진 유리의 도시 → 패션시티'] },
   { v: '12.8', date: '2026-11-25', items: ['노윤 스킬 이름 변경: 심연으로 가라앉아라 → 앙 · 낙하하는 대검 → 아니 진짜'] },
   { v: '12.7', date: '2026-11-25', items: ['PVP 랭킹 수정: PVP를 하지 않았거나 예전 버전에서 기록이 저장되지 않은 계정도 접속하면 PVP 랭킹에 보여요 (기록이 없으면 브론즈 0점)'] },
