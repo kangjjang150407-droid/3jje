@@ -7751,7 +7751,7 @@ requestAnimationFrame(frame);
 
 // ================== 연출 구경 서버 (showcase/index.html) ==================
 if (window.BALLFIGHT_SHOWCASE) (function () {
-  const EXTRA = { marksman: ['hyungtan'], queen: ['arcana'], despair: ['emptyDespair'] };
+  const EXTRA = { marksman: ['hyungtan'], queen: ['arcana'], despair: ['emptyDespair'], darkwooju: ['dwWalk'], targetking: ['kingcounter'] }; // 조건부 · 반격 전용 스킬도 미리보기
   const SKIP = { dummy: 1, dgdummy: 1, clone: 1, yoru: 1 };
   const types = Object.keys(CHAR).filter(k => !SKIP[k]);
   const skillsOf = t => [...new Set([].concat(T_SKILLS[t] || [], CHAR[t].pool || [], EXTRA[t] || [], ['tearSword']))].filter(k => SKILLS[k]); // 눈물로 벼려낸 검: 잿빛 별자리의 가호 강화 스킬 (누구나 미리보기)
