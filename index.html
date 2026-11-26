@@ -3299,10 +3299,10 @@ function hitCoin(u, t, pow, i, heads, crit) {
     songSmoke(f, t, u.sk === 'sAni', u.sk === 'sSlash');
   } else if (f.type === 'sunwooA') {
     // 정선우 - 전성기: 두 자루의 검으로 X자로 교차해 베기 (금빛 · 화상 주황)
-    const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'swJudge' || u.sk === 'swElef', R = t.r * 2.8 + (big ? 40 : 0), pal = ['#7a4a10', '#ffb040', '#ffe08a', '#fff8e0'];
-    slashes.push({ fire: true, pal, img: swA1Img, x: t.x, y: t.y, ang: ang + 0.55, dir: 1, r: R, life: 0.65, max: 0.65, big, seed: Math.random() * 10 });
-    slashes.push({ fire: true, pal, img: swA2Img, x: t.x, y: t.y, ang: ang - 0.55, dir: -1, r: R * 0.92, life: 0.7, max: 0.7, big, seed: Math.random() * 10 });
-    burst(t.x, t.y, '#ffd060', big ? 26 : 16, 520, 8, 0.5, { kind: 'spark' }); burst(t.x, t.y, '#ff7a2a', 10, 300, 12, 0.6, { g: -180 });
+    const ang = Math.atan2(t.y - f.y, t.x - f.x), big = u.sk === 'swJudge' || u.sk === 'swElef', R = t.r * 2.8 + (big ? 40 : 0), palO = ['#a83200', '#ff6a10', '#ffa030', '#fff0c0'], palY = ['#8a6a00', '#ffc820', '#ffe860', '#fffbe0']; // 주황 · 노랑이 섞인 검기
+    slashes.push({ fire: true, pal: palO, img: swA1Img, x: t.x, y: t.y, ang: ang + 0.55, dir: 1, r: R, life: 0.65, max: 0.65, big, seed: Math.random() * 10 });
+    slashes.push({ fire: true, pal: palY, img: swA2Img, x: t.x, y: t.y, ang: ang - 0.55, dir: -1, r: R * 0.92, life: 0.7, max: 0.7, big, seed: Math.random() * 10 });
+    burst(t.x, t.y, '#ffd040', big ? 16 : 10, 520, 8, 0.5, { kind: 'spark' }); burst(t.x, t.y, '#ff6a10', big ? 16 : 10, 480, 8, 0.5, { kind: 'spark' }); burst(t.x, t.y, '#ff9a2a', 10, 300, 12, 0.6, { g: -180 });
     shake = Math.max(shake, big ? 18 : 11); if (u.sk === 'swJudge') doFlash('#ff7a3a', 0.25);
   } else if (f.type === 'hari') {
     // 순보: 분홍 잔상을 남기며 순간 이동해 베고, [븅]은 십이지 고리가 대상을 감쌈
@@ -6798,6 +6798,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.3', date: '2026-11-26', items: ['정선우 - 전성기 이펙트 변경: 주황색과 노란색이 섞인 검기 (한 자루는 주황 · 한 자루는 노랑으로 X자 교차)'] },
   { v: '14.2', date: '2026-11-26', items: ['⚡ 각성 추가: 뽑기에서 아주 낮은 확률(1%)로 각성 영혼석 → 10개로 각성 · 전투마다 기본 · 각성 중 골라서 편성', '첫 각성: 정선우 - 전성기 (LV.90 · 체력 3204 · 물리 4배 절감) — 세치오나투라 디 체르보 · 세치오나투라 디 엘레판테 · 처분 · 회피 예상 / 패시브 사냥 시간 · 흠 · 승기', '전성기 이펙트: 두 자루의 검으로 X자 교차 베기'] },
   { v: '14.1', date: '2026-11-25', items: ['김하리 서버 레이드 종료 조건: 김하리의 체력이 50% 이하가 되면 즉시 전투 종료 · 승리 (서버 체력 기준 50%까지 깎으면 처치)'] },
   { v: '14.0', date: '2026-11-25', items: ['공간참 - 청 연출 강화: 청색 칼날의 거대한 연기 검기 → 공간이 갈라지며 별빛이 비치는 푸른 균열 → 잔격 다섯 줄 → 균열이 닫히며 폭발과 파편'] },
