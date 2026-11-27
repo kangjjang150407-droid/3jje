@@ -3433,16 +3433,16 @@ function hitCoin(u, t, pow, i, heads, crit) {
   } else if (f.type === 'gunminA') {
     // 이건민 - 이불: 은빛 단도가 휘둘러지며 핏빛 검기 · 핏방울이 흩뿌려짐 (공간참 [기동돓]은 공간을 가르는 연속 베기)
     const ang = Math.atan2(t.y - f.y, t.x - f.x), sp = u.sk === 'gmSpace', big = sp || u.sk === 'gmIrid', R = t.r * 2.8 + (big ? 40 : 0), sw = sweepInfo(f);
-    const pal = ['#4a0010', '#c8102e', '#e8e8f4', '#ffffff'];
-    const gsl = { fire: true, pal, img: gmSwordImg, x: t.x, y: t.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: R, life: 0.7, max: 0.7, big, seed: Math.random() * 10 };
+    const pal = ['#7a1400', '#ff4a10', '#ff9a50', '#fff0d8']; // 주홍빛
+    const gsl = { fire: true, cloud: true, pal, img: gmSwordImg, x: t.x, y: t.y, ang, dir: Math.random() < 0.5 ? 1 : -1, r: R, life: 0.7, max: 0.7, big, seed: Math.random() * 10 };
     if (sw && !sw.skip) Object.assign(gsl, { x: sw.x, y: sw.y, ang: sw.ang, r: sw.r, sweep: sw.sweep, life: 0.85, max: 0.85 });
     if (!sw || !sw.skip) slashes.push(gsl);
     if (sp) { // 공간을 가르는 붉은 십자 베기
-      slashes.push({ fire: true, pal: ['#2a0008', '#ff1a3a', '#ff9aa8', '#ffffff'], img: gmSwordImg, x: t.x, y: t.y, ang: ang + Math.PI / 2, dir: -gsl.dir, r: R * 1.1, life: 0.8, max: 0.8, big: true, seed: Math.random() * 10 });
-      ring(t.x, t.y, '#ff1a3a', R * 2.2, 0.55, 12); ring(t.x, t.y, '#ffffff', R * 1.2, 0.3, 5); doFlash('#ff1a3a', 0.25);
+      slashes.push({ fire: true, cloud: true, pal: ['#5a0e00', '#ff3a00', '#ffb070', '#ffffff'], img: gmSwordImg, x: t.x, y: t.y, ang: ang + Math.PI / 2, dir: -gsl.dir, r: R * 1.1, life: 0.8, max: 0.8, big: true, seed: Math.random() * 10 });
+      ring(t.x, t.y, '#ff4a10', R * 2.2, 0.55, 12); ring(t.x, t.y, '#ffe0c0', R * 1.2, 0.3, 5); doFlash('#ff4a10', 0.25);
     }
-    for (let k = 0; k < Math.round((big ? 22 : 12) * QUALITY) + 4; k++) { const a2 = ang + rand(-0.9, 0.9), v = rand(200, 560); particles.push({ x: t.x, y: t.y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v, life: rand(0.5, 0.9), max: 0.9, size: rand(3, 6.5), color: Math.random() < 0.7 ? '#b0001e' : '#ff3a4a', drag: 0.94, g: 520, kind: 'glow' }); } // 핏방울
-    burst(t.x, t.y, '#f0f0ff', big ? 18 : 10, 560, 7, 0.4, { kind: 'spark' });
+    for (let k = 0; k < Math.round((big ? 22 : 12) * QUALITY) + 4; k++) { const a2 = ang + rand(-0.9, 0.9), v = rand(200, 560); particles.push({ x: t.x, y: t.y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v, life: rand(0.5, 0.9), max: 0.9, size: rand(3, 6.5), color: Math.random() < 0.6 ? '#ff4a10' : '#ffb070', drag: 0.94, g: 520, kind: 'glow' }); } // 주홍 불티
+    burst(t.x, t.y, '#ffe0c0', big ? 18 : 10, 560, 7, 0.4, { kind: 'spark' });
     shake = Math.max(shake, big ? 16 : 9);
   } else if (f.type === 'gunmin' && skinOn('gunmin_abyss')) {
     // 스킨 심연의 해변: 바닷물과 잉크가 뭉쳐 휘둘러지는 검기
@@ -4811,6 +4811,14 @@ function sweepInfo(f) {
   for (const t of c.list) { let d = Math.atan2(t.y - f.y, t.x - f.x) - mid; d = Math.atan2(Math.sin(d), Math.cos(d)); lo = Math.min(lo, d); hi = Math.max(hi, d); far = Math.max(far, Math.hypot(t.x - f.x, t.y - f.y)); tr = Math.max(tr, t.r); }
   return { x: f.x, y: f.y, ang: mid + (lo + hi) / 2, sweep: clamp(hi - lo + 1.1, 1.8, 5.6), r: far + tr * 0.7 };
 }
+// 상서로운 구름 문양 (말린 소용돌이 + 몽글한 구름 등 + 꼬리)
+function drawCloudMotif(x, y, s, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.lineCap = 'round'; ctx.beginPath();
+  for (let t = 0; t <= 1.001; t += 0.06) { const a = -Math.PI / 2 + t * TAU * 1.15, r = s * 0.55 * (1 - t * 0.72); ctx.lineTo(-s * 0.55 + Math.cos(a) * r, Math.sin(a) * r); } // 왼쪽 소용돌이
+  ctx.moveTo(-s * 0.55, -s * 0.55); ctx.arc(-s * 0.05, -s * 0.45, s * 0.5, Math.PI * 1.05, Math.PI * 1.95); ctx.arc(s * 0.6, -s * 0.2, s * 0.42, Math.PI * 1.25, Math.PI * 2.35); // 몽글한 구름 등
+  ctx.moveTo(s * 0.55, s * 0.18); ctx.quadraticCurveTo(s * 0.1, s * 0.5, -s * 0.5, s * 0.3); ctx.quadraticCurveTo(-s * 0.95, s * 0.2, -s * 1.35, s * 0.55); // 흘러가는 꼬리
+  ctx.stroke(); ctx.restore();
+}
 function drawFireSlash(sl, k, a0, a1) {
   const lo = Math.min(a0, a1), hi = Math.max(a0, a1), fl = simTime * 40 + sl.seed, p = 1 - k, P = sl.pal || FIRE_PAL.juwon;
   ctx.save(); ctx.translate(sl.x, sl.y); ctx.globalCompositeOperation = 'lighter';
@@ -4852,6 +4860,15 @@ function drawFireSlash(sl, k, a0, a1) {
     const fh = (18 + Math.sin(a * 5 + fl) * 9) * (0.5 + k), fx = Math.cos(a) * sl.r, fy = Math.sin(a) * sl.r;
     ctx.globalAlpha = k * 0.75; ctx.drawImage(glow(P[1]), fx - fh * 0.7, fy - fh * 1.6 - p * 26, fh * 1.4, fh * 2.2);
     ctx.globalAlpha = k * 0.6; ctx.drawImage(glow(P[3]), fx - fh * 0.35, fy - fh * 0.9 - p * 18, fh * 0.7, fh * 1.1);
+  }
+  if (sl.cloud) { // 구름 무늬: 궤적을 따라 소용돌이치는 상서로운 구름 문양이 떠오름
+    const step = sl.big ? 0.3 : 0.38;
+    let n = 0;
+    for (let a = lo + step * 0.5; a <= hi; a += step, n++) {
+      const side = n % 2 ? 1 : -1, rr = sl.r * (1 + side * (0.17 + p * 0.12)), cs = (sl.big ? 22 : 16) * (0.8 + (n % 3) * 0.18) * (0.75 + p * 0.5);
+      const cx = Math.cos(a) * rr, cy = Math.sin(a) * rr - p * 22, rot = a + Math.PI / 2 + (side > 0 ? 0 : Math.PI);
+      for (const [col, w, al] of [[P[1], 5, 0.55], [P[2], 2.6, 0.9], [P[3], 1.1, 1]]) { ctx.globalAlpha = k * al; ctx.strokeStyle = col; ctx.lineWidth = w; drawCloudMotif(cx, cy, cs, rot); }
+    }
   }
   ctx.globalCompositeOperation = 'source-over';
   const L = sl.sweep ? Math.min(sl.r * 0.55, 150) : sl.r, hasImg = sl.img && sl.img.complete && sl.img.naturalWidth;
@@ -6882,6 +6899,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.7', date: '2026-11-27', items: ['이건민 - 이불 이펙트 변경: 주홍빛 구름 무늬가 떠오르는 검기'] },
   { v: '14.6', date: '2026-11-27', items: ['⚡ 각성 추가: 이건민 - 이불 (LV.92 · 체력 1624 · 물리 1.3배 추가 피해 · 마법 2.4배 절감) — 이건민 각성 영혼석 10개로 각성', '스킬: 우구야 · 이리듐 · 공간참 [기동돓] (이불 999일 때) · 반격 마그네슘 / 패시브: 게르마늄 · 이불 수급', '새 수치 이불 (최대 999 · 수치만큼 방어 레벨 증가) · 새 상태이상 속박 (다음 턴 이동속도 감소 · 행동 지연)'] },
   { v: '14.5', date: '2026-11-27', items: ['친구 목록에 접속 상태 표시: ● 온라인 / ● 오프라인 (마지막 접속 n분 전) · 온라인 친구가 위로 정렬 · 친구 창을 열어 두면 1분마다 갱신'] },
   { v: '14.4', date: '2026-11-26', items: ['강주원 전장 이탈 패시브 이름 변경: 도주 장치 [살아라] (발동 시 이름이 크게 표시돼요)'] },
