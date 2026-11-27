@@ -521,9 +521,9 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
       <b style="color:#d84a5a;font-size:12px">⚡ 이건민 - 이불</b> (각성 · 각성 영혼석 10개 · LV.92 · 체력 1624 · 이동속도 살짝 빠름 · 물리 1.3배 추가 피해 · 마법 2.4배 절감 · 흐트러짐 3%)<br>
       <b>우구야</b> 물리 · 코인 2 · 공격 112 · 16 / +12 · 대상 출혈 6 이상이면 코인 위력 +1 · 1코인: 출혈 횟수 +2, 대상 공격 레벨 -3 · 2코인 (파괴불가): 출혈 3 · 파괴되지 않고 적중 시 대상 출혈 10당 1회 코인 재사용<br>
       <b>이리듐</b> 물리 · 코인 3 (파괴불가) · 공격 145 · 30 / +10 · 가중치 2 · 출혈 위력이 가장 높은 대상 우선 · 이불 50당 가중치 +1, 코인 위력 +1 · 피해량 +(이불)% · 대상 출혈 10당 피해량 +500% · 1코인: 출혈 1회 발동, 출혈 횟수 -1 · 파괴되지 않고 적중 시 출혈 위력만큼 물리 피해 · 2코인: 파괴되지 않고 적중 시 마비 8 · 3코인: 파괴되지 않고 적중 시 속박 5<br>
-      <b>공간참 [기동돓]</b> 물리 · 코인 1 (파괴불가) · 공격 100 + 이불 · 50 / +10 · 이불이 최대치(999)일 때만 사용 · 출혈 위력이 가장 높은 대상 우선 · 이불 50당 가중치 +1, 코인 위력 +1 · 피해량 +(이불)% · 대상 출혈 5당 피해량 +500% · 마지막 코인 재사용 (최대 4회) · 적중 시 출혈을 모두 진동 - 과다출혈로 변환하고 진동폭발 (출혈 횟수)회, 진동 횟수 -1 · 공격 종료 시 이불 모두 소모<br>
+      <b>공간참 [기동돓]</b> 물리 · 코인 1 (파괴불가) · 공격 100 + 이불 · 50 / +10 · 이불이 최대치(100)일 때만 사용 · 출혈 위력이 가장 높은 대상 우선 · 이불 50당 가중치 +1, 코인 위력 +1 · 피해량 +(이불)% · 대상 출혈 5당 피해량 +500% · 마지막 코인 재사용 (최대 4회) · 적중 시 출혈을 모두 진동 - 과다출혈로 변환하고 진동폭발 (출혈 횟수)회, 진동 횟수 -1 · 공격 종료 시 이불 모두 소모<br>
       <b>반격 마그네슘</b> 코인 1 · 공격 200 · 20 / +10 · 아군 수만큼 코인 추가 (최대 8)<br>
-      <b>패시브 게르마늄</b> 아군 사망 시 다음 턴에 사용 스킬 +1 (총 5개까지) · <b>이불 수급</b> 공격 적중 시 대상의 출혈만큼 이불 · <b>이불</b> 최대 999, 수치만큼 방어 레벨 증가 · <b>속박</b> 다음 턴 동안 수치당 이동속도 -8%, 행동 0.1초 지연<br><br>
+      <b>패시브 게르마늄</b> 아군 사망 시 다음 턴에 사용 스킬 +1 (총 5개까지) · <b>이불 수급</b> 공격 적중 시 대상의 출혈만큼 이불 · <b>이불</b> 최대 100, 수치만큼 방어 레벨 증가 · <b>속박</b> 다음 턴 동안 수치당 이동속도 -8%, 행동 0.1초 지연<br><br>
       <b style="color:#ff3aa0;font-size:12px">폭주 십이지[十二支] - 묘 김하리</b> (서버 레이드 · LV.150 · 체력 5,000,000 · 방어 레벨 300 · 내성 전부 12배 추가 피해 · 흐트러짐 10%마다)<br>
       <b>순보</b> 마법 · 코인 2 · 공격 170 · 21 / +13 · 기본 위력이 대상보다 3 이상 높으면 코인 위력 +1 · 대상 파열 4 이상이면 코인 위력 +1 · 합 승리 시 파열 횟수 +1 · 1코인: 파열 12 · 2코인: 폭주 10 이상이면 이 코인 재사용 (스킬당 1회)<br>
       <b>순보 - [븅]</b> 마법 · 코인 2 · 공격 200 · 45 / +16 · 기본 위력이 높으면 (차이 × 폭주)% 피해량 증가 (최대 50%) · 정신력이 3 이상 높으면 코인 위력 +1 · 대상 파열 4 이상이면 코인 위력 +1 · 다음 턴 폭주 2 (턴당 1회) · 합 승리 시 파열 횟수 +1 · 2코인: 대상 파열 40 이상이면 피해량 +900%<br>
@@ -696,6 +696,7 @@ const swA1Img = new Image(); swA1Img.src = IMG_SW_A1;
 const swA2Img = new Image(); swA2Img.src = IMG_SW_A2;
 const gunminAImg = new Image(); gunminAImg.src = IMG_GUNMIN_A; // 이건민 - 이불 프로필
 const gmSwordImg = new Image(); gmSwordImg.src = IMG_GUNMIN_A_SWORD; // 이건민 - 이불 검
+const BLANKET_MAX = 100; // 이불 최댓값
 const blanketImg = new Image(); blanketImg.src = IMG_BLANKET; // 이불 아이콘
 const bindImg = new Image(); bindImg.src = IMG_BIND; // 속박 아이콘
 const noyunImg = new Image(); noyunImg.src = IMG_NOYUN;
@@ -3660,7 +3661,7 @@ function hitCoin(u, t, pow, i, heads, crit) {
       if (t.alive && (u.gmRe || 0) < 4) { u.gmRe = (u.gmRe || 0) + 1; floatText(f.x, f.y - f.r - 40, `코인 재사용 ${u.gmRe}/4`, S.color, 18, { life: 0.8 }); re = true; }
     }
     // 패시브 이불 수급: 공격 적중 시 대상의 출혈만큼 이불
-    if (f.type === 'gunminA' && f.alive && t.bleed && t.bleed.pot > 0) { const g = t.bleed.pot; f.blanket = Math.min(999, (f.blanket || 0) + g); floatText(f.x + 30, f.y - f.r - 14, `이불 +${g}`, '#c8d0ff', 13, { vy: -30, life: 0.7 }); }
+    if (f.type === 'gunminA' && f.alive && t.bleed && t.bleed.pot > 0) { const g = t.bleed.pot; f.blanket = Math.min(BLANKET_MAX, (f.blanket || 0) + g); floatText(f.x + 30, f.y - f.r - 14, `이불 +${g}`, '#c8d0ff', 13, { vy: -30, life: 0.7 }); }
     if (re) return true;
   } else if (u.sk === 'swCervo') {
     if (i === 0) { addStack(t, 'burn', 3, 0, '화상', '#ff8a3a'); addTremorBase(t, 3, 0); }
@@ -4140,8 +4141,8 @@ function unitAI(f, dt) {
       return;
     }
   }
-  // 이건민 - 이불: 이불이 최대치(999)면 공간참 [기동돓]
-  if (f.type === 'gunminA' && (f.blanket || 0) >= 999) { const t = chooseTarget(f, 'gmSpace'); if (t) { log(`${nm(f)} 이불 ${f.blanket} (최대) → ${sk('gmSpace')}`, 'skill'); startCast(f, 'gmSpace', t); return; } }
+  // 이건민 - 이불: 이불이 최대치(100)면 공간참 [기동돓]
+  if (f.type === 'gunminA' && (f.blanket || 0) >= BLANKET_MAX) { const t = chooseTarget(f, 'gmSpace'); if (t) { log(`${nm(f)} 이불 ${f.blanket} (최대) → ${sk('gmSpace')}`, 'skill'); startCast(f, 'gmSpace', t); return; } }
   if (f.ready === 'guard') { useGuard(f, '턴 사용'); return; }
   const s = f.ready; f.ready = null;
   startCast(f, s, chooseTarget(f, s));
@@ -5250,7 +5251,7 @@ function drawFighter(f) {
   if (f.breath) icons.push([breathImg, `${f.breath}/5`, '#9fe8ff']);
   if (f.deathF) icons.push([deathFImg, `${f.deathF}/50`, '#c08080']);
   if (f.rampage) icons.push([rampageImg, `${f.rampage}/100`, '#ffb030']);
-  if (f.type === 'gunminA' || f.blanket) icons.push([blanketImg, `${f.blanket || 0}/999`, (f.blanket || 0) >= 999 ? '#ff6a7a' : '#c8d0ff']);
+  if (f.type === 'gunminA' || f.blanket) icons.push([blanketImg, `${f.blanket || 0}/${BLANKET_MAX}`, (f.blanket || 0) >= BLANKET_MAX ? '#ff6a7a' : '#c8d0ff']);
   if (f.bindUntil > simTime && f.bind) icons.push([bindImg, `${f.bind}`, '#ff9a3a']); else if (f.pendBind) icons.push([bindImg, `${f.pendBind}`, '#8890a0']);
   if (f.paralysis) icons.push([paralysisImg, `${f.paralysis}`, '#ffe14d']);
   if (f.rock) icons.push([rockImg, `${f.rock}/10`, '#c8a8ff']);
@@ -6899,6 +6900,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.8', date: '2026-11-27', items: ['이건민 - 이불: 이불 최댓값 999 → 100 (100이 되면 공간참 [기동돓] 사용)'] },
   { v: '14.7', date: '2026-11-27', items: ['이건민 - 이불 이펙트 변경: 주홍빛 구름 무늬가 떠오르는 검기'] },
   { v: '14.6', date: '2026-11-27', items: ['⚡ 각성 추가: 이건민 - 이불 (LV.92 · 체력 1624 · 물리 1.3배 추가 피해 · 마법 2.4배 절감) — 이건민 각성 영혼석 10개로 각성', '스킬: 우구야 · 이리듐 · 공간참 [기동돓] (이불 999일 때) · 반격 마그네슘 / 패시브: 게르마늄 · 이불 수급', '새 수치 이불 (최대 999 · 수치만큼 방어 레벨 증가) · 새 상태이상 속박 (다음 턴 이동속도 감소 · 행동 지연)'] },
   { v: '14.5', date: '2026-11-27', items: ['친구 목록에 접속 상태 표시: ● 온라인 / ● 오프라인 (마지막 접속 n분 전) · 온라인 친구가 위로 정렬 · 친구 창을 열어 두면 1분마다 갱신'] },
