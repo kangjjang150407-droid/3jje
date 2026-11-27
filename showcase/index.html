@@ -50,6 +50,7 @@
   #gachaPanel.on{display:block}
   #friendPanel{display:none;border:1px solid #3a8a6a;border-radius:10px;padding:10px;margin-bottom:10px;background:#0a1612;font-size:12px;line-height:1.6}
   #friendPanel.on{display:block}
+  .ost{font-size:10px;color:#7a7a8a;white-space:nowrap}#friendPanel .ost{display:block;white-space:normal;word-break:keep-all;line-height:1.3}.ost.on{color:#5aff8a;text-shadow:0 0 6px #2aff6a}
   #friendPanel .fr{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #14281e}
   #friendPanel .fr img{width:26px;height:26px;border-radius:50%;object-fit:cover}
   #friendPanel input{background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:6px;font-size:13px;min-width:0}
@@ -6728,9 +6729,10 @@ function renderAdmin() {
   else if (!adm.users) h += '<div style="color:#777">불러오는 중…</div>';
   else {
     const q = adm.q.trim().toLowerCase(), L = adm.users.filter(u => !q || [u.name, u.code, u.id].some(x => String(x || '').toLowerCase().includes(q)));
-    h += `<div style="color:#998;margin-bottom:4px">가입 유저 ${adm.users.length}명 · 차단 ${Object.keys(adm.bans).length}명${q ? ` · 검색 ${L.length}명` : ''}</div>`;
+    L.sort((a, b) => isOnline(b) - isOnline(a));
+    h += `<div style="color:#998;margin-bottom:4px">가입 유저 ${adm.users.length}명 · <b style="color:#5aff8a">온라인 ${adm.users.filter(isOnline).length}명</b> · 차단 ${Object.keys(adm.bans).length}명${q ? ` · 검색 ${L.length}명` : ''}</div>`;
     h += L.slice(0, 100).map(u => { const bn = adm.bans[u.id];
-      return `<div class="au"><div style="display:flex;align-items:center;gap:6px">${u.picture ? `<img src="${escH(u.picture)}" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">` : ''}<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}<b style="color:${bn ? '#ff6a6a' : '#e8e0c0'}">${escH(u.name || '이름 없음')}</b>${bn ? ' ⛔' : ''}</div><span style="color:#776">${escH(u.code || '')}</span></div>
+      return `<div class="au"><div style="display:flex;align-items:center;gap:6px">${u.picture ? `<img src="${escH(u.picture)}" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">` : ''}<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}<b style="color:${bn ? '#ff6a6a' : '#e8e0c0'}">${escH(u.name || '이름 없음')}</b>${bn ? ' ⛔' : ''}</div>${onlineHTML(u)} <span style="color:#776">${escH(u.code || '')}</span></div>
         <div style="color:#665;font-size:10px">${u.id}${u.t ? ' · 최근 ' + new Date(u.t).toLocaleString() : ''}${bn ? ` · 차단 사유: ${escH(bn.reason || '')}` : ''}</div>
         <div style="display:flex;gap:4px;margin-top:3px"><input data-amt="${u.id}" type="number" placeholder="코인" style="width:80px"><button data-give="${u.id}">지급</button><button data-take="${u.id}">제거</button><span style="flex:1"></span><button data-ban="${u.id}" style="color:${bn ? '#7dffb0' : '#ff8080'}">${bn ? '차단 해제' : '차단'}</button></div></div>`; }).join('');
   }
@@ -6800,6 +6802,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '14.5', date: '2026-11-27', items: ['친구 목록에 접속 상태 표시: ● 온라인 / ● 오프라인 (마지막 접속 n분 전) · 온라인 친구가 위로 정렬 · 친구 창을 열어 두면 1분마다 갱신'] },
   { v: '14.4', date: '2026-11-26', items: ['강주원 전장 이탈 패시브 이름 변경: 도주 장치 [살아라] (발동 시 이름이 크게 표시돼요)'] },
   { v: '14.3', date: '2026-11-26', items: ['정선우 - 전성기 이펙트 변경: 주황색과 노란색이 섞인 검기 (한 자루는 주황 · 한 자루는 노랑으로 X자 교차)'] },
   { v: '14.2', date: '2026-11-26', items: ['⚡ 각성 추가: 뽑기에서 아주 낮은 확률(1%)로 각성 영혼석 → 10개로 각성 · 전투마다 기본 · 각성 중 골라서 편성', '첫 각성: 정선우 - 전성기 (LV.90 · 체력 3204 · 물리 4배 절감) — 세치오나투라 디 체르보 · 세치오나투라 디 엘레판테 · 처분 · 회피 예상 / 패시브 사냥 시간 · 흠 · 승기', '전성기 이펙트: 두 자루의 검으로 X자 교차 베기'] },
@@ -7192,8 +7195,21 @@ const myCode = () => rank.uid ? rank.uid.slice(0, 8).toUpperCase() : '';
 if (!save.giftSent) save.giftSent = {};
 async function friendSelfUpload() {
   if (!rank.db || !rank.uid || !account) return;
-  try { await rank.db.collection('users').doc(rank.uid).set({ name: dispName(), picture: dispPic(), title: titleName(), code: myCode(), t: Date.now() }); } catch (e) { console.error(e); }
+  try { await rank.db.collection('users').doc(rank.uid).set({ name: dispName(), picture: dispPic(), title: titleName(), code: myCode(), t: Date.now(), on: Date.now() }); } catch (e) { console.error(e); }
 }
+// ---- 접속 상태: 화면을 보고 있는 동안 1분마다 접속 신호 · 2분 넘게 신호가 없으면 오프라인 ----
+const ONLINE_MS = 150000;
+const isOnline = u => !!(u && u.on && Date.now() - u.on < ONLINE_MS);
+function agoStr(t) { const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? '방금 전' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전' : Math.floor(m / 1440) + '일 전'; }
+function onlineHTML(u) { return isOnline(u) ? '<span class="ost on" title="온라인">● 온라인</span>' : `<span class="ost" title="오프라인">● 오프라인${u && u.on ? ' · ' + agoStr(u.on) : ''}</span>`; }
+function presenceBeat(off) {
+  if (!rank.db || !rank.uid || !account || window.BALLFIGHT_SHOWCASE) return;
+  rank.db.collection('users').doc(rank.uid).set({ on: off ? Date.now() - ONLINE_MS : Date.now() }, { merge: true }).catch(() => {});
+}
+setInterval(() => { if (!document.hidden) presenceBeat(); }, 60000);
+document.addEventListener('visibilitychange', () => presenceBeat(document.hidden));
+addEventListener('pagehide', () => presenceBeat(true));
+setInterval(() => { const fp = document.getElementById('friendPanel'); if (fp && fp.classList.contains('on') && !document.hidden) friendRefresh(true); const ap = document.getElementById('adminPanel'); if (ap && ap.classList.contains('on') && !document.hidden && adm.users) admRefresh(); }, 60000); // 열려 있으면 1분마다 상태 갱신
 const fcol = (a, b) => rank.db.collection(a).doc(b);
 async function friendRefresh(silent) {
   if (!rank.db || !rank.uid) { renderFriends(); return; }
@@ -7224,7 +7240,7 @@ function renderFriends() {
   friendBadge();
   const el = document.getElementById('friendPanel'); if (!el || !el.classList.contains('on')) return;
   const esc2 = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const who = u => `${u.picture ? `<img src="${esc2(u.picture)}" referrerpolicy="no-referrer" alt="">` : '<span style="width:26px;height:26px;border-radius:50%;background:#2a3a34;display:inline-block"></span>'}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}${esc2(u.name || '이름 없음')}</span>`;
+  const who = (u, st) => `${u.picture ? `<img src="${esc2(u.picture)}" referrerpolicy="no-referrer" alt="">` : '<span style="width:26px;height:26px;border-radius:50%;background:#2a3a34;display:inline-block"></span>'}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}${esc2(u.name || '이름 없음')}${st || ''}</span>`;
   if (!account) { el.innerHTML = '<div style="color:#aaa">구글로 로그인하면 친구를 추가할 수 있어요.</div>'; return; }
   if (!FIREBASE_CONFIG || !/^https?:$/.test(location.protocol)) { el.innerHTML = '<div style="color:#aaa">친구 기능은 웹 주소(GitHub Pages)에서만 돼요.</div>'; return; }
   if (!rank.db || !rank.uid) { el.innerHTML = `<div style="color:#aaa">${rank.ready ? '친구 기능을 쓰려면 로그아웃 후 구글로 다시 로그인해 주세요.' : '서버에 연결하는 중…'}</div>`; return; }
@@ -7236,7 +7252,9 @@ function renderFriends() {
   if (fr.gifts.length) h += `<div style="margin-top:6px"><b>🎁 받은 선물</b> <button id="frClaimAll">모두 받기 (🪙 ${(fr.gifts.length * GIFT_COIN).toLocaleString()})</button></div>` + fr.gifts.map(g => `<div class="fr">${who(g)}<span style="color:#ffcc33">🪙 ${GIFT_COIN}</span><button data-claim="${g.id}">받기</button></div>`).join('');
   if (fr.reqs.length) h += '<div style="margin-top:6px"><b>📨 받은 친구 요청</b></div>' + fr.reqs.map(r => `<div class="fr">${who(r)}<button data-accept="${r.id}">수락</button><button data-reject="${r.id}">거절</button></div>`).join('');
   h += `<div style="margin-top:6px"><b>👥 친구</b> <span style="color:#8a8aa8">(선물은 친구마다 하루 1번 · 내 코인은 들지 않아요)</span></div>`;
-  h += fr.list.length ? fr.list.map(f => `<div class="fr">${who(f)}${f.mutual ? `<button data-gift="${f.id}" ${save.giftSent[f.id] === today ? 'disabled' : ''}>${save.giftSent[f.id] === today ? '보냄 ✔' : '🎁 선물'}</button>` : '<span style="color:#8a8aa8">수락 대기</span>'}<button data-unfriend="${f.id}" title="친구 삭제">✕</button></div>`).join('') : '<div style="color:#777">아직 친구가 없어요. 친구 코드를 주고받아 추가해 보세요.</div>';
+  const fOn = fr.list.filter(isOnline).length;
+  h += fr.list.length ? `<div style="color:#8a8aa8;font-size:11px">온라인 ${fOn}명 · 오프라인 ${fr.list.length - fOn}명</div>` : '';
+  h += fr.list.length ? fr.list.slice().sort((a, b) => isOnline(b) - isOnline(a) || (b.on || 0) - (a.on || 0)).map(f => `<div class="fr">${who(f, onlineHTML(f))}${f.mutual ? `<button data-gift="${f.id}" ${save.giftSent[f.id] === today ? 'disabled' : ''}>${save.giftSent[f.id] === today ? '보냄 ✔' : '🎁 선물'}</button>` : '<span style="color:#8a8aa8">수락 대기</span>'}<button data-unfriend="${f.id}" title="친구 삭제">✕</button></div>`).join('') : '<div style="color:#777">아직 친구가 없어요. 친구 코드를 주고받아 추가해 보세요.</div>';
   el.innerHTML = h;
 }
 async function claimGifts(ids) {
