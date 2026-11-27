@@ -152,6 +152,7 @@
   .log:first-child{animation:fade .3s}
   .log .t{color:#55557a;font-size:10px;margin-right:4px}
   .log.kill{background:#ff2b2b18}
+  .log.turn{text-align:center;color:#ffe48a;font-weight:700;background:#ffcf5a14}
   .log.skill{color:#d8c8ff}
   @keyframes fade{from{opacity:0;transform:translateX(10px)}to{opacity:1}}
   #info{font-size:11px;color:#b9b9d6;line-height:1.55;background:#0b0b18;border:1px solid var(--line);border-radius:8px;padding:8px}
@@ -656,7 +657,7 @@ function drawTremorIcon(x, y, size, alpha = 1) {
   const w = size * tremorImg.naturalWidth / tremorImg.naturalHeight;
   ctx.save(); ctx.globalAlpha *= alpha; ctx.drawImage(tremorImg, x - w / 2, y - size / 2, w, size); ctx.restore();
 }
-let turnBase = 0;
+let turnBase = 0, turnNo = 1, turnBanner = 0; // 현재 턴 번호 · 턴 전환 배너 표시 시간
 // 강우주 - 암흑진화 패시브 [나를 우구라 불러주어서 고마워]: 체력 10% 미만
 const uguLow = f => f && f.type === 'darkwooju' && f.alive && f.hp < f.maxHp * 0.1;
 const turnIdx = () => Math.floor((simTime - turnBase) / TURN);
@@ -1940,6 +1941,7 @@ function forceTurnEnd(by) {
 }
 // 턴 종료 시 처리 (1턴 = 5초 구간)
 function onTurnEnd() {
+  if (fighters.some(f => f.alive)) { turnNo++; turnBanner = 1.3; log(`━━━━━ 🔔 턴 ${turnNo} 시작 ━━━━━`, 'turn'); }
   for (const f of fighters) { if (f.sign) f.sign = false; } // 징표: 턴 종료 시 제거
   // 다한 쓸모, 맺힌 증오
   for (const w of fighters) {
@@ -4235,6 +4237,7 @@ function update(dt) {
     log(`✦ ${nm(a)} <b style="color:#ffe08a">초월</b>: ${nm(q2.by)}와 함께 → ${sk('haejwo')} → ${nm(q2.t)}`, 'skill'); linkedStart = true; beginEngagement(a, 'haejwo', q2.t); linkedStart = false; }
   const ti = turnIdx();
   if (ti !== lastTurnIdx) { lastTurnIdx = ti; onTurnEnd(); }
+  if (turnBanner > 0) turnBanner -= dt;
   for (const f of fighters) if (f.alive && f.hp % 1) f.hp = Math.max(1, Math.floor(f.hp)); // 체력 소수점 버림 (비율 피해 · 회복 등)
   for (let i = respawns.length - 1; i >= 0; i--) {
     const r = respawns[i]; r.t -= dt;
@@ -5977,7 +5980,17 @@ function render() {
   // 시간 HUD (녹화에도 포함)
   ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.font = `700 13px ${FONT}`;
   ctx.fillStyle = 'rgba(200,200,230,0.75)';
-  ctx.fillText(`⏱ ${simTime.toFixed(1)}s · ${speed}x`, cw / 2, 8);
+  ctx.fillText(`⏱ 턴 ${turnNo} · ${simTime.toFixed(1)}s · ${speed}x`, cw / 2, 8);
+  { // 턴 진행 막대 (5초 = 1턴)
+    const pr = clamp(((simTime - turnBase) % TURN) / TURN, 0, 1), bw = 120, bx = cw / 2 - bw / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bx, 26, bw, 3); ctx.fillStyle = pr > 0.8 ? '#ffcf5a' : '#9fb0ff'; ctx.fillRect(bx, 26, bw * pr, 3);
+  }
+  if (turnBanner > 0 && running) { // 턴 전환 배너
+    const a = Math.min(1, turnBanner / 0.4), y = ch * 0.16;
+    ctx.save(); ctx.globalAlpha = a * 0.85; const g = ctx.createLinearGradient(cw / 2 - 170, 0, cw / 2 + 170, 0); g.addColorStop(0, 'rgba(20,20,50,0)'); g.addColorStop(0.5, 'rgba(20,20,50,0.9)'); g.addColorStop(1, 'rgba(20,20,50,0)');
+    ctx.fillStyle = g; ctx.fillRect(cw / 2 - 170, y - 22, 340, 44); ctx.globalAlpha = a; ctx.textBaseline = 'middle'; ctx.font = `900 ${26 + (1 - a) * 6}px ${FONT}`; ctx.fillStyle = '#ffe48a'; ctx.shadowColor = '#ffb000'; ctx.shadowBlur = 12;
+    ctx.fillText(`턴 ${turnNo}`, cw / 2, y); ctx.restore();
+  }
   if (winInfo) drawWin();
   if (!running && !ended) {
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, cw, ch);
@@ -6409,7 +6422,7 @@ function build() {
   resize();
   winInfo = null;
   fighters = []; projectiles = []; particles = []; rings = []; texts = []; beams = []; pillars = []; respawns = [];
-  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; ammoPops = []; reloadPops = []; chargePops = []; cryPops = []; panicPops = []; tremorBasePops = []; staggerPops = []; tonguePops = []; overheatPops = []; markPops = []; scorchPops = []; linkPops = []; dawnfirePops = []; slashes = []; lastTurnIdx = 0; turnBase = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; ended = false; running = false;
+  usagiPops = []; tremorPops = []; bleedPops = []; colaPops = []; obPops = []; preyPops = []; ammoPops = []; reloadPops = []; chargePops = []; cryPops = []; panicPops = []; tremorBasePops = []; staggerPops = []; tonguePops = []; overheatPops = []; markPops = []; scorchPops = []; linkPops = []; dawnfirePops = []; slashes = []; lastTurnIdx = 0; turnBase = 0; engagements = []; bigText = null; shake = 0; flash.a = 0; darkenT = 0; darken = 0; slowmo = 0; simTime = 0; turnNo = 1; turnBanner = 0; ended = false; running = false;
   logEl.innerHTML = ''; logQueue = [];
   document.getElementById('overlay').classList.remove('show');
   const counts = {}, totals = {};
@@ -6899,6 +6912,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.1', date: '2026-11-27', items: ['턴 표시 추가: 화면 위에 현재 턴 번호와 턴 진행 막대 · 턴이 넘어갈 때 "턴 N" 배너 · 전투 로그에 턴 구분선', '속박 아이콘 변경 (주황 화살표)'] },
   { v: '15.0', date: '2026-11-27', items: ['강우주 - 암흑진화의 연 · 패시브 연 · 자랑스럽게 걸어나가라의 이건민 관련 효과가 이건민 - 이불에게도 적용돼요'] },
   { v: '14.9', date: '2026-11-27', items: ['이건민 - 이불: 이리듐 · 공간참 [기동돓]의 이불 효과 50당 → 10당 (공격 가중치 +1 · 코인 위력 +1, 이불 100이면 각각 +10)'] },
   { v: '14.8', date: '2026-11-27', items: ['이건민 - 이불: 이불 최댓값 999 → 100 (100이 되면 공간참 [기동돓] 사용)'] },
