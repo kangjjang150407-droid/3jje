@@ -6974,6 +6974,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.8', date: '2026-11-28', items: ['이제 구글 로그인을 해야만 플레이할 수 있어요 (게스트로 하던 진행 상황은 첫 로그인 때 그대로 옮겨져요)'] },
   { v: '15.7', date: '2026-11-28', items: ['대기 편성 추가: 편성은 최대 12명 · 앞의 5명이 먼저 싸우고, 사망 · 퇴각 · 전장 이탈로 자리가 비면 대기 인원이 순서대로 투입 (PVP는 상대 팀도 같음)', '자동 편성: 강한 순으로 최대 12명 편성 (앞 5명 출전 · 나머지 대기)'] },
   { v: '15.6', date: '2026-11-28', items: ['자동 편성 추가: 레드 팀의 🤖 자동 편성 버튼 → 보유 캐릭터 중 강한 5명을 편성 (각성했으면 각성 · 강화 · 초월 · 장착 아티팩트 · 함께 쓰면 좋은 조합 반영)'] },
   { v: '15.5', date: '2026-11-28', items: ['아티팩트 자동 장착 기준 변경: 레드 팀이 아니라 보유 중인 캐릭터 전체 기준으로 장착'] },
@@ -7905,10 +7906,21 @@ if (PERK) { for (const k of GACHA) save.owned[k] = true; if (save.coins < 999999
   const web = location.protocol === 'https:' || location.protocol === 'http:';
   $i('accLogin').onclick = () => toast(!GOOGLE_CLIENT_ID ? '구글 로그인 설정(클라이언트 ID)이 아직 안 됐어요' : !web ? '구글 로그인은 웹 주소(GitHub Pages)에서만 돼요' : '구글 로그인을 불러오지 못했어요');
   if (!GOOGLE_CLIENT_ID || !web) return;
+  // 구글 로그인을 해야만 플레이 가능 (연출 구경 서버 제외)
+  if (!window.BALLFIGHT_SHOWCASE) {
+    const g = document.createElement('div'); g.id = 'loginGate';
+    g.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(60,30,110,.92),rgba(5,5,15,.97));backdrop-filter:blur(6px)';
+    g.innerHTML = `<div style="text-align:center;padding:28px 26px;border:1px solid #5a4a9a;border-radius:16px;background:#12101ecc;max-width:340px;box-shadow:0 0 40px #7a5cff55">
+      <div style="font-size:40px">⚔</div><div style="font-size:20px;font-weight:900;margin:6px 0;background:linear-gradient(90deg,#ff5fa2,#b06bff);-webkit-background-clip:text;color:transparent">볼 파이트 시뮬레이터</div>
+      <div style="color:#c8c0e0;font-size:13px;margin-bottom:16px;line-height:1.6">구글 계정으로 로그인해야 플레이할 수 있어요.<br><span style="color:#8a8aa8;font-size:11px">이 기기에서 게스트로 하던 진행 상황은 첫 로그인 때 그대로 옮겨져요.</span></div>
+      <div id="gBtnGate" style="display:flex;justify-content:center;min-height:44px"><span style="color:#8a8aa8;font-size:12px">구글 로그인 불러오는 중…</span></div></div>`;
+    document.body.appendChild(g);
+  }
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
   sc.onload = () => { try {
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: googleSignedIn });
     google.accounts.id.renderButton($i('gBtn'), { theme: 'filled_black', size: 'medium', type: 'standard', text: 'signin_with', locale: 'ko' });
+    if ($i('gBtnGate')) { $i('gBtnGate').innerHTML = ''; google.accounts.id.renderButton($i('gBtnGate'), { theme: 'filled_blue', size: 'large', type: 'standard', text: 'signin_with', shape: 'pill', locale: 'ko' }); }
     $i('accLogin').style.display = 'none';
   } catch (e) { console.error(e); } };
   document.head.appendChild(sc);
