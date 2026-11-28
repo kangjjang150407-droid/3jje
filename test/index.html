@@ -355,6 +355,8 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     <div id="raid3Info" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
     <button id="raid4Btn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#ff2a6a,#2affe0);border:none;color:#100010;text-shadow:1px 0 #ff2a6a,-1px 0 #00ffff">📼 레이드 4단계: 과거의 강주원</button>
     <div id="raid4Info" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
+    <button id="raid6Btn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#8a0a0a,#ff3a1a,#ffb02a);border:none;color:#fff;text-shadow:0 0 6px #600">🌶 레이드 6단계: 매워진 봉이 아빠</button>
+    <div id="raid6Info" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
     <button id="srBtn" class="big" style="margin-top:8px;background:linear-gradient(90deg,#3a0010,#ff2a6a,#ffe14d,#2affe0);border:none;color:#fff;text-shadow:0 0 6px #000,1px 0 #ff2a6a,-1px 0 #00ffff">🌐 서버 레이드: 과다 폭주 - 과거의 강주원</button>
     <div id="srInfo" style="font-size:11px;color:var(--dim);margin-top:4px"></div>
     <button id="srBtn2" class="big" style="margin-top:8px;background:linear-gradient(90deg,#3a0030,#ff3aa0,#ffd0f0,#ff3aa0);border:none;color:#fff;text-shadow:0 0 6px #000,0 0 10px #ff3aa0">🌐 서버 레이드: 폭주 십이지[十二支] - 묘 김하리</button>
@@ -1062,7 +1064,7 @@ function lvHp(f, full) {
   if (full) f.hp = f.dispHp = f.lagHp = nm;
   else { const r = old ? nm / old : 1; f.hp = f.hp > 0 ? Math.max(1, Math.floor(f.hp * r)) : 0; f.dispHp = Math.min(nm, (f.dispHp || 0) * r); f.lagHp = Math.min(nm, (f.lagHp || 0) * r); }
 }
-const RAID_COIN = { 1: 300, 2: 500, 3: 1000, 4: 2000 }; // 레이드 단계별 기본 클리어 코인 (보통)
+const RAID_COIN = { 1: 300, 2: 500, 3: 1000, 4: 2000, 6: 3000 }; // 레이드 단계별 기본 클리어 코인 (보통)
 let raidDiff = 0;
 function applyRaidDiff() {
   raidDiff = +document.getElementById('raidDiff').value || 0;
@@ -1114,6 +1116,10 @@ const ARTIFACTS = {
   needle: { name: '날카로운 실과 바늘', color: '#ff6a5a', how: '던전 2층 히든 보스 봉이 아빠 처치 시 획득', desc: '장착한 대상이 매 턴 처음으로 피해를 입힌 스킬의 (피해량 / 2)만큼 추가 고정 피해를 입힘' },
   mirror: { name: '명경지수', color: '#bfe8ff', how: '🛒 상점에서 구매 (🪙 5,000)', desc: '치명타로 가하는 피해량이 1.2배에서 2.5배로 증가 · 치명타가 발생해 호흡 횟수를 소모하면 다음 턴 동안 공격 레벨 +15 (턴당 1회)' },
   hwan: { name: '환 - [묘]', color: '#ff7ac8', how: '서버 레이드 - 폭주 십이지[十二支] - 묘 김하리 처치 시 획득 (피해를 준 모든 참여자)', desc: '받는 피해량 -50% · 가하는 피해량 +40% · 이동속도 +10% · 파열 부여량 ×2 · 매 턴 호흡 3 얻음<br><i style="color:#8a8aa8">[이 세계선의 김하리는 모든 십이지를 다룰 수 있다. 이것이 진짜 전력일까?]</i>' },
+  chickBreast: { name: '닭가슴살', color: '#ffd0b0', how: '레이드 6단계 - 매워진 봉이 아빠 보통 클리어 시 획득', desc: '스킬로 적에게 파열 부여 시 파열 횟수 +3 (턴당 최대 3회)' },
+  chickLeg: { name: '닭다리', color: '#ff9a4a', how: '레이드 6단계 - 매워진 봉이 아빠 하드 클리어 시 획득', desc: '스킬로 적에게 화상 부여 시 화상 횟수 +3 (턴당 최대 3회)' },
+  tango: { name: '탱고 닭양념장', color: '#ff3a1a', how: '레이드 6단계 - 매워진 봉이 아빠 익스트림 클리어 시 50% 확률로 획득', desc: '대상보다 이동속도가 높다면 합 위력 +(속도 / 3) (최대 3)' },
+  dirtyNeedle: { name: '오염된 실과 바늘', color: '#8aff6a', how: '레이드 6단계 - 매워진 봉이 아빠 익스트림 클리어 시 50% 확률로 획득', desc: '매 턴 처음으로 적에게 피해를 입힌 스킬의 (피해량 / 3)만큼 출혈 위력 부여' },
   pendant: { name: '찢어진 펜던트', color: '#ff4a2a', how: '흉탄의 사수 처치 시 획득', desc: '장착한 대상의 아군을 지정하는 스킬 피해량 +100% · 이 스킬로 아군이 사망하지 않았다면 이번 전투 동안 합 위력 -5' },
 };
 const isTargetRace = f => !!f && (f.type === 'dummy' || f.type === 'dgdummy' || f.type === 'targetking'); // 종족: 과녁
@@ -1681,8 +1687,8 @@ function chooseTarget(f, key) {
 // ---- 레벨 / 버프 / 정신력 ----
 function buffVal(f, key) { const b = f.buffs[key]; return b && b.until > simTime ? b.v : 0; }
 function addBuff(f, key, v) { f.buffs[key] = { v: buffVal(f, key) + v, until: simTime + TURN }; }
-function offLv(f, sk) { if (f.type === 'pastjuwon' && SKILLS[sk].glitch) return SKILLS[sk].glitch[f.glIdx || 0] + (f.overdrive ? 60 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown'); return f.level + (SKILLS[sk].lvMod || 0) + (sk === 'gmSpace' ? (f.blanket || 0) : 0) - (uguLow(f) ? 50 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0) + (f.wing || 0) * 3; } // 쐐기의 창: 수치 1당 공격 레벨 +1
-function defLv(f) { if (f.type === 'pastjuwon') return (f.glDef || 80) + buffVal(f, 'defUp'); return (f.blanket || 0) -(f.wing || 0) * 3 - Math.floor((f.rampage || 0) / 10) * 10 + f.level - buffVal(f, 'defDown') - (uguLow(f) ? 50 : 0) + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
+function offLv(f, sk) { if (f.type === 'pastjuwon' && SKILLS[sk].glitch) return SKILLS[sk].glitch[f.glIdx || 0] + (f.overdrive ? 60 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown'); return f.level + (SKILLS[sk].lvMod || 0) + (sk === 'gmSpace' ? (f.blanket || 0) : 0) + (f.offPerm || 0) - (uguLow(f) ? 50 : 0) + buffVal(f, 'offUp') - buffVal(f, 'offDown') - (f.useless ? 3 : 0) + (f.wedgeSpear || 0) + (f.wing || 0) * 3; } // 쐐기의 창: 수치 1당 공격 레벨 +1
+function defLv(f) { if (f.type === 'pastjuwon') return (f.glDef || 80) + buffVal(f, 'defUp'); return (f.blanket || 0) + (f.defPerm || 0) -(f.wing || 0) * 3 - Math.floor((f.rampage || 0) / 10) * 10 + f.level - buffVal(f, 'defDown') - (uguLow(f) ? 50 : 0) + CHAR[f.type].defMod + buffVal(f, 'defUp') - (f.useless ? 3 : 0) - (f.tremorBase && f.tremorBase.collapse ? Math.floor(f.tremorBase.pot / 4) : 0); } // 진동 - 붕괴: 진동 위력 4당 방어 레벨 -1
 function headsChance(f) { return clamp(0.5 + f.sp / 100, 0, 1); }
 function flip(f) { return Math.random() < headsChance(f); }
 function levelMult(ol, dl) { const d = ol - dl; return 1 + d / (Math.abs(d) + 25); }
@@ -2114,8 +2120,13 @@ function onTurnEnd() {
 }
 
 // ---- 호흡 / 침잠 / 화상 (위력 pot, 횟수 cnt) ----
+var hitSrc = null; // 지금 코인을 적중시키고 있는 공격자 (스킬로 부여하는 상태이상 판정용)
 function addStack(t, key, pot, cnt, label, color) {
   if (!t.alive) return;
+  if (hitSrc && hitSrc.team !== t.team && (pot || cnt) && (key === 'burn' || key === 'rupture')) { // 닭다리 (화상) · 닭가슴살 (파열): 부여 시 횟수 +3 (턴당 3회)
+    const id = key === 'burn' ? 'chickLeg' : 'chickBreast';
+    if (hasArt(hitSrc, id)) { const tk = turnIdx() + '@' + turnBase; if (hitSrc[id + 'T'] !== tk) { hitSrc[id + 'T'] = tk; hitSrc[id + 'N'] = 0; } if (hitSrc[id + 'N'] < 3) { hitSrc[id + 'N']++; cnt += 3; } }
+  }
   if (!t[key]) t[key] = { pot: 0, cnt: 0 };
   const b = t[key];
   if (pot) { b.pot = Math.min(99, b.pot + pot); if (b.cnt <= 0) b.cnt = 1; }
@@ -2531,6 +2542,7 @@ function onUse(u) {
     if (SKILLS[u.sk].type === 'physical') w.tearP = (w.tearP || 0) + 1; else w.tearM = (w.tearM || 0) + 1;
     if ((w.tearP || 0) >= 3 && (w.tearM || 0) >= 7 && !w.tearNext) { w.tearP = w.tearM = 0; w.tearNext = true; floatText(w.x, w.y - w.r - 50, '다음 턴 눈물로 벼려낸 검', '#6a9aff', 15, { life: 1.3 }); log(`💍 ${nm(w)} 잿빛 별자리의 가호: 아군이 물리 3번 · 마법 7번 사용 → 다음 턴에 <b style="color:#6a9aff">눈물로 벼려낸 검</b>`); }
   }
+  if (hasArt(f, 'tango') && u.tgt && u.tgt !== f && f.baseSpeed > u.tgt.baseSpeed) { const a = Math.min(3, Math.floor(f.baseSpeed / 10 / 3)); if (a) { u.clashBonus += a; log(`🌶 ${nm(f)} <b style="color:#ff3a1a">탱고 닭양념장</b>: 대상보다 빠름 (속도 ${Math.round(f.baseSpeed / 10)} > ${Math.round(u.tgt.baseSpeed / 10)}) → 합 위력 +${a}`); } }
   if (f.type === 'gunminA' && ['gmUgu', 'gmIrid', 'gmSpace'].includes(u.sk)) {
     const t0 = u.tgt, bl = f.blanket || 0, bp = t0 && t0.bleed ? t0.bleed.pot : 0, notes = [];
     if (u.sk === 'gmUgu') { if (bp >= 6) { u.coinPow += 1; notes.push(`대상 출혈 ${bp} → 코인 위력 +1`); } }
@@ -3210,7 +3222,7 @@ function stepEngagement(e) {
   // 코인별 연: 해당 코인을 던질 때 연결된 아군이 함께 공격
   if (S.coinLink && S.coinLink[ci] && !u.linked) { u.linkedDone = u.linkedDone || []; const types = S.coinLink[ci].filter(x => !u.linkedDone.includes(x)); if (types.length) { u.linkedDone.push(...types); linkAttack(u.f, { link: types }, q.tgt); } }
   { const al = targets.filter(x => x.alive); sweepCtx = al.length > 1 ? { list: al, done: false } : null; }
-  targets.forEach((tg, k) => { if (tg.alive) { const r = hitCoin(u, tg, q.pow, ci, heads, crit); if (k === 0) again = r; } });
+  targets.forEach((tg, k) => { if (tg.alive) { hitSrc = u.f; let r; try { r = hitCoin(u, tg, q.pow, ci, heads, crit); } finally { hitSrc = null; } if (k === 0) again = r; } });
   sweepCtx = null;
   if (u.f.coinView) {
     if (again) { u.f.coinView.total++; u.f.coinView.alive++; }
@@ -3245,6 +3257,7 @@ function stepEngagement(e) {
     if (u.sk === 'arcana' && u.f.forceEnd) { u.f.forceEnd = false; forceTurnEnd(u.f); } // 닳디 닳은 기사가 있는 체력 600 이하의 적 적중 시 턴 종료 // [공격 종료시] 이번 턴 종료
     if (u.sk === 'spit' && u.f.alive) giveDawnGreet(u.f, u.dawn20 ? 2 : 1);
     // 날카로운 실과 바늘: 매 턴 처음으로 피해를 입힌 스킬의 (피해량 / 2)만큼 추가 고정 피해
+    if (u.dealtSum > 0 && u.f.alive && hasArt(u.f, 'dirtyNeedle')) { const tk = turnIdx() + '@' + turnBase; if (u.f.dNeedleTurn !== tk) { u.f.dNeedleTurn = tk; const tg = q.tgt.alive && q.tgt.team !== u.f.team ? q.tgt : (u.mainT && u.mainT.alive && u.mainT.team !== u.f.team ? u.mainT : null); const v = Math.floor(u.dealtSum / 3); if (tg && v > 0) { lightning(u.f.x, u.f.y, tg.x, tg.y, '#8aff6a', 3, 0.3); addStack(tg, 'bleed', v, 0, '출혈', '#ff4060'); log(`🧵 ${nm(u.f)} <b style="color:#8aff6a">오염된 실과 바늘</b>: 피해량 ${Math.floor(u.dealtSum)} / 3 → ${nm(tg)} 출혈 +${v}`); } } }
     if (u.dealtSum > 0 && u.f.alive && hasArt(u.f, 'needle')) { const tk = turnIdx() + '@' + turnBase; if (u.f.needleTurn !== tk) { u.f.needleTurn = tk; const tg = q.tgt.alive ? q.tgt : (u.mainT && u.mainT.alive ? u.mainT : null); if (tg) { lightning(u.f.x, u.f.y, tg.x, tg.y, '#ff6a5a', 3, 0.3); dealDamage(u.f, tg, Math.floor(u.dealtSum / 2), 'true', '날카로운 실과 바늘', `피해량 ${Math.floor(u.dealtSum)} / 2 → `); } } }
     if (u.sk === 'gmSpace' && u.f.alive && u.f.blanket) { log(`${nm(u.f)} ${sk('gmSpace')} [공격 종료시]: 이불 ${u.f.blanket} 모두 소모`); u.f.blanket = 0; floatText(u.f.x, u.f.y - u.f.r - 46, '이불 모두 소모', '#c8d0ff', 16); }
     if (u.f.type === 'sunwooA' && u.f.alive) {
@@ -4331,6 +4344,13 @@ function checkWin() {
       const d = RAID_DIFF[raidDiff], c = RAID_COIN[raidStage] * d.coin;
       addCoins(c, `레이드 ${raidStage}단계 ${d.name} 클리어`);
       log(`🪙 레이드 ${raidStage}단계 <b style="color:${d.color}">${d.name}</b> 클리어 코인 +${c.toLocaleString()}`, 'kill');
+    }
+    if (raidMode && !dungeonFloor && !pvpOpp && raidStage === 6 && w === 0) {
+      // 레이드 6단계 클리어 보상: 보통 닭가슴살 · 하드 닭다리 · 익스트림 탱고 닭양념장 / 오염된 실과 바늘 중 하나 (50%)
+      const id = raidDiff === 0 ? 'chickBreast' : raidDiff === 1 ? 'chickLeg' : (() => { const c = ['tango', 'dirtyNeedle'], left = c.filter(k => !save.artifacts[k]); return (left.length ? left : c)[(Math.random() * (left.length || 2)) | 0]; })();
+      const first = !save.artifacts[id]; save.artifacts[id] = true; save.raid6 = true; persist(); renderArtifacts(); updateRaidInfo();
+      log(`💍 레이드 6단계 <b style="color:${RAID_DIFF[raidDiff].color}">${RAID_DIFF[raidDiff].name}</b> 클리어 보상: 아티팩트 <b style="color:${ARTIFACTS[id].color}">${ARTIFACTS[id].name}</b> ${first ? '획득!' : '(이미 보유 중)'}`, 'kill');
+      if (first) toast(`💍 아티팩트 ${ARTIFACTS[id].name} 획득!`);
     }
     if (raidMode && !dungeonFloor && !pvpOpp && raidStage === 4 && w === 0) {
       const first = !save.artifacts.rageblade; save.artifacts.rageblade = true; save.raid4 = true; persist(); renderArtifacts(); updateRaidInfo();
@@ -6533,6 +6553,21 @@ document.getElementById('raid4Btn').onclick = () => {
   showBig('레이드 4단계: 과거의 강주원', '#ff2a6a', 2.2); doFlash('#ff2a6a', 0.6); shake = Math.max(shake, 22);
   log('📼 <b style="color:#ff6a9a">레이드 4단계 — 과거의 강주원</b> 시작!', 'kill');
 };
+document.getElementById('raid6Btn').onclick = () => {
+  let done4 = false; try { done4 = !!save.raid4; } catch (e) {}
+  if (!done4 && !PERK) { toast('레이드 4단계(과거의 강주원)를 먼저 클리어해 주세요.'); return; }
+  const team = roster.filter(r => r.team === 0 && r.type !== 'dummy');
+  if (!team.length) { toast('레드 팀에 레이드에 도전할 캐릭터를 넣어주세요.'); return; }
+  roster = team.concat([{ type: 'bongdad', team: 1 }]);
+  pvpOpp = null; dungeonFloor = 0; raidMode = true; raidStage = 6; renderRoster(); setTestLock(true); start();
+  const b = fighters.find(f => f.type === 'bongdad');
+  if (b) { // 매워진 봉이 아빠: 레벨 +50 · 공격 레벨 +50 · 방어 레벨 +60 · 기본 위력 +5
+    b.label = '매워진 봉이 아빠'; b.spicy = true; b.level += 50; b.offPerm = 50; b.defPerm = 60; b.permPow = (b.permPow || 0) + 5; lvHp(b, true);
+  }
+  applyRaidDiff(); questEvent('raidTry');
+  showBig('레이드 6단계: 매워진 봉이 아빠', '#ff3a1a', 2.2); doFlash('#ff3a1a', 0.6); shake = Math.max(shake, 22);
+  log('🌶 <b style="color:#ff5a2a">레이드 6단계 — 매워진 봉이 아빠</b> 시작! · 레벨 +50 · 공격 레벨 +50 · 방어 레벨 +60 · 기본 위력 +5', 'kill');
+};
 document.getElementById('raid3Btn').onclick = () => {
   let done2 = false; try { done2 = !!save.raid2; } catch (e) {}
   if (!done2 && !PERK) { toast('레이드 2단계(파멸의 케로베로스)를 먼저 클리어해 주세요.'); return; }
@@ -6647,6 +6682,8 @@ document.getElementById('srBtn2').onclick = () => startServerRaid('hari1');
 function updateRaidInfo() {
   { let d2 = false, d3 = false; try { d2 = !!save.raid2; d3 = !!save.raid3; } catch (e) {}
     let d4 = false; try { d4 = !!save.raid4; } catch (e) {}
+    let d6 = false; try { d6 = !!save.raid6; } catch (e) {}
+    const r6 = document.getElementById('raid6Info'); if (r6) { let A = {}; try { A = save.artifacts || {}; } catch (e) {} const got = ['chickBreast', 'chickLeg', 'tango', 'dirtyNeedle'].filter(k => A[k]).map(k => ARTIFACTS[k].name); r6.innerHTML = (d4 || PERK) ? `봉이 아빠 강화판 (레벨 +50 · 공격 +50 · 방어 +60 · 기본 위력 +5) · 보상: 보통 닭가슴살 · 하드 닭다리 · 익스트림 탱고 닭양념장 / 오염된 실과 바늘 (50%)${got.length ? ` · <b style="color:#ffb07a">획득: ${got.join(', ')}</b>` : ''}` : '🔒 레이드 4단계를 클리어하면 열려요'; }
     const r4 = document.getElementById('raid4Info'); if (r4) r4.innerHTML = d4 ? '강주원 편성 불가 · <b style="color:#ff9a6a">보상 획득함</b> (아티팩트 날이 무뎌진 레이지블레이드)' : (d3 || PERK) ? '강주원 편성 불가 · 승리 시 아티팩트 날이 무뎌진 레이지블레이드' : '🔒 레이드 3단계를 클리어하면 열려요';
     const r3 = document.getElementById('raid3Info'); if (r3) r3.innerHTML = d3 ? '5반만 편성 (강우주 불가) · <b style="color:#b8a0ff">보상 획득함</b> (아티팩트 가능성)' : (d2 || PERK) ? '5반만 편성 (강우주 · 과녁 불가) · 승리 시 아티팩트 가능성' : '🔒 레이드 2단계를 클리어하면 열려요'; }
   let done2 = false; try { done2 = !!save.raid2; } catch (e) {} // save가 아직 준비되지 않았을 수 있음
@@ -6913,6 +6950,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.2', date: '2026-11-28', items: ['🌶 레이드 6단계 추가: 매워진 봉이 아빠 (봉이 아빠 레벨 +50 · 공격 레벨 +50 · 방어 레벨 +60 · 기본 위력 +5) · 레이드 4단계 클리어 후 도전', '클리어 아티팩트 — 보통: 닭가슴살 (스킬로 파열 부여 시 파열 횟수 +3, 턴당 3회) · 하드: 닭다리 (스킬로 화상 부여 시 화상 횟수 +3, 턴당 3회)', '익스트림: 50% 확률로 탱고 닭양념장 (대상보다 빠르면 합 위력 +(속도/3), 최대 3) 또는 오염된 실과 바늘 (매 턴 처음 피해를 입힌 스킬의 피해량/3만큼 출혈 위력 부여)'] },
   { v: '15.1', date: '2026-11-27', items: ['턴 표시 추가: 화면 위에 현재 턴 번호와 턴 진행 막대 · 턴이 넘어갈 때 "턴 N" 배너 · 전투 로그에 턴 구분선', '속박 아이콘 변경 (주황 화살표)'] },
   { v: '15.0', date: '2026-11-27', items: ['강우주 - 암흑진화의 연 · 패시브 연 · 자랑스럽게 걸어나가라의 이건민 관련 효과가 이건민 - 이불에게도 적용돼요'] },
   { v: '14.9', date: '2026-11-27', items: ['이건민 - 이불: 이리듐 · 공간참 [기동돓]의 이불 효과 50당 → 10당 (공격 가중치 +1 · 코인 위력 +1, 이불 100이면 각각 +10)'] },
