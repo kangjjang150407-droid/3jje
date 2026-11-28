@@ -6810,7 +6810,7 @@ const GACHA = ['song', 'jiho', 'juwon', 'wooju', 'gunmin', 'doyun', 'sunwoo', 'k
 const AWAKEN = { gunmin: { type: 'gunminA', fx: '이건민 - 이불 (LV.92 · 체력 1624) — 우구야 · 이리듐 · 공간참 [기동돓] · 반격 마그네슘' }, sunwoo: { type: 'sunwooA', fx: '정선우 - 전성기 (LV.90 · 체력 3204) — 세치오나투라 디 체르보 · 세치오나투라 디 엘레판테 · 처분 · 회피 예상' } };
 const AWAKEN_RATE = 0.01; // 뽑기 1회당 각성 영혼석 확률 1%
 if (!save.awk) save.awk = {}; if (!save.astones) save.astones = {};
-const BASE_OF = { sunwooA: 'sunwoo', gunminA: 'gunmin' }; const baseOf = t => BASE_OF[t] || t;
+const BASE_OF = { sunwooA: 'sunwoo', gunminA: 'gunmin' }; const AWAKEN_OF = BASE_OF; const baseOf = t => BASE_OF[t] || t;
 const TRANS_FX = { gunmin: '강주원이 느린 달리기를 쓰거나 강우주가 머리 때리기 · 머리 때리기 [정오]를 쓰면, 이건민이 그 대상에게 해줘를 사용' };
 if (!save.trans) save.trans = {}; if (!save.tstones) save.tstones = {};
 const transOn = f => { try { const o = pvpOpp && f.team === 1 ? pvpOpp : save; return !!(o.trans || {})[UP_KEY[f.type] || f.type]; } catch (e) { return false; } };
@@ -6950,6 +6950,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.3', date: '2026-11-28', items: ['아티팩트를 각성 캐릭터(⚡ 정선우 - 전성기 · ⚡ 이건민 - 이불)에게 기본 캐릭터와 따로 장착할 수 있어요'] },
   { v: '15.2', date: '2026-11-28', items: ['🌶 레이드 5단계 추가: 매워진 봉이 아빠 (봉이 아빠 레벨 +50 · 공격 레벨 +50 · 방어 레벨 +60 · 기본 위력 +5) · 레이드 4단계 클리어 후 도전', '클리어 아티팩트 — 보통: 닭가슴살 (스킬로 파열 부여 시 파열 횟수 +3, 턴당 3회) · 하드: 닭다리 (스킬로 화상 부여 시 화상 횟수 +3, 턴당 3회)', '익스트림: 50% 확률로 탱고 닭양념장 (대상보다 빠르면 합 위력 +(속도/3), 최대 3) 또는 오염된 실과 바늘 (매 턴 처음 피해를 입힌 스킬의 피해량/3만큼 출혈 위력 부여)'] },
   { v: '15.1', date: '2026-11-27', items: ['턴 표시 추가: 화면 위에 현재 턴 번호와 턴 진행 막대 · 턴이 넘어갈 때 "턴 N" 배너 · 전투 로그에 턴 구분선', '속박 아이콘 변경 (주황 화살표)'] },
   { v: '15.0', date: '2026-11-27', items: ['강우주 - 암흑진화의 연 · 패시브 연 · 자랑스럽게 걸어나가라의 이건민 관련 효과가 이건민 - 이불에게도 적용돼요'] },
@@ -7215,9 +7216,9 @@ updateRaidInfo();
 if (gunminUnlocked && !save.artifacts.crown) { save.artifacts.crown = true; persist(); } // 이미 레이드를 클리어한 사람에게도 지급
 function renderArtifacts() {
   const el = document.getElementById('artPanel'); if (!el) return;
-  el.innerHTML = '<div style="color:#b0a0a8;margin-bottom:4px">아티팩트는 캐릭터에게 장착하는 장비예요. 하나의 아티팩트는 한 캐릭터만 장착할 수 있어요.</div>' + Object.keys(ARTIFACTS).map(id => {
+  el.innerHTML = '<div style="color:#b0a0a8;margin-bottom:4px">아티팩트는 캐릭터에게 장착하는 장비예요. 하나의 아티팩트는 한 캐릭터만 장착할 수 있어요. 각성(⚡)은 기본 캐릭터와 따로 장착해요.</div>' + Object.keys(ARTIFACTS).map(id => {
     const a = ARTIFACTS[id], have = !!save.artifacts[id];
-    const opts = ['<option value="">장착 안 함</option>'].concat(GACHA.filter(k => save.owned[k]).map(k => `<option value="${k}"${save.equip[id] === k ? ' selected' : ''}>${CHAR[k].name}</option>`)).join('');
+    const opts = ['<option value="">장착 안 함</option>'].concat(GACHA.filter(k => save.owned[k]).flatMap(k => [k].concat(AWAKEN[k] && (save.awk || {})[k] ? [AWAKEN[k].type] : [])).map(k => `<option value="${k}"${save.equip[id] === k ? ' selected' : ''}>${AWAKEN_OF[k] ? '⚡ ' : ''}${CHAR[k].name}</option>`)).join(''); // 각성은 기본과 따로 장착
     return `<div class="art" style="opacity:${have ? 1 : 0.55}"><b style="color:${a.color}">${have ? '💍' : '🔒'} ${a.name}</b> <span style="color:#8a8aa8">(${a.how})</span><br>${a.desc}${have ? `<select data-art="${id}">${opts}</select>` : '<div style="color:#777">미획득</div>'}</div>`;
   }).join('');
 }
