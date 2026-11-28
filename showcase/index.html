@@ -6981,6 +6981,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '16.6', date: '2026-11-28', items: ['김치스시 먹는 소리(ASMR)를 더 크게 · 먹는 동안 배경음악은 더 작게', '음식 그림을 모두 새로 그렸어요: 윤기 나는 초밥 · 바삭한 튀김옷 · 겹겹이 통삼겹 · 김이 나는 컵라면 등 · 한 입 먹을 때마다 깨문 자국이 생겨요'] },
   { v: '16.5', date: '2026-11-28', items: ['🥓 김치스시 메뉴에 통삼겹 추가 (🪙 1,200 · 호감도 +10 · 지글지글 ASMR)'] },
   { v: '16.4', date: '2026-11-28', items: ['🏪 김치스시에 편의점 메뉴 추가: 삼각김밥 · 감자칩 · 바나나우유 · 아이스크림 · 컵라면 · 핫바 · 샌드위치 · 편의점 도시락 (후루룩 · 바삭 ASMR)'] },
   { v: '16.3', date: '2026-11-28', items: ['🍣 식당 김치스시 오픈: 음식을 사서 볼과 함께 먹으면 (ASMR) 호감도가 올라요', '호감도는 캐릭터마다 최대 45 · 오른 만큼 전투 시작 정신력 증가 (각성은 기본 캐릭터와 같은 호감도)', '메뉴: 단무지 · 연어 초밥 · 김치 초밥 · 새우튀김 · 김치스시 특선 모둠 · 식당 전용 배경음악'] },
@@ -7722,7 +7723,7 @@ function chewSfx(crisp, slurp) {
     const len = 0.6, buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.min(1, (d.length - i) / 4000);
     const src = actx.createBufferSource(), hp = actx.createBiquadFilter(), g = actx.createGain();
-    src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 3000; g.gain.value = 0.8; src.connect(hp); hp.connect(g); g.connect(sfxGain || actx.destination); src.start();
+    src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 3000; g.gain.value = 2.2; src.connect(hp); hp.connect(g); g.connect(sfxGain || actx.destination); src.start();
     return chewSfx(false);
   }
   if (slurp) { // 후루룩: 잡음의 음높이를 끌어올리며 빨아들이는 소리
@@ -7730,7 +7731,7 @@ function chewSfx(crisp, slurp) {
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length) * (0.6 + 0.4 * Math.sin(i / 300));
     const src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain(), t0 = actx.currentTime;
     src.buffer = buf; bp.type = 'bandpass'; bp.Q.value = 4; bp.frequency.setValueAtTime(500, t0); bp.frequency.exponentialRampToValueAtTime(2600, t0 + len);
-    g.gain.value = 1.4; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0); return;
+    g.gain.value = 3.8; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0); return;
   }
   const t0 = actx.currentTime, n = crisp ? 3 : 2;
   for (let k = 0; k < n; k++) {
@@ -7738,8 +7739,164 @@ function chewSfx(crisp, slurp) {
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, crisp ? 2.5 : 1.4);
     const src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain();
     src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = crisp ? 2200 + Math.random() * 1800 : 600 + Math.random() * 700; bp.Q.value = crisp ? 1.2 : 2.2;
-    g.gain.value = crisp ? 0.9 : 1.3; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0 + k * (crisp ? 0.07 : 0.13));
+    g.gain.value = crisp ? 2.6 : 3.6; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0 + k * (crisp ? 0.07 : 0.13));
   }
+}
+// ---- 음식 그림 (직접 그린 캔버스 일러스트) · (0,0)은 음식 바닥 중앙, 위쪽이 -y · 폭 약 130 ----
+function lg(c, x0, y0, x1, y1, stops) { const g = c.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, col]) => g.addColorStop(o, col)); return g; }
+function rg(c, x, y, r0, r1, stops) { const g = c.createRadialGradient(x, y, r0, x, y, r1); stops.forEach(([o, col]) => g.addColorStop(o, col)); return g; }
+function seeded(n) { let s = Math.abs(Math.floor(n * 9301 + 49297)) % 233280; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
+function gloss(c, x, y, w, h, a = 0.5) { c.save(); c.globalAlpha = a; c.fillStyle = lg(c, x, y, x, y + h, [[0, '#ffffff'], [1, 'rgba(255,255,255,0)']]); c.beginPath(); c.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
+function riceBall(c, x, y, w, h) { // 초밥 밥: 윤기 나는 밥알
+  c.fillStyle = lg(c, 0, y - h, 0, y, [[0, '#ffffff'], [1, '#e8e2d6']]); c.beginPath(); c.roundRect(x - w / 2, y - h, w, h, h * 0.45); c.fill();
+  const R = seeded(x * 7 + w); c.fillStyle = '#ffffff';
+  for (let i = 0; i < 26; i++) { c.save(); c.translate(x - w / 2 + 4 + R() * (w - 8), y - h + 3 + R() * (h - 6)); c.rotate(R() * 3); c.beginPath(); c.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#d8d0c0'; c.lineWidth = 0.6; c.stroke(); c.restore(); }
+}
+const FOOD_DRAW = {
+  danmuji(c) { // 노란 반달 단무지 세 조각 + 작은 접시
+    c.fillStyle = '#e8eef4'; c.beginPath(); c.ellipse(0, -6, 62, 14, 0, 0, Math.PI * 2); c.fill();
+    for (const [x, r, a] of [[-30, 24, -0.2], [0, 26, 0.1], [30, 23, 0.35]]) { c.save(); c.translate(x, -14); c.rotate(a);
+      c.fillStyle = lg(c, 0, -r, 0, 4, [[0, '#fff27a'], [0.6, '#ffd21a'], [1, '#e8a800']]); c.beginPath(); c.arc(0, 0, r, Math.PI, 0); c.lineTo(r, 4); c.lineTo(-r, 4); c.closePath(); c.fill();
+      c.strokeStyle = '#fff6b0'; c.lineWidth = 1.5; for (let k = 1; k < 3; k++) { c.beginPath(); c.arc(0, 0, r * k / 3, Math.PI, 0); c.stroke(); }
+      c.fillStyle = '#f0b000'; c.fillRect(-r, 0, r * 2, 4); gloss(c, -r * 0.6, -r * 0.9, r * 0.8, r * 0.35, 0.6); c.restore(); }
+  },
+  salmon(c) { // 연어 초밥 두 점
+    for (const x of [-30, 30]) {
+      riceBall(c, x, 0, 54, 22);
+      c.save(); c.translate(x, -20); c.fillStyle = lg(c, -30, -10, 30, 10, [[0, '#ff9a5a'], [0.5, '#ff7a3a'], [1, '#f05a20']]);
+      c.beginPath(); c.moveTo(-32, 4); c.quadraticCurveTo(-30, -14, 0, -15); c.quadraticCurveTo(30, -14, 33, 2); c.quadraticCurveTo(0, 10, -32, 4); c.fill();
+      c.save(); c.clip(); c.strokeStyle = '#ffe2d0'; c.lineWidth = 2.4; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(k * 12 - 6, -16); c.quadraticCurveTo(k * 12 + 2, -4, k * 12 - 2, 8); c.stroke(); } c.restore();
+      gloss(c, -22, -14, 30, 7, 0.55); c.restore();
+    }
+  },
+  kimchiSushi(c) { // 김치 초밥: 밥 + 빨간 김치 잎 + 김띠 + 깨
+    for (const x of [-30, 30]) {
+      riceBall(c, x, 0, 54, 22);
+      c.save(); c.translate(x, -20);
+      c.fillStyle = lg(c, 0, -16, 0, 8, [[0, '#ff4a1a'], [0.6, '#d8200a'], [1, '#a8140a']]); c.beginPath(); c.moveTo(-31, 5); c.bezierCurveTo(-34, -12, -10, -20, 0, -16); c.bezierCurveTo(14, -20, 34, -12, 31, 5); c.quadraticCurveTo(0, 11, -31, 5); c.fill();
+      c.strokeStyle = '#ffd0a0'; c.lineWidth = 3; c.beginPath(); c.moveTo(-24, 2); c.quadraticCurveTo(0, -8, 24, 1); c.stroke(); // 배추 줄기
+      const R = seeded(x + 3); for (let i = 0; i < 14; i++) { c.fillStyle = R() < 0.5 ? '#8a0a00' : '#ff8a3a'; c.fillRect(-26 + R() * 52, -14 + R() * 16, 2.2, 2.2); }
+      c.fillStyle = '#fff6e0'; for (let i = 0; i < 6; i++) { c.beginPath(); c.ellipse(-20 + R() * 40, -12 + R() * 10, 1.8, 1.1, R() * 3, 0, Math.PI * 2); c.fill(); }
+      gloss(c, -20, -15, 26, 6, 0.45);
+      c.fillStyle = lg(c, -6, 0, 6, 0, [[0, '#1a2a1a'], [0.5, '#2a3a24'], [1, '#101a10']]); c.fillRect(-6, -14, 12, 34); c.restore();
+    }
+  },
+  ebiTen(c) { // 새우튀김 두 마리 + 레몬
+    c.fillStyle = lg(c, 30, -30, 60, 0, [[0, '#fff27a'], [1, '#f0c800']]); c.beginPath(); c.moveTo(38, -2); c.arc(46, -2, 18, Math.PI, Math.PI * 1.75); c.closePath(); c.fill();
+    for (const [y, a] of [[-10, -0.18], [-26, -0.32]]) { c.save(); c.translate(-6, y); c.rotate(a);
+      c.fillStyle = lg(c, 0, -12, 0, 12, [[0, '#ffd06a'], [0.5, '#e8a030'], [1, '#b8701a']]); c.beginPath(); c.moveTo(-50, 4); c.quadraticCurveTo(-48, -12, -10, -11); c.lineTo(36, -7); c.quadraticCurveTo(44, 0, 36, 7); c.lineTo(-10, 11); c.quadraticCurveTo(-48, 14, -50, 4); c.fill();
+      const R = seeded(y * -3); for (let i = 0; i < 40; i++) { c.fillStyle = R() < 0.5 ? '#ffe49a' : '#c8801a'; c.beginPath(); c.arc(-46 + R() * 80, -8 + R() * 16, 1.2 + R() * 1.8, 0, Math.PI * 2); c.fill(); } // 바삭한 튀김옷
+      c.fillStyle = lg(c, 36, 0, 58, 0, [[0, '#ff5a2a'], [1, '#c8200a']]); c.beginPath(); c.moveTo(36, 0); c.lineTo(58, -12); c.lineTo(54, 0); c.lineTo(58, 12); c.closePath(); c.fill(); // 꼬리
+      gloss(c, -40, -11, 60, 6, 0.35); c.restore(); }
+  },
+  samgyup(c, t) { // 통삼겹
+    const w = 130, h = 48, x0 = -w / 2, y0 = -h;
+    const L2 = [['#5a200a', 0, 0.14], ['#c86a3a', 0.14, 0.04], ['#fbe6d8', 0.18, 0.13], ['#c0583a', 0.31, 0.2], ['#fff0e6', 0.51, 0.09], ['#b04a2e', 0.6, 0.25], ['#f6dccc', 0.85, 0.15]];
+    c.save(); c.beginPath(); c.roundRect(x0, y0, w, h, 10); c.clip();
+    for (const [col, o, hh] of L2) { c.fillStyle = col; c.fillRect(x0, y0 + h * o, w, h * hh + 1); }
+    c.fillStyle = lg(c, 0, y0, 0, y0 + 10, [[0, '#8a3a10'], [1, 'rgba(138,58,16,0)']]); c.fillRect(x0, y0, w, 10); // 노릇한 껍데기
+    c.strokeStyle = '#2a0a02aa'; c.lineWidth = 4; for (let gx = x0 + 8; gx < x0 + w; gx += 22) { c.beginPath(); c.moveTo(gx, y0); c.lineTo(gx + 14, y0 + h); c.stroke(); }
+    c.restore(); c.strokeStyle = '#4a1406'; c.lineWidth = 2; c.beginPath(); c.roundRect(x0, y0, w, h, 10); c.stroke();
+    gloss(c, x0 + 8, y0 + 2, w - 16, 6, 0.55);
+    for (let k = 0; k < 3; k++) { const sx = -20 + k * 20, ph = (t || 0) * 2 + k; c.strokeStyle = `rgba(255,255,255,${0.25 + 0.15 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, y0 - 6); c.bezierCurveTo(sx - 10, y0 - 20, sx + 10, y0 - 30, sx + Math.sin(ph) * 6, y0 - 44); c.stroke(); }
+  },
+  special(c) { // 특선 모둠: 옻칠 도시락
+    c.fillStyle = lg(c, 0, -58, 0, 0, [[0, '#3a0a0a'], [1, '#1a0404']]); c.beginPath(); c.roundRect(-66, -58, 132, 58, 8); c.fill(); c.strokeStyle = '#c8902a'; c.lineWidth = 3; c.stroke();
+    c.strokeStyle = '#c8902a'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -56); c.lineTo(0, -2); c.moveTo(-64, -30); c.lineTo(0, -30); c.stroke();
+    c.save(); c.translate(-48, -32); c.scale(0.42, 0.42); FOOD_DRAW.salmon(c); c.restore();
+    c.save(); c.translate(-18, -4); c.scale(0.42, 0.42); FOOD_DRAW.kimchiSushi(c); c.restore();
+    c.save(); c.translate(34, -10); c.scale(0.5, 0.5); FOOD_DRAW.ebiTen(c); c.restore();
+    c.fillStyle = lg(c, 0, -52, 0, -36, [[0, '#ffe46a'], [1, '#f0b820']]); c.beginPath(); c.roundRect(-32, -52, 26, 16, 3); c.fill(); c.strokeStyle = '#d89a10'; c.lineWidth = 1; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-32, -48 + k * 4); c.lineTo(-6, -48 + k * 4); c.stroke(); } // 계란말이
+  },
+  onigiri(c) { // 삼각김밥
+    c.fillStyle = lg(c, 0, -70, 0, 0, [[0, '#ffffff'], [1, '#e6e0d4']]); c.beginPath(); c.moveTo(0, -70); c.quadraticCurveTo(8, -70, 44, -10); c.quadraticCurveTo(48, 0, 36, 0); c.lineTo(-36, 0); c.quadraticCurveTo(-48, 0, -44, -10); c.quadraticCurveTo(-8, -70, 0, -70); c.fill();
+    const R = seeded(5); c.fillStyle = '#fff'; for (let i = 0; i < 20; i++) { c.beginPath(); c.ellipse(-26 + R() * 52, -50 + R() * 40, 3, 1.7, R() * 3, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = lg(c, -26, 0, 26, 0, [[0, '#0e1a10'], [0.5, '#24341e'], [1, '#0e1a10']]); c.fillRect(-26, -30, 52, 30); c.fillStyle = '#ffffff18'; for (let k = 0; k < 5; k++) c.fillRect(-26, -27 + k * 6, 52, 1);
+    c.fillStyle = '#ff7a3a'; c.beginPath(); c.ellipse(0, -40, 9, 6, 0, 0, Math.PI * 2); c.fill(); // 속 재료
+  },
+  chips(c) { // 감자칩 봉지 + 쏟아진 칩
+    c.fillStyle = lg(c, -40, -78, 40, 0, [[0, '#ff3a3a'], [1, '#b80a1a']]); c.beginPath(); c.moveTo(-34, -78); c.lineTo(30, -78); c.lineTo(40, -6); c.lineTo(-40, -6); c.closePath(); c.fill();
+    c.fillStyle = '#ffd84a'; c.font = '900 13px sans-serif'; c.textAlign = 'center'; c.fillText('CHIPS', -2, -46); c.fillStyle = '#ffffff44'; c.fillRect(-28, -74, 6, 60);
+    const R = seeded(9); for (let i = 0; i < 9; i++) { const x = -50 + R() * 100, y = -6 - R() * 16; c.save(); c.translate(x, y); c.rotate(R() * 3);
+      c.fillStyle = lg(c, -12, -8, 12, 8, [[0, '#fff0a0'], [1, '#f0b830']]); c.beginPath(); c.ellipse(0, 0, 13, 9, 0, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#d89a20'; c.lineWidth = 1; c.stroke();
+      c.fillStyle = '#c8801a'; c.beginPath(); c.arc(R() * 8 - 4, R() * 6 - 3, 1.3, 0, Math.PI * 2); c.fill(); c.restore(); }
+  },
+  bananaMilk(c) { // 통통한 노란 우유병 + 빨대
+    c.strokeStyle = '#ff6a8a'; c.lineWidth = 5; c.beginPath(); c.moveTo(8, -78); c.lineTo(20, -110); c.lineTo(32, -110); c.stroke();
+    c.fillStyle = lg(c, -36, 0, 36, 0, [[0, '#e8b800'], [0.35, '#fff27a'], [1, '#d8a000']]); c.beginPath(); c.moveTo(-14, -80); c.lineTo(14, -80); c.lineTo(16, -66); c.bezierCurveTo(44, -56, 44, -4, 26, 0); c.lineTo(-26, 0); c.bezierCurveTo(-44, -4, -44, -56, -16, -66); c.closePath(); c.fill();
+    c.fillStyle = '#2a8a3a'; c.beginPath(); c.roundRect(-16, -86, 32, 8, 3); c.fill();
+    c.fillStyle = '#ffffffcc'; c.beginPath(); c.roundRect(-22, -42, 44, 18, 6); c.fill(); c.fillStyle = '#c88a00'; c.font = '800 11px sans-serif'; c.textAlign = 'center'; c.fillText('바나나', 0, -29);
+    gloss(c, -30, -60, 12, 40, 0.5);
+  },
+  icecream(c) { // 소프트아이스크림: 와플콘 + 바닐라 · 딸기 소용돌이
+    c.fillStyle = lg(c, -20, -50, 20, 0, [[0, '#e8a050'], [1, '#b8702a']]); c.beginPath(); c.moveTo(-22, -50); c.lineTo(22, -50); c.lineTo(0, 0); c.closePath(); c.fill();
+    c.save(); c.clip(); c.strokeStyle = '#8a4a1a'; c.lineWidth = 1.5; for (let k = -6; k < 6; k++) { c.beginPath(); c.moveTo(k * 8, -50); c.lineTo(k * 8 + 40, 0); c.moveTo(k * 8, -50); c.lineTo(k * 8 - 40, 0); c.stroke(); } c.restore();
+    for (const [y, w, col] of [[-54, 30, '#fff8ec'], [-68, 24, '#ffb0c8'], [-80, 17, '#fff8ec'], [-90, 9, '#ffb0c8']]) { c.fillStyle = lg(c, 0, y - 8, 0, y + 8, [[0, '#ffffff'], [1, col]]); c.beginPath(); c.ellipse(0, y, w, 10, 0, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = '#fff8ec'; c.beginPath(); c.moveTo(-2, -100); c.quadraticCurveTo(4, -104, 3, -96); c.fill();
+    c.fillStyle = '#ffb0c8'; c.beginPath(); c.ellipse(-22, -46, 4, 7, 0, 0, Math.PI * 2); c.fill(); // 흘러내림
+    gloss(c, -14, -84, 10, 30, 0.5);
+  },
+  cupRamen(c, t) { // 컵라면: 면 · 계란 · 파 · 김
+    c.fillStyle = lg(c, -40, 0, 40, 0, [[0, '#d8d0c8'], [0.4, '#ffffff'], [1, '#c8c0b8']]); c.beginPath(); c.moveTo(-44, -62); c.lineTo(44, -62); c.lineTo(34, 0); c.lineTo(-34, 0); c.closePath(); c.fill();
+    c.fillStyle = '#e8201a'; c.beginPath(); c.moveTo(-41, -42); c.lineTo(41, -42); c.lineTo(38, -26); c.lineTo(-38, -26); c.closePath(); c.fill(); c.fillStyle = '#fff'; c.font = '900 11px sans-serif'; c.textAlign = 'center'; c.fillText('RAMEN', 0, -30);
+    c.fillStyle = rg(c, 0, -62, 4, 46, [[0, '#ffb04a'], [1, '#c8601a']]); c.beginPath(); c.ellipse(0, -62, 44, 11, 0, 0, Math.PI * 2); c.fill(); // 국물
+    c.strokeStyle = '#ffe08a'; c.lineWidth = 2.4; for (let k = 0; k < 7; k++) { c.beginPath(); for (let x = -36; x <= 36; x += 3) c.lineTo(x, -64 + Math.sin(x * 0.4 + k * 1.3) * 3 + (k - 3) * 1.2); c.stroke(); } // 꼬불꼬불 면
+    c.fillStyle = '#fff'; c.beginPath(); c.ellipse(14, -66, 10, 5, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffb000'; c.beginPath(); c.ellipse(14, -66, 5, 3, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3ab04a'; for (const [x, y] of [[-20, -66], [-12, -60], [-26, -60], [0, -68]]) { c.beginPath(); c.arc(x, y, 2.5, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = '#1a2a1a'; c.fillRect(-36, -76, 12, 14);
+    c.strokeStyle = '#c89a5a'; c.lineWidth = 4; c.beginPath(); c.moveTo(-10, -60); c.lineTo(30, -112); c.moveTo(-2, -60); c.lineTo(40, -108); c.stroke();
+    for (let k = 0; k < 3; k++) { const sx = -24 + k * 18, ph = (t || 0) * 2 + k; c.strokeStyle = `rgba(255,255,255,${0.2 + 0.12 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, -76); c.bezierCurveTo(sx - 8, -90, sx + 8, -100, sx + Math.sin(ph) * 5, -114); c.stroke(); }
+  },
+  hotbar(c) { // 핫바: 노릇한 어묵바 + 케첩
+    c.strokeStyle = '#d8b880'; c.lineWidth = 5; c.beginPath(); c.moveTo(-70, -10); c.lineTo(-40, -20); c.stroke();
+    c.save(); c.translate(6, -26); c.rotate(-0.2);
+    c.fillStyle = lg(c, 0, -16, 0, 16, [[0, '#ffc870'], [0.5, '#e89a3a'], [1, '#b8681a']]); c.beginPath(); c.roundRect(-50, -15, 100, 30, 15); c.fill();
+    c.strokeStyle = '#7a3a0aaa'; c.lineWidth = 3; for (let x = -36; x <= 36; x += 18) { c.beginPath(); c.moveTo(x - 6, -13); c.lineTo(x + 6, 13); c.stroke(); }
+    c.strokeStyle = '#e8201a'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); for (let x = -40; x <= 40; x += 10) c.lineTo(x, (x / 10) % 2 ? -6 : 4); c.stroke(); c.lineCap = 'butt';
+    gloss(c, -40, -14, 70, 6, 0.45); c.restore();
+  },
+  sandwich(c) { // 세모 샌드위치 두 쪽: 빵 · 햄 · 치즈 · 토마토 · 양상추 단면
+    for (const [x, a] of [[-30, -0.06], [32, 0.08]]) { c.save(); c.translate(x, 0); c.rotate(a);
+      const tri = () => { c.beginPath(); c.moveTo(-36, 0); c.lineTo(36, 0); c.lineTo(0, -66); c.closePath(); };
+      tri(); c.save(); c.clip();
+      const L = [['#fbefd0', 0, 12], ['#f0a0b0', 12, 9], ['#ffd040', 21, 6], ['#e8301a', 27, 8], ['#7ad04a', 35, 8], ['#fbefd0', 43, 26]];
+      for (const [col, o, h] of L) { c.fillStyle = col; c.fillRect(-40, -o - h, 80, h + 0.5); }
+      c.fillStyle = '#5ab02a'; for (let xx = -30; xx < 30; xx += 8) { c.beginPath(); c.arc(xx, -36, 4, 0, Math.PI); c.fill(); } // 양상추 물결
+      c.fillStyle = '#ffffff55'; c.beginPath(); c.arc(-6, -26, 3, 0, Math.PI * 2); c.arc(8, -27, 2.5, 0, Math.PI * 2); c.fill(); // 토마토 씨
+      c.restore(); c.strokeStyle = '#c8904a'; c.lineWidth = 4; c.lineJoin = 'round'; tri(); c.stroke(); c.restore(); }
+  },
+  dosirak(c) { // 편의점 도시락: 칸칸이 반찬
+    c.fillStyle = '#222'; c.beginPath(); c.roundRect(-66, -52, 132, 52, 8); c.fill(); c.strokeStyle = '#555'; c.lineWidth = 2; c.stroke();
+    c.save(); c.translate(-36, -6); riceBall(c, 0, 0, 52, 38); c.fillStyle = '#e8201a'; c.beginPath(); c.arc(0, -20, 5, 0, Math.PI * 2); c.fill(); c.restore(); // 밥 + 매실
+    c.fillStyle = '#555'; c.fillRect(-6, -50, 2, 48); c.fillRect(-4, -26, 68, 2);
+    c.fillStyle = lg(c, 0, -48, 0, -30, [[0, '#d0702a'], [1, '#8a3a0a']]); for (const [x, y] of [[12, -38], [28, -42], [44, -36]]) { c.beginPath(); c.arc(x, y, 9, 0, Math.PI * 2); c.fill(); } // 치킨
+    c.fillStyle = '#e8502a'; for (const x of [10, 26]) { c.beginPath(); c.roundRect(x, -20, 14, 9, 4); c.fill(); } // 소시지
+    c.fillStyle = '#ffd84a'; c.beginPath(); c.roundRect(44, -22, 16, 14, 3); c.fill(); // 계란말이
+    gloss(c, -60, -50, 120, 6, 0.25);
+  },
+};
+// 먹은 만큼 한 입씩 베어 문 자국을 내며 그리기
+function drawFoodBitten(c, id, x, y, sc, left, t) {
+  const f = FOOD_DRAW[id]; if (!f) return false;
+  const W = 260, H = 260, oc = drawFoodBitten.oc || (drawFoodBitten.oc = document.createElement('canvas')); oc.width = W; oc.height = H;
+  const o = oc.getContext('2d'); o.save(); o.translate(W / 2, H - 20); o.scale(sc, sc); f(o, t); o.restore();
+  if (left < 1) { // 오른쪽부터 깨물린 자국
+    const cut = W / 2 - 72 * sc + 144 * sc * left; o.globalCompositeOperation = 'destination-out'; o.fillRect(cut, 0, W, H);
+    for (let k = 0; k < 5; k++) { o.beginPath(); o.arc(cut, H - 20 - (k + 0.5) * 24 * sc, 13 * sc, 0, Math.PI * 2); o.fill(); }
+    o.globalCompositeOperation = 'source-over';
+  }
+  c.drawImage(oc, x - W / 2, y - H + 20); return true;
+}
+const foodIconCache = {};
+function foodIcon(id) { // 메뉴용 작은 그림: 그린 부분만 잘라 꽉 차게
+  if (foodIconCache[id]) return foodIconCache[id];
+  const big = document.createElement('canvas'); big.width = big.height = 320; const b = big.getContext('2d');
+  b.translate(160, 260); try { FOOD_DRAW[id](b, 0.5); } catch (e) {}
+  const d = b.getImageData(0, 0, 320, 320).data; let x0 = 320, y0 = 320, x1 = 0, y1 = 0;
+  for (let y = 0; y < 320; y++) for (let x = 0; x < 320; x++) if (d[(y * 320 + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c = cv.getContext('2d');
+  if (x1 > x0) { const w = x1 - x0 + 1, h = y1 - y0 + 1, sc = Math.min(88 / w, 88 / h); c.drawImage(big, x0, y0, w, h, 48 - w * sc / 2, 48 - h * sc / 2, w * sc, h * sc); }
+  return (foodIconCache[id] = cv.toDataURL());
 }
 function sushiOpen() {
   let el = document.getElementById('sushiShop');
@@ -7779,7 +7936,7 @@ function sushiRender() {
       <div style="display:flex;gap:6px;margin-bottom:6px">${[['sushi', '🍣 김치스시'], ['cvs', '🏪 편의점']].map(([t, l]) => `<button data-sx="tab" data-t="${t}" style="flex:1;padding:6px;font-weight:700;border-radius:8px;border:2px solid ${sushi.tab === t ? '#ffcf5a' : '#5a2a20'};background:${sushi.tab === t ? (t === 'cvs' ? '#0a3a5a' : '#5a1a10') : '#2a120c'};color:#f8e8d8">${l}</button>`).join('')}</div>
       <div style="font-weight:700;color:#ffd8a0;margin-bottom:4px">${sushi.tab === 'cvs' ? '편의점 메뉴 <span style="color:#9fd8ff;font-weight:400">(김치스시 옆 편의점에서 사 왔어요)</span>' : '메뉴'} <span style="color:#c8a890;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>
       ${SUSHI_MENU.filter(m => !!m.cvs === (sushi.tab === 'cvs')).map(m => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:5px;border-radius:10px;background:#2a120c;border:1px solid #5a2a20">
-        <span style="font-size:26px">${m.icon}</span><div style="flex:1"><b>${m.name}</b> <span style="color:#ff8aa8">♥ +${m.aff}</span><br><span style="color:#c8a890">${m.desc}</span></div>
+        <img src="${foodIcon(m.id)}" style="width:46px;height:46px;flex:none" alt=""><div style="flex:1"><b>${m.name}</b> <span style="color:#ff8aa8">♥ +${m.aff}</span><br><span style="color:#c8a890">${m.desc}</span></div>
         <button data-sx="buy" data-m="${m.id}" ${sushi.eating || a >= AFF_MAX ? 'disabled' : ''} style="padding:6px 10px;font-weight:700;border-radius:8px;border:none;background:linear-gradient(90deg,#ffcc33,#ff7a3a);color:#2a0a00;opacity:${sushi.eating || a >= AFF_MAX ? 0.4 : 1}">🪙 ${m.price.toLocaleString()}</button></div>`).join('')}
       ${a >= AFF_MAX ? '<div style="color:#ff8aa8;text-align:center">♥ 호감도가 최대예요!</div>' : ''}
     </div></div>`;
@@ -7801,7 +7958,7 @@ function sushiClick(e) {
 // ASMR 먹방: 볼과 내가 번갈아 한 입씩 · 씹는 소리 · 부스러기 · 하트
 function sushiEat(k, m) {
   sushi.eating = { k, m, t: 0, bites: 0, last: -1, crumbs: [], hearts: [], done: false };
-  sushiRender(); sushiBgm.volume = 0.35; // ASMR이 잘 들리게 음악을 줄임
+  sushiRender(); sushiBgm.volume = 0.2; // ASMR이 잘 들리게 음악을 줄임
   const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 6, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' ? 'sizzle' : false;
   let prev = performance.now();
   const loop = now => {
@@ -7829,16 +7986,7 @@ function sushiEat(k, m) {
     // 접시 + 음식 (한 입마다 작아짐)
     c.fillStyle = '#f4f0ea'; c.beginPath(); c.ellipse(300, 168, 78, 18, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#d8d0c8'; c.beginPath(); c.ellipse(300, 168, 58, 11, 0, 0, Math.PI * 2); c.fill();
     const left = Math.max(0, 1 - E.bites / BITES);
-    if (left > 0 && m.id === 'samgyup') { // 통삼겹: 겹겹이 지방층 · 노릇한 껍데기 · 석쇠 자국 · 김
-      const w = 120 * left + 20, h = 46, x0 = 300 - w / 2, y0 = 166 - h;
-      const L2 = [['#6a2a10', 0, 0.16], ['#f8e0d0', 0.16, 0.12], ['#b8502a', 0.28, 0.22], ['#fbe8dc', 0.5, 0.1], ['#a8452a', 0.6, 0.26], ['#f0d0c0', 0.86, 0.14]];
-      c.save(); c.beginPath(); c.roundRect(x0, y0, w, h, 8); c.clip();
-      for (const [col, o, hh] of L2) { c.fillStyle = col; c.fillRect(x0, y0 + h * o, w, h * hh + 1); }
-      c.strokeStyle = '#3a1206aa'; c.lineWidth = 4; for (let gx = x0 + 10; gx < x0 + w; gx += 22) { c.beginPath(); c.moveTo(gx, y0); c.lineTo(gx + 14, y0 + h); c.stroke(); }
-      c.restore(); c.strokeStyle = '#5a1a08'; c.lineWidth = 2; c.beginPath(); c.roundRect(x0, y0, w, h, 8); c.stroke();
-      c.fillStyle = '#ffffff55'; c.fillRect(x0 + 6, y0 + 3, w - 12, 3); // 기름 광택
-      for (let k2 = 0; k2 < 3; k2++) { const sx = 280 + k2 * 20, ph = E.t * 2 + k2; c.strokeStyle = `rgba(255,255,255,${0.25 + 0.15 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, y0 - 6); c.bezierCurveTo(sx - 10, y0 - 20, sx + 10, y0 - 30, sx + Math.sin(ph) * 6, y0 - 44); c.stroke(); } // 모락모락 김
-    } else if (left > 0) { c.font = `${Math.round(30 + 50 * left)}px sans-serif`; c.textBaseline = 'bottom'; c.fillText(m.icon, 300, 172); c.textBaseline = 'alphabetic'; }
+    if (left > 0) drawFoodBitten(c, m.id, 300, 168, 0.95, left, E.t);
     // 젓가락 (내 차례)
     if (E.bites % 2 === 0 && E.bites && !E.done) { c.strokeStyle = '#c89a5a'; c.lineWidth = 4; c.beginPath(); c.moveTo(470, 40); c.lineTo(320, 140); c.moveTo(480, 50); c.lineTo(326, 146); c.stroke(); }
     for (const p of E.crumbs) { p.vy += 400 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; c.globalAlpha = Math.max(0, p.life); c.fillStyle = '#ffe0a0'; c.fillRect(p.x, p.y, 3, 3); }
