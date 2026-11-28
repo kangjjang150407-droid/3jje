@@ -6980,6 +6980,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '16.5', date: '2026-11-28', items: ['🥓 김치스시 메뉴에 통삼겹 추가 (🪙 1,200 · 호감도 +10 · 지글지글 ASMR)'] },
   { v: '16.4', date: '2026-11-28', items: ['🏪 김치스시에 편의점 메뉴 추가: 삼각김밥 · 감자칩 · 바나나우유 · 아이스크림 · 컵라면 · 핫바 · 샌드위치 · 편의점 도시락 (후루룩 · 바삭 ASMR)'] },
   { v: '16.3', date: '2026-11-28', items: ['🍣 식당 김치스시 오픈: 음식을 사서 볼과 함께 먹으면 (ASMR) 호감도가 올라요', '호감도는 캐릭터마다 최대 45 · 오른 만큼 전투 시작 정신력 증가 (각성은 기본 캐릭터와 같은 호감도)', '메뉴: 단무지 · 연어 초밥 · 김치 초밥 · 새우튀김 · 김치스시 특선 모둠 · 식당 전용 배경음악'] },
   { v: '16.2', date: '2026-11-28', items: ['강우주님도 다음 접속 때 신규 가입 환영 메시지를 받아요'] },
@@ -7696,6 +7697,7 @@ const SUSHI_MENU = [
   { id: 'salmon', name: '연어 초밥', icon: '🍣', price: 200, aff: 2, desc: '입에서 녹는 연어' },
   { id: 'kimchiSushi', name: '김치 초밥', icon: '🌶', price: 400, aff: 4, desc: '가게 이름이 걸린 대표 메뉴' },
   { id: 'ebiTen', name: '새우튀김', icon: '🍤', price: 700, aff: 6, desc: '바사삭 소리가 나는 튀김' },
+  { id: 'samgyup', name: '통삼겹', icon: '🥓', price: 1200, aff: 10, desc: '지글지글 통째로 구운 두툼한 삼겹살', snd: 'sizzle' },
   { id: 'special', name: '김치스시 특선 모둠', icon: '🍱', price: 1500, aff: 12, desc: '오늘의 특선 한 상' },
   // 🏪 편의점 메뉴
   { id: 'onigiri', cvs: true, name: '삼각김밥', icon: '🍙', price: 100, aff: 1, desc: '김 뜯는 소리부터 바삭', snd: 'crisp' },
@@ -7715,6 +7717,13 @@ var sushi = { sel: null, eating: null, raf: 0, tab: 'sushi' };
 // ASMR 씹는 소리: 짧게 걸러낸 잡음을 여러 번 (바삭 · 오독 · 냠)
 function chewSfx(crisp, slurp) {
   if (muted) return; initAudio(); if (!actx) return;
+  if (slurp === 'sizzle') { // 지글지글: 고기 굽는 소리 (자글자글한 고음 잡음)
+    const len = 0.6, buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.min(1, (d.length - i) / 4000);
+    const src = actx.createBufferSource(), hp = actx.createBiquadFilter(), g = actx.createGain();
+    src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 3000; g.gain.value = 0.8; src.connect(hp); hp.connect(g); g.connect(sfxGain || actx.destination); src.start();
+    return chewSfx(false);
+  }
   if (slurp) { // 후루룩: 잡음의 음높이를 끌어올리며 빨아들이는 소리
     const len = 0.45, buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length) * (0.6 + 0.4 * Math.sin(i / 300));
@@ -7792,7 +7801,7 @@ function sushiClick(e) {
 function sushiEat(k, m) {
   sushi.eating = { k, m, t: 0, bites: 0, last: -1, crumbs: [], hearts: [], done: false };
   sushiRender(); sushiBgm.volume = 0.35; // ASMR이 잘 들리게 음악을 줄임
-  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 6, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp';
+  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 6, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' ? 'sizzle' : false;
   let prev = performance.now();
   const loop = now => {
     const E = sushi.eating; if (!E) return;
@@ -7818,7 +7827,17 @@ function sushiEat(k, m) {
     c.fillStyle = '#f8e8d8'; c.font = '700 13px sans-serif'; c.textAlign = 'center'; c.fillText(CHAR[k].name, bx, by + R + 18);
     // 접시 + 음식 (한 입마다 작아짐)
     c.fillStyle = '#f4f0ea'; c.beginPath(); c.ellipse(300, 168, 78, 18, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#d8d0c8'; c.beginPath(); c.ellipse(300, 168, 58, 11, 0, 0, Math.PI * 2); c.fill();
-    const left = Math.max(0, 1 - E.bites / BITES); if (left > 0) { c.font = `${Math.round(30 + 50 * left)}px sans-serif`; c.textBaseline = 'bottom'; c.fillText(m.icon, 300, 172); c.textBaseline = 'alphabetic'; }
+    const left = Math.max(0, 1 - E.bites / BITES);
+    if (left > 0 && m.id === 'samgyup') { // 통삼겹: 겹겹이 지방층 · 노릇한 껍데기 · 석쇠 자국 · 김
+      const w = 120 * left + 20, h = 46, x0 = 300 - w / 2, y0 = 166 - h;
+      const L2 = [['#6a2a10', 0, 0.16], ['#f8e0d0', 0.16, 0.12], ['#b8502a', 0.28, 0.22], ['#fbe8dc', 0.5, 0.1], ['#a8452a', 0.6, 0.26], ['#f0d0c0', 0.86, 0.14]];
+      c.save(); c.beginPath(); c.roundRect(x0, y0, w, h, 8); c.clip();
+      for (const [col, o, hh] of L2) { c.fillStyle = col; c.fillRect(x0, y0 + h * o, w, h * hh + 1); }
+      c.strokeStyle = '#3a1206aa'; c.lineWidth = 4; for (let gx = x0 + 10; gx < x0 + w; gx += 22) { c.beginPath(); c.moveTo(gx, y0); c.lineTo(gx + 14, y0 + h); c.stroke(); }
+      c.restore(); c.strokeStyle = '#5a1a08'; c.lineWidth = 2; c.beginPath(); c.roundRect(x0, y0, w, h, 8); c.stroke();
+      c.fillStyle = '#ffffff55'; c.fillRect(x0 + 6, y0 + 3, w - 12, 3); // 기름 광택
+      for (let k2 = 0; k2 < 3; k2++) { const sx = 280 + k2 * 20, ph = E.t * 2 + k2; c.strokeStyle = `rgba(255,255,255,${0.25 + 0.15 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, y0 - 6); c.bezierCurveTo(sx - 10, y0 - 20, sx + 10, y0 - 30, sx + Math.sin(ph) * 6, y0 - 44); c.stroke(); } // 모락모락 김
+    } else if (left > 0) { c.font = `${Math.round(30 + 50 * left)}px sans-serif`; c.textBaseline = 'bottom'; c.fillText(m.icon, 300, 172); c.textBaseline = 'alphabetic'; }
     // 젓가락 (내 차례)
     if (E.bites % 2 === 0 && E.bites && !E.done) { c.strokeStyle = '#c89a5a'; c.lineWidth = 4; c.beginPath(); c.moveTo(470, 40); c.lineTo(320, 140); c.moveTo(480, 50); c.lineTo(326, 146); c.stroke(); }
     for (const p of E.crumbs) { p.vy += 400 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; c.globalAlpha = Math.max(0, p.life); c.fillStyle = '#ffe0a0'; c.fillRect(p.x, p.y, 3, 3); }
@@ -7826,7 +7845,7 @@ function sushiEat(k, m) {
     c.globalAlpha = 1; E.crumbs = E.crumbs.filter(p => p.life > 0); E.hearts = E.hearts.filter(h => h.life > 0);
     c.fillStyle = '#ffd8a0'; c.font = '700 14px sans-serif'; c.textAlign = 'left';
     c.fillText(E.done ? `♥ 호감도 +${m.aff}!` : `${m.icon} ${m.name} — ${E.bites % 2 ? CHAR[k].name : '나'}의 한 입 (${E.bites}/${BITES})`, 14, 24);
-    c.font = '11px sans-serif'; c.fillStyle = '#c8a890'; c.fillText(`🎧 ASMR — ${slurp ? '후루룩 · 쪼옥' : crisp ? '바삭 · 오독오독' : '냠냠 · 오물오물'}`, 14, 42);
+    c.font = '11px sans-serif'; c.fillStyle = '#c8a890'; c.fillText(`🎧 ASMR — ${slurp === 'sizzle' ? '지글지글 · 쫄깃' : slurp ? '후루룩 · 쪼옥' : crisp ? '바삭 · 오독오독' : '냠냠 · 오물오물'}`, 14, 42);
     sushi.raf = requestAnimationFrame(loop);
   };
   sushi.raf = requestAnimationFrame(loop);
