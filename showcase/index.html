@@ -6984,6 +6984,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.9', date: '2026-11-28', items: ['김치스시: 이제 볼 혼자 다섯 입에 나눠 먹어요 (6입 → 5입)'] },
   { v: '17.8', date: '2026-11-28', items: ['호감도가 최대(45)여도 음식을 사서 함께 먹을 수 있어요 (호감도는 더 오르지 않아요)'] },
   { v: '17.7', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 정신력 -45가 아니라 +45가 되면 패닉'] },
   { v: '17.6', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 호감도 1당 시작 정신력 -1 (최대 -35까지) · 35를 넘는 호감도는 첫 턴 위력 + 로 바뀌어요'] },
@@ -8315,19 +8316,19 @@ function sushiClick(e) {
   }
   if (x === 'cancelChoose') { sushi.choose = null; return sushiRender(); }
 }
-// ASMR 먹방: 볼과 내가 번갈아 한 입씩 · 씹는 소리 · 부스러기 · 하트
+// ASMR 먹방: 볼이 다섯 입에 나눠 먹음 · 씹는 소리 · 부스러기 · 하트
 function sushiEat(k, m) {
   sushi.eating = { k, m, t: 0, bites: 0, last: -1, crumbs: [], hearts: [], done: false };
   sushiRender(); sushiBgm.volume = 0.2; // ASMR이 잘 들리게 음악을 줄임
-  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 6, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' || m.snd === 'soup' ? m.snd : false;
+  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 5, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' || m.snd === 'soup' ? m.snd : false;
   let prev = performance.now();
   const loop = now => {
     const E = sushi.eating; if (!E) return;
     const dt = Math.min(0.05, (now - prev) / 1000); prev = now; E.t += dt;
     const bi = Math.floor(E.t / 0.75);
-    if (bi !== E.last && bi < BITES) { E.last = bi; E.bites = bi + 1; chewSfx(crisp, slurp, bi === BITES - 1); const who = bi % 2; // 0: 볼 · 1: 나
+    if (bi !== E.last && bi < BITES) { E.last = bi; E.bites = bi + 1; chewSfx(crisp, slurp, bi === BITES - 1);
       for (let i = 0; i < 10; i++) E.crumbs.push({ x: 260 + (Math.random() - 0.5) * 30, y: 150, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0.8 });
-      if (!who) E.hearts.push({ x: 120 + Math.random() * 40, y: 80, life: 1.2 }); }
+      E.hearts.push({ x: 120 + Math.random() * 40, y: 80, life: 1.2 }); }
     if (E.t > BITES * 0.75 + 0.6 && !E.done) {
       E.done = true; const before = affOf(k); save.aff[baseOf(k)] = Math.min(AFF_MAX, before + m.aff); E.gain = affOf(k) - before; persist();
       for (let i = 0; i < 8; i++) E.hearts.push({ x: 90 + Math.random() * 100, y: 120 + Math.random() * 40, life: 1.6 });
@@ -8338,7 +8339,7 @@ function sushiEat(k, m) {
     c.clearRect(0, 0, 520, 230);
     const g = c.createLinearGradient(0, 150, 0, 230); g.addColorStop(0, '#6a3a1a'); g.addColorStop(1, '#3a1a0a'); c.fillStyle = g; c.fillRect(0, 160, 520, 70);
     c.fillStyle = '#ffffff10'; for (let i = 0; i < 6; i++) c.fillRect(0, 168 + i * 10, 520, 1);
-    const chew = E.bites && (E.t % 0.75) < 0.45 ? Math.sin((E.t % 0.75) * 40) * 0.06 : 0, bx = 140, by = 105, R = 52;
+    const chew = E.bites && (E.t % 0.75) < 0.45 ? Math.sin((E.t % 0.75) * 40) * 0.06 : 0, ph = E.t % 0.75, bx = 140 + (E.bites && !E.done && ph < 0.24 ? Math.sin(ph / 0.24 * Math.PI) * 46 : 0), by = 105 + (E.bites && !E.done && ph < 0.24 ? Math.sin(ph / 0.24 * Math.PI) * 10 : 0), R = 52; // 한 입마다 음식 쪽으로 쏙
     c.save(); c.translate(bx, by); c.scale(1 + chew, 1 - chew); c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.closePath(); c.save(); c.clip();
     if (img && img.complete && img.naturalWidth) c.drawImage(img, -R, -R, R * 2, R * 2); else { c.fillStyle = CHAR[k].color; c.fill(); } c.restore();
     c.lineWidth = 4; c.strokeStyle = CHAR[k].color; c.stroke(); c.restore();
@@ -8347,13 +8348,11 @@ function sushiEat(k, m) {
     c.fillStyle = '#f4f0ea'; c.beginPath(); c.ellipse(300, 168, 78, 18, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#d8d0c8'; c.beginPath(); c.ellipse(300, 168, 58, 11, 0, 0, Math.PI * 2); c.fill();
     const left = Math.max(0, 1 - E.bites / BITES);
     if (left > 0) drawFoodBitten(c, m.id, 300, 168, 0.95, left, E.t);
-    // 젓가락 (내 차례)
-    if (E.bites % 2 === 0 && E.bites && !E.done) { c.strokeStyle = '#c89a5a'; c.lineWidth = 4; c.beginPath(); c.moveTo(470, 40); c.lineTo(320, 140); c.moveTo(480, 50); c.lineTo(326, 146); c.stroke(); }
     for (const p of E.crumbs) { p.vy += 400 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; c.globalAlpha = Math.max(0, p.life); c.fillStyle = '#ffe0a0'; c.fillRect(p.x, p.y, 3, 3); }
     for (const h of E.hearts) { h.y -= 40 * dt; h.life -= dt; c.globalAlpha = Math.max(0, Math.min(1, h.life)); c.font = '20px sans-serif'; c.fillText('💗', h.x, h.y); }
     c.globalAlpha = 1; E.crumbs = E.crumbs.filter(p => p.life > 0); E.hearts = E.hearts.filter(h => h.life > 0);
     c.fillStyle = '#ffd8a0'; c.font = '700 14px sans-serif'; c.textAlign = 'left';
-    c.fillText(E.done ? (E.gain ? `♥ 호감도 +${E.gain}!` : '♥ 맛있게 먹었어요! (호감도 최대)') : `${m.icon} ${m.name} — ${E.bites % 2 ? CHAR[k].name : '나'}의 한 입 (${E.bites}/${BITES})`, 14, 24);
+    c.fillText(E.done ? (E.gain ? `♥ 호감도 +${E.gain}!` : '♥ 맛있게 먹었어요! (호감도 최대)') : `${m.icon} ${m.name} — ${CHAR[k].name}의 한 입 (${E.bites}/${BITES})`, 14, 24);
     c.font = '11px sans-serif'; c.fillStyle = '#c8a890'; c.fillText(`🎧 ASMR — ${slurp === 'soup' ? '딸깍 · 후루룩 · 크으~' : slurp === 'sizzle' ? '지글지글 · 쫄깃' : slurp ? '후루룩 · 쪼옥' : crisp ? '바삭 · 오독오독' : '냠냠 · 오물오물'}`, 14, 42);
     sushi.raf = requestAnimationFrame(loop);
   };
