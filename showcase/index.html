@@ -62,6 +62,7 @@
   #chatPanel.on,#pvpPanel.on{display:block}
   #chatList{height:220px;overflow:auto;display:flex;flex-direction:column-reverse;gap:3px;margin-bottom:6px}
   #chatList .cm{word-break:break-all}
+  #chatList .cm.sys{color:#ffe48a;background:linear-gradient(90deg,#ffcf5a22,#ffcf5a08);border-left:3px solid #ffcf5a;padding:3px 6px;margin:2px 0;border-radius:4px}#chatList .cm.sys b{color:#ffcf5a}
   #chatInput{flex:1;background:#14142a;color:#e8e8f0;border:1px solid #33335a;border-radius:8px;padding:7px;font-size:13px;min-width:0}
   #pvpPanel .op{padding:6px 0;border-bottom:1px solid #1a2238}
   #pvpPanel .op button{margin-top:4px;width:100%;padding:6px;font-weight:700}
@@ -6974,6 +6975,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.9', date: '2026-11-28', items: ['신규 가입자가 처음 로그인하면 채팅에 📢 시스템 환영 메시지가 올라가요'] },
   { v: '15.8', date: '2026-11-28', items: ['이제 구글 로그인을 해야만 플레이할 수 있어요 (게스트로 하던 진행 상황은 첫 로그인 때 그대로 옮겨져요)'] },
   { v: '15.7', date: '2026-11-28', items: ['대기 편성 추가: 편성은 최대 12명 · 앞의 5명이 먼저 싸우고, 사망 · 퇴각 · 전장 이탈로 자리가 비면 대기 인원이 순서대로 투입 (PVP는 상대 팀도 같음)', '자동 편성: 강한 순으로 최대 12명 편성 (앞 5명 출전 · 나머지 대기)'] },
   { v: '15.6', date: '2026-11-28', items: ['자동 편성 추가: 레드 팀의 🤖 자동 편성 버튼 → 보유 캐릭터 중 강한 5명을 편성 (각성했으면 각성 · 강화 · 초월 · 장착 아티팩트 · 함께 쓰면 좋은 조합 반영)'] },
@@ -7432,6 +7434,10 @@ const myCode = () => rank.uid ? rank.uid.slice(0, 8).toUpperCase() : '';
 if (!save.giftSent) save.giftSent = {};
 async function friendSelfUpload() {
   if (!rank.db || !rank.uid || !account) return;
+  try { // 신규 가입자: users 문서가 처음 만들어지는 순간 시스템 채팅으로 환영
+    const ref = rank.db.collection('users').doc(rank.uid), fresh = !(await ref.get()).exists;
+    if (fresh && !friendSelfUpload.welcomed) { friendSelfUpload.welcomed = true; await rank.db.collection('chat').add({ uid: rank.uid, sys: 'welcome', name: '시스템', text: `🎉 신규 가입자 ${dispName()}님, 볼 파이트 시뮬레이터에 오신 걸 환영해요!`, ms: Date.now() }).catch(e => console.error(e)); }
+  } catch (e) { console.error(e); }
   try { await rank.db.collection('users').doc(rank.uid).set({ name: dispName(), picture: dispPic(), title: titleName(), code: myCode(), t: Date.now(), on: Date.now() }); } catch (e) { console.error(e); }
 }
 // ---- 접속 상태: 화면을 보고 있는 동안 1분마다 접속 신호 · 2분 넘게 신호가 없으면 오프라인 ----
@@ -7647,6 +7653,7 @@ async function chatOpen() {
   chat.unsub = rank.db.collection('chat').orderBy('ms', 'desc').limit(50).onSnapshot(q => {
     const king = rank.list && rank.list[0] ? rank.list[0].id : null;
     document.getElementById('chatList').innerHTML = q.docs.map(d => { const m = d.data(), tm = new Date(m.ms || 0);
+      if (m.sys) return `<div class="cm sys"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b>📢 시스템</b> ${escH(m.text || '')}</div>`; // 시스템 채팅
       return `<div class="cm"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b style="color:${m.uid === rank.uid ? '#ffcc33' : '#9fd8ff'}">${(() => { const mm = /^\[(.+?)\] (.*)$/.exec(m.name || ''); return mm && TITLES.some(x => x.name === mm[1]) ? titleHTML(mm[1]) + escH(mm[2]) : escH(m.name || '익명'); })()}${m.uid === king ? ' 👑' : ''}</b> ${escH(m.text || '')}</div>`; }).join('') || '<div style="color:#777">아직 메시지가 없어요.</div>';
   }, e => { console.error(e); chatNote('채팅을 불러오지 못했어요.'); });
 }
