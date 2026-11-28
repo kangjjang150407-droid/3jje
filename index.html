@@ -1753,8 +1753,11 @@ function changeSp(f, v, why) {
   if (f.sp === old) return;
   floatText(f.x + 30, f.y + f.r + 6, `정신력 ${v > 0 ? '+' : ''}${f.sp - old}`, v > 0 ? '#7fd4ff' : '#ff7f9a', 15, { vy: -30, life: 1.0 });
   log(`${nm(f)} 정신력 ${old} → ${f.sp} <span style="color:#777">(${why})</span>`);
-  if (f.sp <= -45) enterPanic(f);
+  if (panicSp(f)) enterPanic(f);
 }
+// 마이너스 코인 볼 (강화한 윤지호 · 노윤)은 정신력 +45가 패닉 · 그 외에는 -45
+const minusSpBall = f => !!f && ((f.type === 'jiho' && up('jiho', f)) || f.type === 'noyun');
+const panicSp = f => minusSpBall(f) ? f.sp >= 45 : f.sp <= -45;
 // 패닉 유형: 새벽녘 — 패닉 중에도 행동 (무작위 대상), 받는 피해 +20%, 가하는 피해 +10%, 공격 위력 +2, 진동폭발로 피해를 입지 않음
 const panicTypeOf = f => (f && f.panicOverride) || CHAR[f.type].panicType; // 눈물로 벼려낸 검: 패닉 유형을 절망으로 바꿀 수 있음
 const isWrath = f => f && f.panic > 0 && panicTypeOf(f) === 'wrath';
@@ -6353,7 +6356,7 @@ function testSet(inp) {
   if (inp.dataset.f) {
     const k = inp.dataset.f;
     if (k === 'hp') f.hp = clamp(+inp.value || 0, 1, f.maxHp);
-    else if (k === 'sp') { f.sp = clamp(v, minSp(f), 45); if (f.sp <= -45 && f.panic <= 0) enterPanic(f); }
+    else if (k === 'sp') { f.sp = clamp(v, minSp(f), 45); if (panicSp(f) && f.panic <= 0) enterPanic(f); }
     else if (k === 'cola') f.cola = clamp(v, 0, 30);
     else if (k === 'ammo') f.ammo = clamp(v, 0, CHAR[f.type].maxAmmo || 99);
     else if (k === 'tears') f.tears = clamp(v, 0, 99);
@@ -6980,6 +6983,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.7', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 정신력 -45가 아니라 +45가 되면 패닉'] },
   { v: '17.6', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 호감도 1당 시작 정신력 -1 (최대 -35까지) · 35를 넘는 호감도는 첫 턴 위력 + 로 바뀌어요'] },
   { v: '17.5', date: '2026-11-28', items: ['🥢 탕수육은 이제 부먹 · 찍먹을 골라 먹어요 (부먹: 소스가 촉촉하게 · 찍먹: 바삭한 튀김에 소스 종지 따로 · 소리도 달라요)'] },
   { v: '17.4', date: '2026-11-28', items: ['🍱 일식 (타코야키 · 규동 · 돈가스 · 돈코츠 라멘) · 🍚 한식 (김밥 · 돌솥 비빔밥 · 김치찌개 · 불고기) 탭 추가', '🥢 중식 (짜장면 · 짬뽕 · 샤오롱바오 · 탕수육) · 🍔 미식 (핫도그 · 수제버거 · 후라이드 치킨 · BBQ 립) 탭 추가 — 모두 직접 그린 그림 · 음식마다 다른 ASMR'] },
