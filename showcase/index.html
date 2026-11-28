@@ -6897,6 +6897,7 @@ function renderAdmin() {
   const el = document.getElementById('adminPanel'); if (!el) return;
   let h = `<div style="font-weight:800;color:#ffd86a">🛠 관리자 패널</div>
     <div style="color:#aa9">내 UID: <code style="user-select:all;color:#fff">${rank.uid || '(로그인 필요)'}</code> · 권한: ${adm.isAdmin ? '<b style="color:#7dffb0">관리자</b>' : '<b style="color:#ff8080">없음</b> (관리자 계정으로 로그인해야 조치할 수 있어요)'}</div>
+    <div style="display:flex;gap:4px;margin:6px 0"><input id="admSys" maxlength="200" placeholder="📢 시스템 메시지 (채팅에 닉네임 없이 올라가요)" style="flex:1"><button id="admSysSend">보내기</button></div>
     <input id="admQ" placeholder="이름 · 친구 코드 · UID 검색" value="${escH(adm.q)}" style="width:100%;margin:6px 0">`;
   if (adm.err) h += `<div style="color:#ff8080">${adm.err}</div>`;
   else if (!adm.users) h += '<div style="color:#777">불러오는 중…</div>';
@@ -6907,7 +6908,7 @@ function renderAdmin() {
     h += L.slice(0, 100).map(u => { const bn = adm.bans[u.id];
       return `<div class="au"><div style="display:flex;align-items:center;gap:6px">${u.picture ? `<img src="${escH(u.picture)}" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">` : ''}<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleHTML(u.title)}<b style="color:${bn ? '#ff6a6a' : '#e8e0c0'}">${escH(u.name || '이름 없음')}</b>${bn ? ' ⛔' : ''}</div>${onlineHTML(u)} <span style="color:#776">${escH(u.code || '')}</span></div>
         <div style="color:#665;font-size:10px">${u.id}${u.t ? ' · 최근 ' + new Date(u.t).toLocaleString() : ''}${bn ? ` · 차단 사유: ${escH(bn.reason || '')}` : ''}</div>
-        <div style="display:flex;gap:4px;margin-top:3px"><input data-amt="${u.id}" type="number" placeholder="코인" style="width:80px"><button data-give="${u.id}">지급</button><button data-take="${u.id}">제거</button><span style="flex:1"></span><button data-ban="${u.id}" style="color:${bn ? '#7dffb0' : '#ff8080'}">${bn ? '차단 해제' : '차단'}</button></div></div>`; }).join('');
+        <div style="display:flex;gap:4px;margin-top:3px"><input data-amt="${u.id}" type="number" placeholder="코인" style="width:80px"><button data-give="${u.id}">지급</button><button data-take="${u.id}">제거</button><span style="flex:1"></span><button data-welcome="${u.id}" title="시스템 채팅으로 환영">📢 환영</button><button data-ban="${u.id}" style="color:${bn ? '#7dffb0' : '#ff8080'}">${bn ? '차단 해제' : '차단'}</button></div></div>`; }).join('');
   }
   el.innerHTML = h;
   const qi = document.getElementById('admQ'); if (qi) qi.oninput = e => { adm.q = e.target.value; const pos = e.target.selectionStart; renderAdmin(); const n = document.getElementById('admQ'); n.focus(); n.setSelectionRange(pos, pos); };
@@ -6916,6 +6917,10 @@ document.getElementById('adminBtn').onclick = async () => { if (!document.getEle
 document.getElementById('adminPanel').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b || !rank.db) return;
   const deny = err => { console.error(err); toast(adm.isAdmin ? '조치하지 못했어요' : '관리자 권한이 없어요 — 관리자 계정으로 로그인해 주세요'); };
+  if (b.id === 'admSysSend') { const inp = document.getElementById('admSys'), text = inp.value.trim().slice(0, 200); if (!text) return toast('메시지를 입력해 주세요');
+    try { await rank.db.collection('chat').add({ uid: rank.uid, sys: 'admin', name: '시스템', text, ms: Date.now() }); inp.value = ''; toast('📢 시스템 메시지를 보냈어요'); } catch (err) { deny(err); } return; }
+  if (b.dataset.welcome) { const id = b.dataset.welcome, u = adm.users.find(x => x.id === id); if (!confirm(`${u ? u.name : id}님 환영 메시지를 채팅에 올릴까요?`)) return;
+    try { await rank.db.collection('chat').add({ uid: rank.uid, for: id, sys: 'welcome', name: '시스템', text: welcomeText(u ? u.name : ''), ms: Date.now() }); toast('📢 환영 메시지를 보냈어요'); } catch (err) { deny(err); } return; }
   if (b.dataset.give || b.dataset.take) {
     const id = b.dataset.give || b.dataset.take, inp = document.querySelector(`[data-amt="${id}"]`), v = Math.floor(Math.abs(+inp.value || 0));
     if (!v) return toast('코인 수를 입력해 주세요');
@@ -7435,6 +7440,7 @@ const GIFT_COIN = 100;
 var fr = { list: [], reqs: [], gifts: [], err: '', loading: false };
 const myCode = () => rank.uid ? rank.uid.slice(0, 8).toUpperCase() : '';
 if (!save.giftSent) save.giftSent = {};
+const welcomeText = name => `🎉 신규 가입자 ${String(name || '').slice(0, 40)}님, 볼 파이트 시뮬레이터에 오신 걸 환영해요!`;
 const WELCOME_FROM = new Date('2026-11-28T00:00:00+09:00').getTime(); // 이 날부터 가입한 사람 환영
 const WELCOME_UIDS = ['0qGLnBkMR6TddqyeaMGm9jLER183']; // 가입일과 상관없이 환영할 계정 (강우주)
 async function friendSelfUpload() {
@@ -7444,7 +7450,11 @@ async function friendSelfUpload() {
     const ref = rank.db.collection('users').doc(rank.uid), snap = await ref.get(), d = snap.exists ? snap.data() : {};
     let created = Date.now(); try { const cu = firebase.auth().currentUser; if (cu && cu.metadata && cu.metadata.creationTime) created = Date.parse(cu.metadata.creationTime) || created; } catch (e) {}
     welcomed = !!d.welcomed;
-    if (!welcomed && (created >= WELCOME_FROM || WELCOME_UIDS.includes(rank.uid)) && !friendSelfUpload.welcomed) { friendSelfUpload.welcomed = welcomed = true; await rank.db.collection('chat').add({ uid: rank.uid, sys: 'welcome', name: '시스템', text: `🎉 신규 가입자 ${dispName()}님, 볼 파이트 시뮬레이터에 오신 걸 환영해요!`, ms: Date.now() }).catch(e => console.error(e)); }
+    if (!welcomed && (created >= WELCOME_FROM || WELCOME_UIDS.includes(rank.uid)) && !friendSelfUpload.welcomed) {
+      friendSelfUpload.welcomed = welcomed = true;
+      let dup = false; try { dup = (await rank.db.collection('chat').where('for', '==', rank.uid).limit(1).get()).docs.length > 0; } catch (e) {} // 관리자가 이미 환영했으면 건너뜀
+      if (!dup) await rank.db.collection('chat').add({ uid: rank.uid, for: rank.uid, sys: 'welcome', name: '시스템', text: welcomeText(dispName()), ms: Date.now() }).catch(e => console.error(e));
+    }
   } catch (e) { console.error(e); }
   try { await rank.db.collection('users').doc(rank.uid).set({ name: dispName(), picture: dispPic(), title: titleName(), code: myCode(), t: Date.now(), on: Date.now(), welcomed }); } catch (e) { console.error(e); }
 }
