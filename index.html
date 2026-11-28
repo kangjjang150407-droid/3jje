@@ -6980,6 +6980,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.0', date: '2026-11-28', items: ['김치스시 ASMR 먹는 소리를 더 맛있게: 베어 무는 소리 · 촉촉하게 씹는 소리 · 쩝 · 마지막 입엔 꿀꺽 + 카아~ (바삭 · 후루룩 · 지글지글 음식마다 다르게)'] },
   { v: '16.9', date: '2026-11-28', items: ['업데이트가 올라오면 게임이 자동으로 재시작돼요 (전투 중이면 전투가 끝난 뒤 · 진행 상황은 저장 후 새로고침)'] },
   { v: '16.8', date: '2026-11-28', items: ['김치스시 · 편의점 메뉴 가격 100배 인상 (예: 단무지 25,000 · 김치 초밥 200,000 · 특선 모둠 750,000)'] },
   { v: '16.7', date: '2026-11-28', items: ['김치스시 · 편의점 메뉴 가격 5배 인상 (예: 김치 초밥 400 → 2,000 · 통삼겹 1,200 → 6,000 · 특선 모둠 1,500 → 7,500)'] },
@@ -7719,29 +7720,48 @@ const PORTRAIT = () => ({ song: songImg, jiho: jihoImg, juwon: juwonImg, wooju: 
 const sushiBgm = new Audio(BGM_BASE + 'bgm_kimchisushi.mp3'); sushiBgm.loop = true; sushiBgm.preload = 'none'; sushiBgm.setAttribute('playsinline', '');
 var sushi = { sel: null, eating: null, raf: 0, tab: 'sushi' };
 // ASMR 씹는 소리: 짧게 걸러낸 잡음을 여러 번 (바삭 · 오독 · 냠)
-function chewSfx(crisp, slurp) {
+// ---- ASMR 먹는 소리 (Web Audio로 합성) ----
+// 한 입: 베어 물기(바삭 · 말캉) → 촉촉하게 씹기 3~4번 → 입맛 다시기(쩝) · 마지막 입은 꿀꺽 + 만족의 숨
+let asmrNoise = null, asmrBus = null;
+function asmrOut() {
+  if (asmrBus) return asmrBus;
+  const comp = actx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; comp.attack.value = 0.002; comp.release.value = 0.12;
+  const warm = actx.createBiquadFilter(); warm.type = 'lowshelf'; warm.frequency.value = 280; warm.gain.value = 5; // 가까이서 들리는 따뜻한 저음
+  const g = actx.createGain(); g.gain.value = 2.2; const lim = actx.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; // 크게 키우되 찢어지지 않게
+  warm.connect(comp); comp.connect(g); g.connect(lim); lim.connect(sfxGain || actx.destination);
+  return (asmrBus = warm);
+}
+function asmrNoiseBuf() { if (asmrNoise) return asmrNoise; const b = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return (asmrNoise = b); }
+function nz(t, dur, type, f, q, vol, env = 'exp', f2) { // 걸러낸 잡음 한 조각
+  const src = actx.createBufferSource(), fl = actx.createBiquadFilter(), g = actx.createGain();
+  src.buffer = asmrNoiseBuf(); fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur); fl.Q.value = q;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (env === 'soft' ? dur * 0.35 : 0.004)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(asmrOut()); src.start(t, Math.random() * 1.5, dur + 0.05);
+}
+function tone(t, dur, f1, f2, vol, type = 'sine') { const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(asmrOut()); o.start(t); o.stop(t + dur + 0.02); }
+function crunch(t, n, bright) { for (let k = 0; k < n; k++) nz(t + k * (0.012 + Math.random() * 0.02), 0.025 + Math.random() * 0.03, 'bandpass', bright * (0.7 + Math.random() * 0.8), 1.4, 0.5 + Math.random() * 0.5); } // 바사삭: 작은 부서짐이 연달아
+function squish(t, dur) { nz(t, dur, 'lowpass', 900 + Math.random() * 400, 2.5, 0.9, 'soft', 300); nz(t + dur * 0.4, dur * 0.6, 'bandpass', 1600 + Math.random() * 600, 6, 0.25); } // 촉촉하게 씹는 소리
+function smack(t) { nz(t, 0.05, 'bandpass', 1800 + Math.random() * 500, 3, 1.1); nz(t + 0.05, 0.04, 'bandpass', 1200, 4, 0.5); } // 쩝 (입맛 다시기)
+function chewSfx(crisp, slurp, last) {
   if (muted) return; initAudio(); if (!actx) return;
-  if (slurp === 'sizzle') { // 지글지글: 고기 굽는 소리 (자글자글한 고음 잡음)
-    const len = 0.6, buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.min(1, (d.length - i) / 4000);
-    const src = actx.createBufferSource(), hp = actx.createBiquadFilter(), g = actx.createGain();
-    src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 3000; g.gain.value = 2.2; src.connect(hp); hp.connect(g); g.connect(sfxGain || actx.destination); src.start();
-    return chewSfx(false);
+  const t = actx.currentTime + 0.01;
+  if (slurp === 'sizzle') { // 지글지글 굽는 소리 + 쫄깃하게 씹기
+    for (let k = 0; k < 26; k++) nz(t + Math.random() * 0.55, 0.008 + Math.random() * 0.01, 'highpass', 3500, 0.7, 0.25 + Math.random() * 0.35);
+    nz(t, 0.6, 'highpass', 5000, 0.5, 0.06, 'soft');
+    squish(t + 0.12, 0.16); squish(t + 0.34, 0.15); smack(t + 0.56);
+  } else if (slurp) { // 후루룩: 빨아들이는 바람 소리가 높아지며 + 젖은 면발
+    nz(t, 0.42, 'bandpass', 450, 3, 0.9, 'soft', 2400); nz(t + 0.05, 0.35, 'bandpass', 900, 8, 0.35, 'soft', 3000);
+    for (let k = 0; k < 6; k++) nz(t + 0.06 + k * 0.05, 0.03, 'bandpass', 2600, 5, 0.25); // 쪽쪽
+    squish(t + 0.48, 0.14);
+  } else if (crisp) { // 바삭: 첫 입 크게 부서지고 → 오독오독 씹기
+    crunch(t, 9, 3200); crunch(t + 0.2, 5, 2600); crunch(t + 0.37, 4, 2200); squish(t + 0.52, 0.1);
+  } else { // 냠냠: 말캉하게 베어 물고 촉촉하게 씹기
+    nz(t, 0.06, 'bandpass', 1400, 2, 0.8); squish(t + 0.08, 0.15); squish(t + 0.27, 0.14); squish(t + 0.45, 0.13);
   }
-  if (slurp) { // 후루룩: 잡음의 음높이를 끌어올리며 빨아들이는 소리
-    const len = 0.45, buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length) * (0.6 + 0.4 * Math.sin(i / 300));
-    const src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain(), t0 = actx.currentTime;
-    src.buffer = buf; bp.type = 'bandpass'; bp.Q.value = 4; bp.frequency.setValueAtTime(500, t0); bp.frequency.exponentialRampToValueAtTime(2600, t0 + len);
-    g.gain.value = 3.8; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0); return;
-  }
-  const t0 = actx.currentTime, n = crisp ? 3 : 2;
-  for (let k = 0; k < n; k++) {
-    const len = 0.05 + Math.random() * (crisp ? 0.05 : 0.09), buf = actx.createBuffer(1, Math.floor(actx.sampleRate * len), actx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, crisp ? 2.5 : 1.4);
-    const src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain();
-    src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = crisp ? 2200 + Math.random() * 1800 : 600 + Math.random() * 700; bp.Q.value = crisp ? 1.2 : 2.2;
-    g.gain.value = crisp ? 2.6 : 3.6; src.connect(bp); bp.connect(g); g.connect(sfxGain || actx.destination); src.start(t0 + k * (crisp ? 0.07 : 0.13));
+  smack(t + 0.62);
+  if (last) { // 꿀꺽 + 만족의 숨 (카아~)
+    tone(t + 0.78, 0.16, 190, 70, 0.9); nz(t + 0.78, 0.1, 'lowpass', 500, 2, 0.5);
+    nz(t + 1.0, slurp === true ? 0.5 : 0.35, 'bandpass', 1300, 1.2, 0.5, 'soft', 700);
   }
 }
 // ---- 음식 그림 (직접 그린 캔버스 일러스트) · (0,0)은 음식 바닥 중앙, 위쪽이 -y · 폭 약 130 ----
@@ -7967,7 +7987,7 @@ function sushiEat(k, m) {
     const E = sushi.eating; if (!E) return;
     const dt = Math.min(0.05, (now - prev) / 1000); prev = now; E.t += dt;
     const bi = Math.floor(E.t / 0.75);
-    if (bi !== E.last && bi < BITES) { E.last = bi; E.bites = bi + 1; chewSfx(crisp, slurp); const who = bi % 2; // 0: 볼 · 1: 나
+    if (bi !== E.last && bi < BITES) { E.last = bi; E.bites = bi + 1; chewSfx(crisp, slurp, bi === BITES - 1); const who = bi % 2; // 0: 볼 · 1: 나
       for (let i = 0; i < 10; i++) E.crumbs.push({ x: 260 + (Math.random() - 0.5) * 30, y: 150, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0.8 });
       if (!who) E.hearts.push({ x: 120 + Math.random() * 40, y: 80, life: 1.2 }); }
     if (E.t > BITES * 0.75 + 0.6 && !E.done) {
