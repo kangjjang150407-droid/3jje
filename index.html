@@ -4252,6 +4252,7 @@ function update(dt) {
   const ti = turnIdx();
   if (ti !== lastTurnIdx) { lastTurnIdx = ti; onTurnEnd(); }
   if (turnBanner > 0) turnBanner -= dt;
+  if (running && !ended) reserveCheck();
   for (const f of fighters) if (f.alive && f.hp % 1) f.hp = Math.max(1, Math.floor(f.hp)); // 체력 소수점 버림 (비율 피해 · 회복 등)
   for (let i = respawns.length - 1; i >= 0; i--) {
     const r = respawns[i]; r.t -= dt;
@@ -4316,6 +4317,7 @@ function update(dt) {
 function checkWin() {
   const teams = new Set(fighters.filter(f => f.alive && f.type !== 'clone').map(f => f.team));
   respawns.forEach(r => teams.add(r.f.team));
+  for (const t of [0, 1]) if (reserveQ[t] && reserveQ[t].length) teams.add(t); // 대기 인원이 남아 있으면 아직 패배가 아님
   if (teams.size <= 1 && !ended) {
     ended = true;
     const w = [...teams][0];
@@ -6434,6 +6436,22 @@ function readSettings() {
   settings.dummyImmortal = document.getElementById('dummyImmortal').checked;
 }
 
+// ---- 대기 편성: 편성은 최대 12명 · 앞의 5명이 먼저 싸우고, 사망 · 퇴각 · 전장 이탈로 자리가 비면 대기 인원이 순서대로 투입 ----
+const FIELD_N = 5, TEAM_MAX = 12;
+let reserveQ = { 0: [], 1: [] };
+const usesReserve = team => team === 0 || !!pvpOpp; // 내 팀 (PVP에서는 상대 팀도)
+function reserveCheck() {
+  for (const team of [0, 1]) {
+    const q = reserveQ[team]; if (!q || !q.length || ended) continue;
+    const act = fighters.filter(f => f.fromRoster && f.team === team && f.alive && !f.away).length;
+    if (act >= FIELD_N) continue;
+    const r = q.shift(), f = new Fighter(r.type, team, 0, 0, r.label); f.fromRoster = true;
+    fighters.push(f); placeFighter(f); f.cd = Math.min(f.cd, 0.8);
+    ring(f.x, f.y, TEAM[team].color, 170, 0.8, 8); burst(f.x, f.y, TEAM[team].color, 40, 420, 12, 0.8); burst(f.x, f.y, '#ffffff', 20, 500, 7, 0.5, { kind: 'spark' });
+    floatText(f.x, f.y - f.r - 46, '대기 인원 투입!', TEAM[team].color, 20, { life: 1.4 });
+    log(`🔄 ${nm(f)} 대기 인원 투입 (남은 대기 ${q.length}명)`, 'kill');
+  }
+}
 function build() {
   readSettings();
   bgmPause();
@@ -6448,10 +6466,13 @@ function build() {
   document.getElementById('overlay').classList.remove('show');
   const counts = {}, totals = {};
   roster.forEach(r => totals[r.type] = (totals[r.type] || 0) + 1);
+  reserveQ = { 0: [], 1: [] }; const onField = { 0: 0, 1: 0 };
   for (const r of roster) {
     counts[r.type] = (counts[r.type] || 0) + 1;
     const label = CHAR[r.type].name + (totals[r.type] > 1 ? ' ' + counts[r.type] : '');
-    const f = new Fighter(r.type, r.team, 0, 0, label);
+    if (usesReserve(r.team) && onField[r.team] >= FIELD_N) { reserveQ[r.team].push({ type: r.type, label }); continue; } // 대기 편성: 앞의 5명이 먼저 싸움
+    onField[r.team]++;
+    const f = new Fighter(r.type, r.team, 0, 0, label); f.fromRoster = true;
     fighters.push(f); placeFighter(f);
   }
   updatePauseBtn();
@@ -6473,8 +6494,9 @@ function start() {
 
 function renderRoster() {
   for (const t of [0, 1]) {
-    const html = roster.map((r, i) => r.team !== t ? '' :
-      `<div class="unit"><span class="dot" style="background:${CHAR[r.type].color}"></span>${CHAR[r.type].name}${raidMode && t === 1 ? '' : `<button class="rm" data-rm="${i}">✕</button>`}</div>`).join('');
+    let n = 0;
+    const html = roster.map((r, i) => { if (r.team !== t) return ''; const rs = usesReserve(t) && n++ >= FIELD_N;
+      return `${rs && n === FIELD_N + 1 ? '<div style="font-size:10px;color:#8a8aa8;margin:4px 0 2px">⏳ 대기 (앞의 인원이 쓰러지거나 이탈하면 순서대로 투입)</div>' : ''}<div class="unit"${rs ? ' style="opacity:0.6"' : ''}><span class="dot" style="background:${CHAR[r.type].color}"></span>${rs ? '⏳ ' : ''}${CHAR[r.type].name}${raidMode && t === 1 ? '' : `<button class="rm" data-rm="${i}">✕</button>`}</div>`; }).join('');
     document.getElementById('team' + t).innerHTML = html || '<div class="empty">비어 있음</div>';
   }
   // 레이드 중에는 적 추가 버튼과 과녁 추가 버튼을 잠금
@@ -6506,6 +6528,7 @@ document.addEventListener('click', e => {
   if (b.dataset.add && !owned(b.dataset.add)) { toast(`${CHAR[b.dataset.add].name}은(는) 뽑기에서 얻을 수 있어요`); return; }
   if (b.dataset.add && b.dataset.add !== 'dummy' && roster.some(r => baseOf(r.type) === baseOf(b.dataset.add))) { toast(`${CHAR[b.dataset.add].name}은(는) 이미 전투에 있어요`); return; }
   if (raidMode && b.dataset.rm !== undefined && roster[+b.dataset.rm] && roster[+b.dataset.rm].team === 1) { toast(`${modeName()}에서는 적을 뺄 수 없어요`); return; }
+  if (b.dataset.add && +b.dataset.team === 0 && roster.filter(r => r.team === 0).length >= TEAM_MAX) { toast(`편성은 최대 ${TEAM_MAX}명까지예요`); return; }
   if (b.dataset.add) { roster.push({ type: b.dataset.add, team: +b.dataset.team }); renderRoster(); build(); }
   else if (b.dataset.rm !== undefined) { roster.splice(+b.dataset.rm, 1); renderRoster(); build(); }
   else if (b.dataset.s) {
@@ -6950,6 +6973,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.7', date: '2026-11-28', items: ['대기 편성 추가: 편성은 최대 12명 · 앞의 5명이 먼저 싸우고, 사망 · 퇴각 · 전장 이탈로 자리가 비면 대기 인원이 순서대로 투입 (PVP는 상대 팀도 같음)', '자동 편성: 강한 순으로 최대 12명 편성 (앞 5명 출전 · 나머지 대기)'] },
   { v: '15.6', date: '2026-11-28', items: ['자동 편성 추가: 레드 팀의 🤖 자동 편성 버튼 → 보유 캐릭터 중 강한 5명을 편성 (각성했으면 각성 · 강화 · 초월 · 장착 아티팩트 · 함께 쓰면 좋은 조합 반영)'] },
   { v: '15.5', date: '2026-11-28', items: ['아티팩트 자동 장착 기준 변경: 레드 팀이 아니라 보유 중인 캐릭터 전체 기준으로 장착'] },
   { v: '15.4', date: '2026-11-28', items: ['아티팩트 자동 장착 추가: 아티팩트 창의 ✨ 자동 장착 버튼 → 레드 팀(비어 있으면 보유 캐릭터 전체)에게 효과가 잘 맞는 캐릭터 우선으로 골고루 장착 (전용 아티팩트는 전용 캐릭터에게)'] },
@@ -7225,8 +7249,8 @@ function renderArtifacts() {
     return `<div class="art" style="opacity:${have ? 1 : 0.55}"><b style="color:${a.color}">${have ? '💍' : '🔒'} ${a.name}</b> <span style="color:#8a8aa8">(${a.how})</span><br>${a.desc}${have ? `<select data-art="${id}">${opts}</select>` : '<div style="color:#777">미획득</div>'}</div>`;
   }).join('');
 }
-// ---- 자동 편성: 보유 캐릭터 중 강한 5명을 레드 팀에 (각성이 있으면 각성 · 강화 · 초월 · 아티팩트 · 시너지 반영) ----
-const AUTO_TEAM_N = 5;
+// ---- 자동 편성: 보유 캐릭터 중 강한 순으로 최대 12명 (앞 5명 출전 · 나머지 대기)을 레드 팀에 (각성이 있으면 각성 · 강화 · 초월 · 아티팩트 · 시너지 반영) ----
+const AUTO_TEAM_N = 12; // 앞의 5명이 먼저 싸우고 나머지는 대기
 const AUTO_SYN = [['jiho', 'sunwooA', 25], ['song', 'kwak', 20], ['noyun', 'wooju', 20], ['juwon', 'gunmin', 15], ['juwon', 'gunminA', 15], ['jiho', 'kwak', 10], ['sunwoo', 'jiho', 8]]; // 함께 쓰면 좋은 조합
 function autoTeam() {
   if (raidMode && running) return toast('전투 중에는 자동 편성을 할 수 없어요');
