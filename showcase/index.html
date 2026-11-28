@@ -6975,6 +6975,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '16.0', date: '2026-11-28', items: ['시스템 채팅은 보낸 사람 닉네임 없이 내용만 표시돼요'] },
   { v: '15.9', date: '2026-11-28', items: ['신규 가입자가 처음 로그인하면 채팅에 📢 시스템 환영 메시지가 올라가요'] },
   { v: '15.8', date: '2026-11-28', items: ['이제 구글 로그인을 해야만 플레이할 수 있어요 (게스트로 하던 진행 상황은 첫 로그인 때 그대로 옮겨져요)'] },
   { v: '15.7', date: '2026-11-28', items: ['대기 편성 추가: 편성은 최대 12명 · 앞의 5명이 먼저 싸우고, 사망 · 퇴각 · 전장 이탈로 자리가 비면 대기 인원이 순서대로 투입 (PVP는 상대 팀도 같음)', '자동 편성: 강한 순으로 최대 12명 편성 (앞 5명 출전 · 나머지 대기)'] },
@@ -7653,7 +7654,7 @@ async function chatOpen() {
   chat.unsub = rank.db.collection('chat').orderBy('ms', 'desc').limit(50).onSnapshot(q => {
     const king = rank.list && rank.list[0] ? rank.list[0].id : null;
     document.getElementById('chatList').innerHTML = q.docs.map(d => { const m = d.data(), tm = new Date(m.ms || 0);
-      if (m.sys) return `<div class="cm sys"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b>📢 시스템</b> ${escH(m.text || '')}</div>`; // 시스템 채팅
+      if (m.sys) return `<div class="cm sys"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> ${escH(m.text || '')}</div>`; // 시스템 채팅 (보낸 사람 닉네임 없이)
       return `<div class="cm"><span style="color:#6a6a88">${String(tm.getHours()).padStart(2, '0')}:${String(tm.getMinutes()).padStart(2, '0')}</span> <b style="color:${m.uid === rank.uid ? '#ffcc33' : '#9fd8ff'}">${(() => { const mm = /^\[(.+?)\] (.*)$/.exec(m.name || ''); return mm && TITLES.some(x => x.name === mm[1]) ? titleHTML(mm[1]) + escH(mm[2]) : escH(m.name || '익명'); })()}${m.uid === king ? ' 👑' : ''}</b> ${escH(m.text || '')}</div>`; }).join('') || '<div style="color:#777">아직 메시지가 없어요.</div>';
   }, e => { console.error(e); chatNote('채팅을 불러오지 못했어요.'); });
 }
