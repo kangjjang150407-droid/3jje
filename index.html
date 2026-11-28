@@ -6980,6 +6980,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.2', date: '2026-11-28', items: ['🍽 레스토랑 메뉴 추가: 오므라이스 · 크림 파스타 · 페퍼로니 피자 · 철판 스테이크 · 버터 랍스터', '🍪 간식 메뉴 추가: 곰젤리 · 붕어빵 · 초코칩 쿠키 · 딸기 도넛 · 마카롱 · 떡볶이 (모두 직접 그린 그림 · 음식마다 다른 ASMR)'] },
   { v: '17.1', date: '2026-11-28', items: ['🍲 김치스시 메뉴에 국밥 추가 (🪙 450,000 · 호감도 +8 · 딸깍 · 후루룩 · 크으~ ASMR)', '국밥 · 컵라면 · 바나나우유는 그릇은 그대로 두고 먹을수록 내용물이 줄어들어요'] },
   { v: '17.0', date: '2026-11-28', items: ['김치스시 ASMR 먹는 소리를 더 맛있게: 베어 무는 소리 · 촉촉하게 씹는 소리 · 쩝 · 마지막 입엔 꿀꺽 + 카아~ (바삭 · 후루룩 · 지글지글 음식마다 다르게)'] },
   { v: '16.9', date: '2026-11-28', items: ['업데이트가 올라오면 게임이 자동으로 재시작돼요 (전투 중이면 전투가 끝난 뒤 · 진행 상황은 저장 후 새로고침)'] },
@@ -7714,6 +7715,19 @@ const SUSHI_MENU = [
   { id: 'cupRamen', cvs: true, name: '컵라면', icon: '🍜', price: 100000, aff: 2, desc: '후루룩 소리가 생명', snd: 'slurp' },
   { id: 'hotbar', cvs: true, name: '핫바', icon: '🌭', price: 125000, aff: 2, desc: '전자레인지에 30초' },
   { id: 'sandwich', cvs: true, name: '샌드위치', icon: '🥪', price: 175000, aff: 3, desc: '반 갈라서 하나씩' },
+  // 🍽 레스토랑
+  { id: 'omurice', cat: 'resto', name: '오므라이스', icon: '🍳', price: 300000, aff: 5, desc: '케첩 하트가 그려진 폭신한 계란' },
+  { id: 'pasta', cat: 'resto', name: '크림 파스타', icon: '🍝', price: 400000, aff: 6, desc: '포크로 돌돌 말아 후루룩', snd: 'slurp' },
+  { id: 'pizza', cat: 'resto', name: '페퍼로니 피자', icon: '🍕', price: 500000, aff: 7, desc: '치즈가 쭈욱 늘어나는 두 조각', snd: 'crisp' },
+  { id: 'steak', cat: 'resto', name: '철판 스테이크', icon: '🥩', price: 900000, aff: 12, desc: '버터를 올린 미디엄 · 지글지글 철판', snd: 'sizzle' },
+  { id: 'lobster', cat: 'resto', name: '버터 랍스터', icon: '🦞', price: 1200000, aff: 15, desc: '반으로 가른 통통한 랍스터 살', snd: 'crisp' },
+  // 🍪 간식
+  { id: 'jelly', cat: 'snack', name: '곰젤리', icon: '🧸', price: 30000, aff: 1, desc: '말랑말랑 오물오물' },
+  { id: 'bungeo', cat: 'snack', name: '붕어빵', icon: '🐟', price: 40000, aff: 1, desc: '겉은 바삭 속은 팥 가득', snd: 'crisp' },
+  { id: 'cookie', cat: 'snack', name: '초코칩 쿠키', icon: '🍪', price: 50000, aff: 1, desc: '와삭 부서지는 쿠키 탑', snd: 'crisp' },
+  { id: 'donut', cat: 'snack', name: '딸기 도넛', icon: '🍩', price: 75000, aff: 1, desc: '스프링클 잔뜩 · 폭신폭신' },
+  { id: 'macaron', cat: 'snack', name: '마카롱', icon: '🍬', price: 100000, aff: 2, desc: '바삭 쫀득 알록달록', snd: 'crisp' },
+  { id: 'tteokbokki', cat: 'snack', name: '떡볶이', icon: '🌶', price: 150000, aff: 2, desc: '쫀득한 떡 · 어묵 · 삶은 달걀' },
   { id: 'dosirak', cvs: true, name: '편의점 도시락', icon: '🍱', price: 300000, aff: 5, desc: '반찬이 꽉 찬 든든한 한 끼' },
 ];
 if (!save.aff) save.aff = {};
@@ -7845,6 +7859,90 @@ const FOOD_DRAW = {
     c.strokeStyle = '#c8c8d0'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(34, -60); c.lineTo(66, -96); c.stroke(); c.lineCap = 'butt'; c.fillStyle = '#d8d8e0'; c.beginPath(); c.ellipse(28, -56, 9, 5, -0.8, 0, Math.PI * 2); c.fill(); // 숟가락
     for (let k = 0; k < 4; k++) { const sx = -30 + k * 18, ph = (t || 0) * 2 + k; c.strokeStyle = `rgba(255,255,255,${0.22 + 0.14 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, -70); c.bezierCurveTo(sx - 9, -86, sx + 9, -98, sx + Math.sin(ph) * 6, -116); c.stroke(); } // 펄펄 김
   },
+  // ---- 🍽 레스토랑 ----
+  steak(c, t) { // 철판 스테이크: 그릴 자국 · 단면 미디엄 · 버터 · 로즈마리
+    c.fillStyle = '#2a2a2e'; c.beginPath(); c.ellipse(0, -6, 66, 14, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#4a3a2a'; c.beginPath(); c.ellipse(0, -8, 60, 11, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = lg(c, 0, -40, 0, -8, [[0, '#7a3a1a'], [1, '#4a1a0a']]); c.beginPath(); c.moveTo(-50, -12); c.bezierCurveTo(-54, -44, 40, -48, 50, -22); c.bezierCurveTo(52, -10, -30, -4, -50, -12); c.fill();
+    c.strokeStyle = '#2a0a02'; c.lineWidth = 3; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(-34 + k * 20, -38); c.lineTo(-22 + k * 20, -14); c.stroke(); }
+    c.fillStyle = lg(c, 0, -20, 0, -8, [[0, '#d84a5a'], [0.5, '#f07a7a'], [1, '#c83a3a']]); c.beginPath(); c.moveTo(18, -22); c.lineTo(50, -22); c.quadraticCurveTo(52, -12, 40, -10); c.lineTo(14, -12); c.closePath(); c.fill(); // 미디엄 단면
+    c.fillStyle = '#ffe89a'; c.beginPath(); c.roundRect(-14, -46, 16, 10, 3); c.fill(); gloss(c, -12, -46, 12, 4, 0.7); // 버터
+    c.strokeStyle = '#3a7a2a'; c.lineWidth = 2; c.beginPath(); c.moveTo(-40, -30); c.lineTo(-20, -40); c.stroke(); for (let k = 0; k < 5; k++) { c.beginPath(); c.moveTo(-38 + k * 4, -31 - k * 2); c.lineTo(-36 + k * 4, -36 - k * 2); c.stroke(); }
+    gloss(c, -30, -44, 50, 6, 0.3);
+    for (let k = 0; k < 3; k++) { const sx = -20 + k * 20, ph = (t || 0) * 2 + k; c.strokeStyle = `rgba(255,255,255,${0.2 + 0.12 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, -48); c.bezierCurveTo(sx - 8, -60, sx + 8, -72, sx + Math.sin(ph) * 5, -86); c.stroke(); }
+  },
+  pasta(c) { // 크림 파스타: 돌돌 말린 면 · 베이컨 · 파슬리 · 후추
+    c.fillStyle = rg(c, 0, -14, 4, 60, [[0, '#fff6e0'], [1, '#f0d8a8']]); c.beginPath(); c.ellipse(0, -10, 58, 14, 0, 0, Math.PI * 2); c.fill(); // 크림 소스
+    for (let r = 34; r > 4; r -= 5) { c.strokeStyle = r % 10 ? '#f8d888' : '#e8c060'; c.lineWidth = 5; c.beginPath(); c.ellipse(0, -26 - (34 - r) * 0.5, r, r * 0.55, 0, 0, Math.PI * 2); c.stroke(); } // 돌돌 면
+    c.fillStyle = '#c85a4a'; for (const [x, y] of [[-26, -18], [22, -22], [6, -40], [-10, -30]]) { c.beginPath(); c.roundRect(x, y, 12, 6, 2); c.fill(); c.fillStyle = '#f0c8b8'; c.fillRect(x, y + 2, 12, 1.5); c.fillStyle = '#c85a4a'; }
+    const R = seeded(77); for (let i = 0; i < 18; i++) { c.fillStyle = R() < 0.6 ? '#3a8a2a' : '#222'; c.fillRect(-40 + R() * 80, -46 + R() * 34, 2, 2); }
+    gloss(c, -20, -44, 30, 6, 0.4);
+  },
+  pizza(c) { // 피자 두 조각: 바삭한 끝 · 늘어나는 치즈 · 페퍼로니 · 바질
+    for (const [x, a] of [[-26, -0.15], [28, 0.12]]) { c.save(); c.translate(x, 0); c.rotate(a);
+      c.fillStyle = lg(c, 0, -70, 0, 0, [[0, '#ffd860'], [1, '#f0b030']]); c.beginPath(); c.moveTo(0, 0); c.lineTo(-32, -66); c.quadraticCurveTo(0, -78, 32, -66); c.closePath(); c.fill();
+      c.fillStyle = lg(c, 0, -78, 0, -62, [[0, '#e8a040'], [1, '#b8701a']]); c.beginPath(); c.moveTo(-34, -66); c.quadraticCurveTo(0, -82, 34, -66); c.quadraticCurveTo(0, -74, -34, -66); c.fill(); // 크러스트
+      c.fillStyle = '#e8401a'; for (const [px, py] of [[-12, -52], [10, -50], [0, -32], [-4, -16]]) { c.beginPath(); c.arc(px, py, 7, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffffff33'; c.beginPath(); c.arc(px - 2, py - 2, 2, 0, Math.PI * 2); c.fill(); c.fillStyle = '#e8401a'; }
+      c.fillStyle = '#3a9a3a'; c.beginPath(); c.ellipse(14, -36, 5, 3, 0.6, 0, Math.PI * 2); c.fill();
+      c.restore(); }
+  },
+  omurice(c) { // 오므라이스: 매끈한 계란 이불 · 케첩 하트
+    c.fillStyle = lg(c, 0, -50, 0, 0, [[0, '#fff27a'], [0.6, '#ffd02a'], [1, '#e8a810']]); c.beginPath(); c.ellipse(0, -18, 56, 26, 0, Math.PI, 0); c.lineTo(56, -8); c.quadraticCurveTo(0, 4, -56, -8); c.closePath(); c.fill();
+    gloss(c, -34, -42, 44, 10, 0.55);
+    c.strokeStyle = '#d81a1a'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, -18); c.bezierCurveTo(-18, -30, -10, -46, 0, -34); c.bezierCurveTo(10, -46, 18, -30, 0, -18); c.stroke(); c.lineCap = 'butt';
+    c.fillStyle = '#3a8a2a'; c.beginPath(); c.ellipse(40, -20, 6, 3, 0.4, 0, Math.PI * 2); c.fill();
+  },
+  lobster(c) { // 랍스터: 반으로 가른 빨간 껍데기 · 하얀 살 · 버터 · 레몬
+    c.fillStyle = lg(c, 0, -40, 0, 0, [[0, '#ff4a2a'], [1, '#b8140a']]); c.beginPath(); c.ellipse(0, -18, 58, 18, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = lg(c, 0, -30, 0, -6, [[0, '#fff8f0'], [1, '#f0d8c8']]); c.beginPath(); c.ellipse(-4, -22, 44, 11, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#ff8a6a'; c.lineWidth = 2; for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(k * 11 - 4, -32); c.quadraticCurveTo(k * 11, -22, k * 11 - 4, -12); c.stroke(); } // 결
+    c.fillStyle = '#d82a1a'; c.beginPath(); c.moveTo(54, -20); c.lineTo(72, -34); c.lineTo(70, -8); c.closePath(); c.fill(); // 꼬리
+    for (const s2 of [-1, 1]) { c.save(); c.translate(-54, -26 + s2 * 6); c.rotate(s2 * 0.4); c.fillStyle = '#e8301a'; c.beginPath(); c.ellipse(-12, 0, 14, 7, 0, 0, Math.PI * 2); c.fill(); c.restore(); } // 집게
+    c.fillStyle = '#ffe89a'; c.beginPath(); c.ellipse(10, -26, 8, 4, 0, 0, Math.PI * 2); c.fill(); gloss(c, -36, -32, 60, 5, 0.5);
+    c.fillStyle = '#fff27a'; c.beginPath(); c.moveTo(30, -4); c.arc(38, -4, 12, Math.PI, Math.PI * 1.8); c.closePath(); c.fill();
+  },
+  // ---- 🍪 간식 ----
+  jelly(c) { // 반짝이는 곰젤리
+    const cols = ['#ff4a6a', '#ffb02a', '#5ad84a', '#4ab0ff', '#c86aff'];
+    for (let i = 0; i < 5; i++) { const x = -44 + i * 22, y = -4 - (i % 2) * 6; c.save(); c.translate(x, y); c.globalAlpha = 0.9;
+      c.fillStyle = cols[i]; c.beginPath(); c.arc(0, -26, 8, 0, Math.PI * 2); c.arc(-6, -32, 3.5, 0, Math.PI * 2); c.arc(6, -32, 3.5, 0, Math.PI * 2); c.ellipse(0, -10, 10, 13, 0, 0, Math.PI * 2); c.fill();
+      c.globalAlpha = 1; gloss(c, -6, -30, 6, 10, 0.7); c.restore(); }
+  },
+  bungeo(c) { // 붕어빵: 바삭한 물고기 모양 · 팥이 살짝
+    for (const [x, y, a] of [[-22, -4, -0.1], [22, -14, 0.15]]) { c.save(); c.translate(x, y); c.rotate(a);
+      c.fillStyle = lg(c, 0, -30, 0, 0, [[0, '#f0b050'], [1, '#b8701a']]); c.beginPath(); c.ellipse(-4, -16, 34, 16, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.moveTo(26, -16); c.lineTo(44, -30); c.lineTo(44, -2); c.closePath(); c.fill(); // 꼬리
+      c.strokeStyle = '#a8601a'; c.lineWidth = 1.5; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(4 + k * 6, -16, 8, -1, 1); c.stroke(); } // 비늘
+      c.fillStyle = '#3a1a0a'; c.beginPath(); c.arc(-26, -20, 2.5, 0, Math.PI * 2); c.fill();
+      gloss(c, -30, -30, 40, 7, 0.35); c.restore(); }
+    c.fillStyle = '#5a1a1a'; c.beginPath(); c.ellipse(-48, -16, 4, 6, 0, 0, Math.PI * 2); c.fill(); // 팥
+  },
+  cookie(c) { // 초코칩 쿠키 탑
+    for (const [y, x] of [[-6, -6], [-18, 4], [-30, -2]]) { c.fillStyle = lg(c, 0, y - 12, 0, y + 8, [[0, '#e8b060'], [1, '#b8782a']]); c.beginPath(); c.ellipse(x, y, 40, 11, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#3a1a0a'; const R = seeded(y * -5); for (let i = 0; i < 7; i++) { c.beginPath(); c.ellipse(x - 30 + R() * 60, y - 4 + R() * 6, 3.5, 2.4, 0, 0, Math.PI * 2); c.fill(); } }
+    gloss(c, -26, -40, 40, 5, 0.3);
+  },
+  donut(c) { // 딸기 글레이즈 도넛 + 스프링클
+    c.fillStyle = lg(c, 0, -60, 0, 0, [[0, '#f0b060'], [1, '#b8702a']]); c.beginPath(); c.ellipse(0, -24, 50, 24, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = lg(c, 0, -46, 0, -14, [[0, '#ffb0d0'], [1, '#ff6aa8']]); c.beginPath(); c.ellipse(0, -28, 44, 19, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#2a120c'; c.beginPath(); c.ellipse(0, -28, 13, 6, 0, 0, Math.PI * 2); c.fill();
+    const R = seeded(12), cl = ['#fff', '#5ad8ff', '#ffe04a', '#7a4aff', '#5ad84a']; for (let i = 0; i < 26; i++) { const a = R() * 6.28, r = 18 + R() * 22; c.save(); c.translate(Math.cos(a) * r, -28 + Math.sin(a) * r * 0.42); c.rotate(R() * 3); c.fillStyle = cl[i % 5]; c.fillRect(-3, -1, 6, 2); c.restore(); }
+    gloss(c, -30, -44, 36, 7, 0.5);
+  },
+  macaron(c) { // 마카롱 탑
+    const cols = [['#ffb0c8', '#ff7aa8'], ['#b8f0c8', '#6ad890'], ['#d8c0ff', '#a87aff'], ['#fff0a0', '#ffd040']];
+    cols.forEach(([a, b], i) => { const x = -42 + i * 28, y = -2 - (i % 2) * 22; c.save(); c.translate(x, y);
+      c.fillStyle = lg(c, 0, -26, 0, 0, [[0, a], [1, b]]); c.beginPath(); c.ellipse(0, -20, 15, 7, 0, 0, Math.PI * 2); c.fill(); c.beginPath(); c.ellipse(0, -6, 15, 7, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff8ee'; c.fillRect(-13, -15, 26, 5); c.strokeStyle = b; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-14, -15); c.lineTo(14, -15); c.moveTo(-14, -10); c.lineTo(14, -10); c.stroke(); gloss(c, -9, -26, 12, 4, 0.6); c.restore(); });
+  },
+  tteokbokki(c, t, left = 1) { // 떡볶이: 빨간 양념 · 쫀득한 떡 · 어묵 · 삶은 달걀 · 파
+    c.fillStyle = lg(c, -58, 0, 58, 0, [[0, '#b8b8c0'], [0.4, '#f0f0f4'], [1, '#a8a8b0']]); c.beginPath(); c.moveTo(-60, -40); c.quadraticCurveTo(-56, 0, 0, 0); c.quadraticCurveTo(56, 0, 60, -40); c.closePath(); c.fill(); // 은색 접시냄비
+    c.fillStyle = rg(c, 0, -42, 4, 60, [[0, '#ff5a2a'], [1, '#b8200a']]); c.beginPath(); c.ellipse(0, -40, 58, 13, 0, 0, Math.PI * 2); c.fill();
+    const R = seeded(44); const n = Math.round(9 * left);
+    for (let i = 0; i < n; i++) { const x = -44 + R() * 80, y = -46 + R() * 10, a = R() * 3; c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = lg(c, 0, -4, 0, 4, [[0, '#fff0e0'], [1, '#ff8a5a']]); c.beginPath(); c.roundRect(-11, -4, 22, 8, 4); c.fill(); gloss(c, -8, -4, 14, 2.5, 0.7); c.restore(); } // 떡
+    if (left > 0.4) { c.fillStyle = '#e8b07a'; c.beginPath(); c.moveTo(-30, -52); c.lineTo(-8, -54); c.lineTo(-12, -44); c.lineTo(-34, -44); c.closePath(); c.fill(); } // 어묵
+    if (left > 0.6) { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(24, -48, 11, 8, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffc000'; c.beginPath(); c.ellipse(24, -47, 5, 4, 0, 0, Math.PI * 2); c.fill(); } // 달걀
+    c.fillStyle = '#3ab04a'; for (let i = 0; i < Math.round(8 * left); i++) { c.beginPath(); c.arc(-36 + R() * 70, -48 + R() * 9, 2, 0, Math.PI * 2); c.fill(); }
+  },
   special(c) { // 특선 모둠: 옻칠 도시락
     c.fillStyle = lg(c, 0, -58, 0, 0, [[0, '#3a0a0a'], [1, '#1a0404']]); c.beginPath(); c.roundRect(-66, -58, 132, 58, 8); c.fill(); c.strokeStyle = '#c8902a'; c.lineWidth = 3; c.stroke();
     c.strokeStyle = '#c8902a'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -56); c.lineTo(0, -2); c.moveTo(-64, -30); c.lineTo(0, -30); c.stroke();
@@ -7922,7 +8020,7 @@ const FOOD_DRAW = {
   },
 };
 // 먹은 만큼 한 입씩 베어 문 자국을 내며 그리기
-const FOOD_CONTAINER = { gukbap: 1, cupRamen: 1, bananaMilk: 1 }; // 그릇 · 병: 그릇은 그대로, 내용물만 줄어듦
+const FOOD_CONTAINER = { gukbap: 1, cupRamen: 1, bananaMilk: 1, tteokbokki: 1 }; // 그릇 · 병: 그릇은 그대로, 내용물만 줄어듦
 function drawFoodBitten(c, id, x, y, sc, left, t) {
   const f = FOOD_DRAW[id]; if (!f) return false;
   const W = 260, H = 260, oc = drawFoodBitten.oc || (drawFoodBitten.oc = document.createElement('canvas')); oc.width = W; oc.height = H;
@@ -7980,9 +8078,9 @@ function sushiRender() {
       <div style="margin:10px 0 4px;display:flex;align-items:center;gap:8px"><b style="color:#ffd8a0">${CHAR[sushi.sel].name}</b> 호감도 <b style="color:#ff8aa8">♥ ${a} / ${AFF_MAX}</b> <span style="color:#c8a890">(시작 정신력 +${a})</span></div>
       <div style="height:8px;border-radius:5px;background:#3a1a14;overflow:hidden;margin-bottom:10px"><i style="display:block;height:100%;width:${a / AFF_MAX * 100}%;background:linear-gradient(90deg,#ff5a8a,#ffb0c8)"></i></div>
       <div id="sushiStage" style="display:${sushi.eating ? 'block' : 'none'};margin-bottom:10px"><canvas id="sushiCv" width="520" height="230" style="width:100%;border-radius:12px;background:#120604"></canvas></div>
-      <div style="display:flex;gap:6px;margin-bottom:6px">${[['sushi', '🍣 김치스시'], ['cvs', '🏪 편의점']].map(([t, l]) => `<button data-sx="tab" data-t="${t}" style="flex:1;padding:6px;font-weight:700;border-radius:8px;border:2px solid ${sushi.tab === t ? '#ffcf5a' : '#5a2a20'};background:${sushi.tab === t ? (t === 'cvs' ? '#0a3a5a' : '#5a1a10') : '#2a120c'};color:#f8e8d8">${l}</button>`).join('')}</div>
-      <div style="font-weight:700;color:#ffd8a0;margin-bottom:4px">${sushi.tab === 'cvs' ? '편의점 메뉴 <span style="color:#9fd8ff;font-weight:400">(김치스시 옆 편의점에서 사 왔어요)</span>' : '메뉴'} <span style="color:#c8a890;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>
-      ${SUSHI_MENU.filter(m => !!m.cvs === (sushi.tab === 'cvs')).map(m => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:5px;border-radius:10px;background:#2a120c;border:1px solid #5a2a20">
+      <div style="display:flex;gap:6px;margin-bottom:6px">${[['sushi', '🍣 김치스시'], ['resto', '🍽 레스토랑'], ['snack', '🍪 간식'], ['cvs', '🏪 편의점']].map(([t, l]) => `<button data-sx="tab" data-t="${t}" style="flex:1;padding:6px 2px;font-size:11px;font-weight:700;border-radius:8px;border:2px solid ${sushi.tab === t ? '#ffcf5a' : '#5a2a20'};background:${sushi.tab === t ? ({ cvs: '#0a3a5a', resto: '#3a2a5a', snack: '#5a2a4a' }[t] || '#5a1a10') : '#2a120c'};color:#f8e8d8">${l}</button>`).join('')}</div>
+      <div style="font-weight:700;color:#ffd8a0;margin-bottom:4px">${({ cvs: '편의점 메뉴 <span style="color:#9fd8ff;font-weight:400">(김치스시 옆 편의점에서 사 왔어요)</span>', resto: '레스토랑 메뉴 <span style="color:#c8b0ff;font-weight:400">(오늘은 근사하게 썰어 볼까요)</span>', snack: '간식 <span style="color:#ffb0d8;font-weight:400">(입이 심심할 때 하나씩)</span>' })[sushi.tab] || '메뉴'} <span style="color:#c8a890;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>
+      ${SUSHI_MENU.filter(m => (m.cat || (m.cvs ? 'cvs' : 'sushi')) === sushi.tab).map(m => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:5px;border-radius:10px;background:#2a120c;border:1px solid #5a2a20">
         <img src="${foodIcon(m.id)}" style="width:46px;height:46px;flex:none" alt=""><div style="flex:1"><b>${m.name}</b> <span style="color:#ff8aa8">♥ +${m.aff}</span><br><span style="color:#c8a890">${m.desc}</span></div>
         <button data-sx="buy" data-m="${m.id}" ${sushi.eating || a >= AFF_MAX ? 'disabled' : ''} style="padding:6px 10px;font-weight:700;border-radius:8px;border:none;background:linear-gradient(90deg,#ffcc33,#ff7a3a);color:#2a0a00;opacity:${sushi.eating || a >= AFF_MAX ? 0.4 : 1}">🪙 ${m.price.toLocaleString()}</button></div>`).join('')}
       ${a >= AFF_MAX ? '<div style="color:#ff8aa8;text-align:center">♥ 호감도가 최대예요!</div>' : ''}
