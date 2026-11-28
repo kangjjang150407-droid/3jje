@@ -6984,6 +6984,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '18.0', date: '2026-11-28', items: ['김치스시: 볼이 여섯 입에 나눠 먹어요 (5입 → 6입)'] },
   { v: '17.9', date: '2026-11-28', items: ['김치스시: 이제 볼 혼자 다섯 입에 나눠 먹어요 (6입 → 5입)'] },
   { v: '17.8', date: '2026-11-28', items: ['호감도가 최대(45)여도 음식을 사서 함께 먹을 수 있어요 (호감도는 더 오르지 않아요)'] },
   { v: '17.7', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 정신력 -45가 아니라 +45가 되면 패닉'] },
@@ -8316,11 +8317,11 @@ function sushiClick(e) {
   }
   if (x === 'cancelChoose') { sushi.choose = null; return sushiRender(); }
 }
-// ASMR 먹방: 볼이 다섯 입에 나눠 먹음 · 씹는 소리 · 부스러기 · 하트
+// ASMR 먹방: 볼이 여섯 입에 나눠 먹음 · 씹는 소리 · 부스러기 · 하트
 function sushiEat(k, m) {
   sushi.eating = { k, m, t: 0, bites: 0, last: -1, crumbs: [], hearts: [], done: false };
   sushiRender(); sushiBgm.volume = 0.2; // ASMR이 잘 들리게 음악을 줄임
-  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 5, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' || m.snd === 'soup' ? m.snd : false;
+  const cv = document.getElementById('sushiCv'), c = cv.getContext('2d'), img = PORTRAIT()[k], BITES = 6, crisp = m.snd === 'crisp' || ['danmuji', 'ebiTen'].includes(m.id), slurp = m.snd === 'slurp' ? true : m.snd === 'sizzle' || m.snd === 'soup' ? m.snd : false;
   let prev = performance.now();
   const loop = now => {
     const E = sushi.eating; if (!E) return;
