@@ -6980,6 +6980,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.3', date: '2026-11-28', items: ['🐂 레스토랑에 한우 꽃등심 (🪙 1,500,000 · 호감도 +18) · 육회 (🪙 800,000 · 호감도 +10) 추가', '🐟 김치스시에 모듬회 (🪙 1,000,000 · 호감도 +13) 추가'] },
   { v: '17.2', date: '2026-11-28', items: ['🍽 레스토랑 메뉴 추가: 오므라이스 · 크림 파스타 · 페퍼로니 피자 · 철판 스테이크 · 버터 랍스터', '🍪 간식 메뉴 추가: 곰젤리 · 붕어빵 · 초코칩 쿠키 · 딸기 도넛 · 마카롱 · 떡볶이 (모두 직접 그린 그림 · 음식마다 다른 ASMR)'] },
   { v: '17.1', date: '2026-11-28', items: ['🍲 김치스시 메뉴에 국밥 추가 (🪙 450,000 · 호감도 +8 · 딸깍 · 후루룩 · 크으~ ASMR)', '국밥 · 컵라면 · 바나나우유는 그릇은 그대로 두고 먹을수록 내용물이 줄어들어요'] },
   { v: '17.0', date: '2026-11-28', items: ['김치스시 ASMR 먹는 소리를 더 맛있게: 베어 무는 소리 · 촉촉하게 씹는 소리 · 쩝 · 마지막 입엔 꿀꺽 + 카아~ (바삭 · 후루룩 · 지글지글 음식마다 다르게)'] },
@@ -7706,6 +7707,7 @@ const SUSHI_MENU = [
   { id: 'ebiTen', name: '새우튀김', icon: '🍤', price: 350000, aff: 6, desc: '바사삭 소리가 나는 튀김' },
   { id: 'gukbap', name: '국밥', icon: '🍲', price: 450000, aff: 8, desc: '펄펄 끓는 뚝배기에 뽀얀 국물 · 든든한 한 그릇', snd: 'soup' },
   { id: 'samgyup', name: '통삼겹', icon: '🥓', price: 600000, aff: 10, desc: '지글지글 통째로 구운 두툼한 삼겹살', snd: 'sizzle' },
+  { id: 'sashimi', name: '모듬회', icon: '🐟', price: 1000000, aff: 13, desc: '연어 · 참치 · 광어를 깻잎과 무채 위에' },
   { id: 'special', name: '김치스시 특선 모둠', icon: '🍱', price: 750000, aff: 12, desc: '오늘의 특선 한 상' },
   // 🏪 편의점 메뉴
   { id: 'onigiri', cvs: true, name: '삼각김밥', icon: '🍙', price: 50000, aff: 1, desc: '김 뜯는 소리부터 바삭', snd: 'crisp' },
@@ -7719,7 +7721,9 @@ const SUSHI_MENU = [
   { id: 'omurice', cat: 'resto', name: '오므라이스', icon: '🍳', price: 300000, aff: 5, desc: '케첩 하트가 그려진 폭신한 계란' },
   { id: 'pasta', cat: 'resto', name: '크림 파스타', icon: '🍝', price: 400000, aff: 6, desc: '포크로 돌돌 말아 후루룩', snd: 'slurp' },
   { id: 'pizza', cat: 'resto', name: '페퍼로니 피자', icon: '🍕', price: 500000, aff: 7, desc: '치즈가 쭈욱 늘어나는 두 조각', snd: 'crisp' },
+  { id: 'yukhoe', cat: 'resto', name: '육회', icon: '🥚', price: 800000, aff: 10, desc: '노른자 톡 터뜨려 배채와 함께 쫀득하게' },
   { id: 'steak', cat: 'resto', name: '철판 스테이크', icon: '🥩', price: 900000, aff: 12, desc: '버터를 올린 미디엄 · 지글지글 철판', snd: 'sizzle' },
+  { id: 'hanwoo', cat: 'resto', name: '한우 꽃등심', icon: '🐂', price: 1500000, aff: 18, desc: '1++ 마블링 · 석쇠에 지글지글 · 소금 톡톡', snd: 'sizzle' },
   { id: 'lobster', cat: 'resto', name: '버터 랍스터', icon: '🦞', price: 1200000, aff: 15, desc: '반으로 가른 통통한 랍스터 살', snd: 'crisp' },
   // 🍪 간식
   { id: 'jelly', cat: 'snack', name: '곰젤리', icon: '🧸', price: 30000, aff: 1, desc: '말랑말랑 오물오물' },
@@ -7942,6 +7946,34 @@ const FOOD_DRAW = {
     if (left > 0.4) { c.fillStyle = '#e8b07a'; c.beginPath(); c.moveTo(-30, -52); c.lineTo(-8, -54); c.lineTo(-12, -44); c.lineTo(-34, -44); c.closePath(); c.fill(); } // 어묵
     if (left > 0.6) { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(24, -48, 11, 8, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffc000'; c.beginPath(); c.ellipse(24, -47, 5, 4, 0, 0, Math.PI * 2); c.fill(); } // 달걀
     c.fillStyle = '#3ab04a'; for (let i = 0; i < Math.round(8 * left); i++) { c.beginPath(); c.arc(-36 + R() * 70, -48 + R() * 9, 2, 0, Math.PI * 2); c.fill(); }
+  },
+  hanwoo(c, t) { // 한우 1++ 구이: 석쇠 위 마블링 꽃등심 · 노릇한 겉면 · 소금 · 김
+    c.strokeStyle = '#555'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, -8, 64, 13, 0, 0, Math.PI * 2); c.stroke(); for (let x = -56; x <= 56; x += 10) { c.beginPath(); c.moveTo(x, -18); c.lineTo(x, 2); c.stroke(); } // 석쇠
+    for (const [x, y, a] of [[-30, -20, -0.15], [8, -26, 0.1], [36, -16, 0.25]]) { c.save(); c.translate(x, y); c.rotate(a);
+      c.fillStyle = lg(c, 0, -12, 0, 12, [[0, '#e8606a'], [0.5, '#c8404a'], [1, '#a82a34']]); c.beginPath(); c.roundRect(-24, -11, 48, 22, 9); c.fill();
+      c.strokeStyle = '#fff0f0'; c.lineWidth = 1.6; const R = seeded(x + 50); for (let k = 0; k < 9; k++) { c.beginPath(); let px = -20 + R() * 40, py = -8 + R() * 16; c.moveTo(px, py); for (let j = 0; j < 3; j++) { px += -4 + R() * 8; py += -3 + R() * 6; c.lineTo(px, py); } c.stroke(); } // 마블링
+      c.fillStyle = '#7a2a10aa'; c.fillRect(-24, 6, 48, 5); c.strokeStyle = '#4a1406aa'; c.lineWidth = 2.5; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(k * 9 - 3, -10); c.lineTo(k * 9 + 4, 10); c.stroke(); } // 석쇠 자국
+      gloss(c, -18, -10, 30, 5, 0.55); c.restore(); }
+    c.fillStyle = '#ffffff'; const R2 = seeded(3); for (let i = 0; i < 14; i++) c.fillRect(-40 + R2() * 80, -34 + R2() * 24, 1.6, 1.6); // 굵은 소금
+    for (let k = 0; k < 3; k++) { const sx = -20 + k * 20, ph = (t || 0) * 2 + k; c.strokeStyle = `rgba(255,255,255,${0.2 + 0.12 * Math.sin(ph)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(sx, -36); c.bezierCurveTo(sx - 8, -50, sx + 8, -62, sx + Math.sin(ph) * 5, -78); c.stroke(); }
+  },
+  yukhoe(c) { // 육회: 붉은 소고기 채 · 노른자 · 배채 · 깨 · 잣
+    c.fillStyle = lg(c, 0, -10, 0, 0, [[0, '#fff8e0'], [1, '#e8dcb0']]); for (let i = 0; i < 12; i++) { c.save(); c.translate(-50 + i * 9, -4); c.rotate(-0.2 + (i % 3) * 0.2); c.fillRect(-2, -12, 4, 14); c.restore(); } // 배채
+    const R = seeded(18); for (let i = 0; i < 46; i++) { const a = R() * Math.PI, r = R() * 38; c.save(); c.translate(Math.cos(a) * r * 1.2 - 2, -10 - Math.sin(a) * r * 0.9); c.rotate(R() * 3); c.fillStyle = R() < 0.5 ? '#c8202e' : '#a8142a'; c.beginPath(); c.roundRect(-9, -2, 18, 4, 2); c.fill(); c.fillStyle = '#ffffff40'; c.fillRect(-7, -2, 12, 1); c.restore(); } // 고기 채
+    c.fillStyle = rg(c, -3, -48, 2, 14, [[0, '#ffe080'], [0.6, '#ffb000'], [1, '#e88a00']]); c.beginPath(); c.ellipse(0, -44, 13, 10, 0, 0, Math.PI * 2); c.fill(); gloss(c, -8, -52, 10, 5, 0.8); // 노른자
+    c.fillStyle = '#fff6dc'; for (let i = 0; i < 18; i++) { c.beginPath(); c.ellipse(-30 + R() * 60, -40 + R() * 30, 1.8, 1, R() * 3, 0, Math.PI * 2); c.fill(); } // 깨
+    c.fillStyle = '#f0e0b0'; for (const [x, y] of [[18, -36], [22, -30], [-20, -34]]) { c.beginPath(); c.ellipse(x, y, 3, 2, 0.5, 0, Math.PI * 2); c.fill(); } // 잣
+    c.fillStyle = '#3a9a3a'; c.beginPath(); c.ellipse(-36, -22, 9, 4, -0.5, 0, Math.PI * 2); c.fill(); // 깻잎 한 조각
+  },
+  sashimi(c) { // 모듬회: 무채 위 연어 · 참치 · 흰살 · 깻잎 · 와사비 · 레몬
+    c.fillStyle = '#f8f8f4'; const R = seeded(23); for (let i = 0; i < 40; i++) { c.save(); c.translate(-50 + R() * 100, -6 - R() * 10); c.rotate(-0.3 + R() * 0.6); c.fillRect(-1, -8, 2, 16); c.restore(); } // 무채
+    c.fillStyle = '#3a8a2a'; for (const x of [-32, 18]) { c.beginPath(); c.ellipse(x, -18, 22, 12, 0.3, 0, Math.PI * 2); c.fill(); } // 깻잎
+    const fan = (x, y, cols, stripe) => { for (let k = 0; k < 4; k++) { c.save(); c.translate(x + k * 7, y - k * 2); c.rotate(-0.25 + k * 0.08); c.fillStyle = lg(c, -14, 0, 14, 0, cols); c.beginPath(); c.roundRect(-14, -7, 28, 14, 6); c.fill(); if (stripe) { c.strokeStyle = stripe; c.lineWidth = 1.6; for (let j = -1; j <= 1; j++) { c.beginPath(); c.moveTo(j * 8 - 3, -6); c.quadraticCurveTo(j * 8 + 2, 0, j * 8 - 2, 6); c.stroke(); } } gloss(c, -10, -7, 18, 4, 0.55); c.restore(); } };
+    fan(-50, -22, [[0, '#ff9a5a'], [1, '#f0602a']], '#ffe8d8'); // 연어
+    fan(-14, -30, [[0, '#e8304a'], [1, '#a8142a']], null); // 참치
+    fan(22, -20, [[0, '#fffaf4'], [1, '#e8e0d8']], '#f0d0d0'); // 흰살 (광어)
+    c.fillStyle = '#9ad84a'; c.beginPath(); c.ellipse(50, -10, 7, 5, 0, 0, Math.PI * 2); c.fill(); // 와사비
+    c.fillStyle = '#fff27a'; c.beginPath(); c.moveTo(-58, -4); c.arc(-50, -4, 10, Math.PI, Math.PI * 1.8); c.closePath(); c.fill(); // 레몬
   },
   special(c) { // 특선 모둠: 옻칠 도시락
     c.fillStyle = lg(c, 0, -58, 0, 0, [[0, '#3a0a0a'], [1, '#1a0404']]); c.beginPath(); c.roundRect(-66, -58, 132, 58, 8); c.fill(); c.strokeStyle = '#c8902a'; c.lineWidth = 3; c.stroke();
