@@ -1481,7 +1481,7 @@ class Fighter {
     this.vy = this.static ? 0 : Math.sin(a) * d.speed;
     this.alive = true; this.cd = rand(1.0, 2.2); this.cast = null;
     this.resetCombat();
-    try { if (team === 0 && hasSp(this) && !window.BALLFIGHT_SHOWCASE) { const a = affOf(type); if (a > 0) this.sp = Math.min(45, a); } } catch (e) {} // 호감도만큼 시작 정신력 증가
+    try { if (team === 0 && hasSp(this) && !window.BALLFIGHT_SHOWCASE) { const a = affOf(type); if (a > 0) { if (minusBall(type)) { this.sp = -Math.min(MINUS_SP_FLOOR, a); const ex = a - MINUS_SP_FLOOR; if (ex > 0) { this.affPow = ex; addBuff(this, 'powerUp', ex); } } else this.sp = Math.min(45, a); } } } catch (e) {} // 호감도만큼 시작 정신력 증가 (마이너스 코인 볼은 감소)
     this.hitFlash = 0; this.trail = []; this.trailT = 0; this.wob = Math.random() * TAU;
   }
   resetCombat() {
@@ -6980,6 +6980,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.6', date: '2026-11-28', items: ['마이너스 코인 볼 (강화한 윤지호 · 노윤)은 호감도 1당 시작 정신력 -1 (최대 -35까지) · 35를 넘는 호감도는 첫 턴 위력 + 로 바뀌어요'] },
   { v: '17.5', date: '2026-11-28', items: ['🥢 탕수육은 이제 부먹 · 찍먹을 골라 먹어요 (부먹: 소스가 촉촉하게 · 찍먹: 바삭한 튀김에 소스 종지 따로 · 소리도 달라요)'] },
   { v: '17.4', date: '2026-11-28', items: ['🍱 일식 (타코야키 · 규동 · 돈가스 · 돈코츠 라멘) · 🍚 한식 (김밥 · 돌솥 비빔밥 · 김치찌개 · 불고기) 탭 추가', '🥢 중식 (짜장면 · 짬뽕 · 샤오롱바오 · 탕수육) · 🍔 미식 (핫도그 · 수제버거 · 후라이드 치킨 · BBQ 립) 탭 추가 — 모두 직접 그린 그림 · 음식마다 다른 ASMR'] },
   { v: '17.3', date: '2026-11-28', items: ['🐂 레스토랑에 한우 꽃등심 (🪙 1,500,000 · 호감도 +18) · 육회 (🪙 800,000 · 호감도 +10) 추가', '🐟 김치스시에 모듬회 (🪙 1,000,000 · 호감도 +13) 추가'] },
@@ -7757,6 +7758,10 @@ const SUSHI_MENU = [
   { id: 'dosirak', cvs: true, name: '편의점 도시락', icon: '🍱', price: 300000, aff: 5, desc: '반찬이 꽉 찬 든든한 한 끼' },
 ];
 if (!save.aff) save.aff = {};
+// 마이너스 코인 볼 (정신력이 낮을수록 강함): 강화한 윤지호 (모든 코인이 마이너스) · 노윤 (굿 다이노 · 스스로 정신력을 낮춤)
+const MINUS_SP_FLOOR = 35;
+function minusBall(type) { const b = baseOf(type); return (b === 'jiho' && up('jiho')) || b === 'noyun'; }
+function affEffect(type) { const a = affOf(type); if (!minusBall(type)) return `시작 정신력 +${a}`; const ex = Math.max(0, a - MINUS_SP_FLOOR); return `마이너스 코인 볼 · 시작 정신력 -${Math.min(MINUS_SP_FLOOR, a)}${ex ? ` · 첫 턴 위력 +${ex}` : ''}`; }
 function affOf(type) { try { return Math.min(AFF_MAX, (save.aff || {})[baseOf(type)] || 0); } catch (e) { return 0; } }
 const PORTRAIT = () => ({ song: songImg, jiho: jihoImg, juwon: juwonImg, wooju: woojuImg, gunmin: gunminImg, doyun: doyunImg, sunwoo: sunwooImg, kwak: kwakImg, yuhwan: yuhwanImg, noyun: noyunImg });
 const sushiBgm = new Audio(BGM_BASE + 'bgm_kimchisushi.mp3'); sushiBgm.loop = true; sushiBgm.preload = 'none'; sushiBgm.setAttribute('playsinline', '');
@@ -8274,7 +8279,7 @@ function sushiRender() {
     <div style="padding:10px 12px">
       <div style="font-weight:700;color:#ffd8a0;margin-bottom:4px">함께 먹을 볼</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${chars.map(k => `<button data-sx="sel" data-k="${k}" style="display:flex;align-items:center;gap:4px;padding:3px 7px 3px 3px;border-radius:20px;border:2px solid ${k === sushi.sel ? '#ffcf5a' : '#5a2a20'};background:${k === sushi.sel ? '#5a2a10' : '#2a120c'};color:#f8e8d8">${P[k] ? `<img src="${P[k].src}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">` : ''}${CHAR[k].name} <span style="color:#ff8aa8">♥${affOf(k)}</span></button>`).join('')}</div>
-      <div style="margin:10px 0 4px;display:flex;align-items:center;gap:8px"><b style="color:#ffd8a0">${CHAR[sushi.sel].name}</b> 호감도 <b style="color:#ff8aa8">♥ ${a} / ${AFF_MAX}</b> <span style="color:#c8a890">(시작 정신력 +${a})</span></div>
+      <div style="margin:10px 0 4px;display:flex;align-items:center;gap:8px"><b style="color:#ffd8a0">${CHAR[sushi.sel].name}</b> 호감도 <b style="color:#ff8aa8">♥ ${a} / ${AFF_MAX}</b> <span style="color:#c8a890">(${affEffect(sushi.sel)})</span></div>
       <div style="height:8px;border-radius:5px;background:#3a1a14;overflow:hidden;margin-bottom:10px"><i style="display:block;height:100%;width:${a / AFF_MAX * 100}%;background:linear-gradient(90deg,#ff5a8a,#ffb0c8)"></i></div>
       <div id="sushiStage" style="display:${sushi.eating ? 'block' : 'none'};margin-bottom:10px"><canvas id="sushiCv" width="520" height="230" style="width:100%;border-radius:12px;background:#120604"></canvas></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">${[['sushi', '🍣 김치스시'], ['resto', '🍽 레스토랑'], ['snack', '🍪 간식'], ['cvs', '🏪 편의점'], ['jp', '🍱 일식'], ['kr', '🍚 한식'], ['cn', '🥢 중식'], ['us', '🍔 미식']].map(([t, l]) => `<button data-sx="tab" data-t="${t}" style="flex:1;padding:6px 2px;font-size:11px;font-weight:700;border-radius:8px;border:2px solid ${sushi.tab === t ? '#ffcf5a' : '#5a2a20'};background:${sushi.tab === t ? ({ cvs: '#0a3a5a', resto: '#3a2a5a', snack: '#5a2a4a', jp: '#5a1a2a', kr: '#1a4a3a', cn: '#6a1a0a', us: '#1a2a5a' }[t] || '#5a1a10') : '#2a120c'};color:#f8e8d8">${l}</button>`).join('')}</div>
@@ -8321,7 +8326,7 @@ function sushiEat(k, m) {
     if (E.t > BITES * 0.75 + 0.6 && !E.done) {
       E.done = true; const before = affOf(k); save.aff[baseOf(k)] = Math.min(AFF_MAX, before + m.aff); persist();
       for (let i = 0; i < 8; i++) E.hearts.push({ x: 90 + Math.random() * 100, y: 120 + Math.random() * 40, life: 1.6 });
-      toast(`♥ ${CHAR[k].name} 호감도 ${before} → ${affOf(k)} (시작 정신력 +${affOf(k)})`);
+      toast(`♥ ${CHAR[k].name} 호감도 ${before} → ${affOf(k)} (${affEffect(k)})`);
       setTimeout(() => { sushi.eating = null; sushiBgm.volume = 1; sushiRender(); }, 1500);
     }
     // 그리기: 나무 테이블 · 볼 · 접시 위 음식
