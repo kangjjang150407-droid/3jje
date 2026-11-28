@@ -334,7 +334,7 @@ var SFX_UNANA = 'data:audio/mpeg;base64,SUQzBAAAAAACYlRYWFgAAAASAAADbWFqb3JfYnJh
     </div>
 
     <div class="team t0">
-      <div class="title">🔴 레드 팀</div>
+      <div class="title" style="display:flex;align-items:center;gap:6px">🔴 레드 팀<button id="autoTeam" style="margin-left:auto;padding:3px 8px;font-size:11px;font-weight:700;background:linear-gradient(90deg,#ff5a5a,#ffb04a);border:none;color:#2a0a00;border-radius:6px">🤖 자동 편성</button></div>
       <div id="team0"></div>
       <div class="adds"><button data-add="song" data-team="0">+ 송재범</button><button data-add="jiho" data-team="0">+ 윤지호</button><button data-add="juwon" data-team="0">+ 강주원</button><button data-add="wooju" data-team="0">+ 강우주</button><button data-add="gunmin" data-team="0">+ 이건민</button><button data-add="doyun" data-team="0">+ 이도윤</button><button data-add="sunwoo" data-team="0">+ 정선우</button><button data-add="sunwooA" data-team="0">+ 정선우 - 전성기</button><button data-add="gunminA" data-team="0">+ 이건민 - 이불</button><button data-add="kwak" data-team="0">+ 곽시율</button><button data-add="yuhwan" data-team="0">+ 유환</button><button data-add="noyun" data-team="0">+ 노윤</button><button data-add="dummy" data-team="0">+ 과녁</button></div>
     </div>
@@ -6950,6 +6950,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.6', date: '2026-11-28', items: ['자동 편성 추가: 레드 팀의 🤖 자동 편성 버튼 → 보유 캐릭터 중 강한 5명을 편성 (각성했으면 각성 · 강화 · 초월 · 장착 아티팩트 · 함께 쓰면 좋은 조합 반영)'] },
   { v: '15.5', date: '2026-11-28', items: ['아티팩트 자동 장착 기준 변경: 레드 팀이 아니라 보유 중인 캐릭터 전체 기준으로 장착'] },
   { v: '15.4', date: '2026-11-28', items: ['아티팩트 자동 장착 추가: 아티팩트 창의 ✨ 자동 장착 버튼 → 레드 팀(비어 있으면 보유 캐릭터 전체)에게 효과가 잘 맞는 캐릭터 우선으로 골고루 장착 (전용 아티팩트는 전용 캐릭터에게)'] },
   { v: '15.3', date: '2026-11-28', items: ['아티팩트를 각성 캐릭터(⚡ 정선우 - 전성기 · ⚡ 이건민 - 이불)에게 기본 캐릭터와 따로 장착할 수 있어요'] },
@@ -7224,6 +7225,28 @@ function renderArtifacts() {
     return `<div class="art" style="opacity:${have ? 1 : 0.55}"><b style="color:${a.color}">${have ? '💍' : '🔒'} ${a.name}</b> <span style="color:#8a8aa8">(${a.how})</span><br>${a.desc}${have ? `<select data-art="${id}">${opts}</select>` : '<div style="color:#777">미획득</div>'}</div>`;
   }).join('');
 }
+// ---- 자동 편성: 보유 캐릭터 중 강한 5명을 레드 팀에 (각성이 있으면 각성 · 강화 · 초월 · 아티팩트 · 시너지 반영) ----
+const AUTO_TEAM_N = 5;
+const AUTO_SYN = [['jiho', 'sunwooA', 25], ['song', 'kwak', 20], ['noyun', 'wooju', 20], ['juwon', 'gunmin', 15], ['juwon', 'gunminA', 15], ['jiho', 'kwak', 10], ['sunwoo', 'jiho', 8]]; // 함께 쓰면 좋은 조합
+function autoTeam() {
+  if (raidMode && running) return toast('전투 중에는 자동 편성을 할 수 없어요');
+  const blue = roster.filter(r => r.team === 1), used = new Set(blue.map(r => baseOf(r.type)));
+  const pool = GACHA.filter(k => save.owned[k] && !used.has(k)).map(k => AWAKEN[k] && (save.awk || {})[k] ? AWAKEN[k].type : k); // 각성했으면 각성으로
+  if (!pool.length) return toast('편성할 수 있는 캐릭터가 없어요');
+  const power = k => { const C = CHAR[k], b = baseOf(k); let v = C.level * 2 + Math.log(C.maxHp) * 25 + (C.defMod || 0) * 0.3;
+    if (up(b)) v += 15; if ((save.trans || {})[b]) v += 15; v += Object.values(save.equip || {}).filter(x => x === k).length * 10; return v; };
+  const pick = [];
+  while (pick.length < Math.min(AUTO_TEAM_N, pool.length)) {
+    let best = null, bs = -1e9;
+    for (const k of pool) { if (pick.includes(k)) continue; let v = power(k); for (const [a, b2, w] of AUTO_SYN) if ((a === k && pick.includes(b2)) || (b2 === k && pick.includes(a))) v += w; if (v > bs) { bs = v; best = k; } }
+    pick.push(best);
+  }
+  roster = pick.map(k => ({ type: k, team: 0 })).concat(blue);
+  renderRoster(); build();
+  toast(`🤖 자동 편성: ${pick.map(k => CHAR[k].name).join(' · ')}`);
+  log(`🤖 자동 편성 (보유 캐릭터 중 ${pick.length}명): ${pick.map(k => CHAR[k].name).join(' · ')}`, 'skill');
+}
+document.getElementById('autoTeam').onclick = autoTeam;
 // ---- 아티팩트 자동 장착: 보유 중인 캐릭터 전체에서 효과가 잘 맞는 캐릭터 우선 · 골고루 분배 ----
 const ART_TAGS = { song: ['poise', 'crit'], jiho: ['bleed'], juwon: ['burn'], wooju: ['burn', 'charge'], gunmin: ['burn', 'tremor'], doyun: ['poise', 'tremor', 'crit'], sunwoo: ['poise', 'tremor', 'crit'],
   sunwooA: ['burn', 'tremor', 'poise', 'crit'], kwak: ['burn', 'bleed'], yuhwan: ['tremor', 'poise', 'crit'], noyun: ['sinking', 'bleed'], gunminA: ['bleed'] };
