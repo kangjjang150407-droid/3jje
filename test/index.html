@@ -6981,6 +6981,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '17.5', date: '2026-11-28', items: ['🥢 탕수육은 이제 부먹 · 찍먹을 골라 먹어요 (부먹: 소스가 촉촉하게 · 찍먹: 바삭한 튀김에 소스 종지 따로 · 소리도 달라요)'] },
   { v: '17.4', date: '2026-11-28', items: ['🍱 일식 (타코야키 · 규동 · 돈가스 · 돈코츠 라멘) · 🍚 한식 (김밥 · 돌솥 비빔밥 · 김치찌개 · 불고기) 탭 추가', '🥢 중식 (짜장면 · 짬뽕 · 샤오롱바오 · 탕수육) · 🍔 미식 (핫도그 · 수제버거 · 후라이드 치킨 · BBQ 립) 탭 추가 — 모두 직접 그린 그림 · 음식마다 다른 ASMR'] },
   { v: '17.3', date: '2026-11-28', items: ['🐂 레스토랑에 한우 꽃등심 (🪙 1,500,000 · 호감도 +18) · 육회 (🪙 800,000 · 호감도 +10) 추가', '🐟 김치스시에 모듬회 (🪙 1,000,000 · 호감도 +13) 추가'] },
   { v: '17.2', date: '2026-11-28', items: ['🍽 레스토랑 메뉴 추가: 오므라이스 · 크림 파스타 · 페퍼로니 피자 · 철판 스테이크 · 버터 랍스터', '🍪 간식 메뉴 추가: 곰젤리 · 붕어빵 · 초코칩 쿠키 · 딸기 도넛 · 마카롱 · 떡볶이 (모두 직접 그린 그림 · 음식마다 다른 ASMR)'] },
@@ -8094,6 +8095,9 @@ const FOOD_DRAW = {
     c.fillStyle = 'rgba(255,120,40,0.55)'; c.beginPath(); c.ellipse(4, -24, 40, 12, 0.1, 0, Math.PI * 2); c.fill(); gloss(c, -20, -32, 40, 6, 0.6); // 소스
     for (const [x, y, col] of [[-12, -26, '#3ab04a'], [16, -22, '#ff7a2a'], [2, -32, '#f8e8c0'], [26, -30, '#e8301a']]) { c.fillStyle = col; c.beginPath(); c.roundRect(x, y, 9, 5, 2); c.fill(); }
   },
+  tangsuyukDip(c) { // 찍먹: 바삭한 튀김은 그대로 · 소스는 옆 종지에
+    const R = seeded(141); for (let i = 0; i < 11; i++) { const x = -50 + R() * 70, y = -10 - R() * 24; c.save(); c.translate(x, y); c.rotate(R() * 3); c.fillStyle = lg(c, 0, -8, 0, 8, [[0, '#ffe8b0'], [1, '#e0a040']]); c.beginPath(); c.roundRect(-12, -7, 24, 14, 6); c.fill(); for (let k = 0; k < 8; k++) { c.fillStyle = R() < 0.5 ? '#fff8d8' : '#c8801a'; c.fillRect(-9 + R() * 16, -5 + R() * 9, 2, 2); } gloss(c, -8, -7, 14, 3, 0.4); c.restore(); }
+  },
   xiaolongbao(c, t) { // 샤오롱바오: 대나무 찜기 · 주름 잡힌 만두 · 김
     c.fillStyle = lg(c, 0, -34, 0, 0, [[0, '#e8c88a'], [1, '#b8904a']]); c.beginPath(); c.roundRect(-60, -30, 120, 30, 6); c.fill(); c.strokeStyle = '#8a6a2a'; c.lineWidth = 2; for (let x = -54; x < 60; x += 10) { c.beginPath(); c.moveTo(x, -28); c.lineTo(x, -2); c.stroke(); }
     for (let i = 0; i < 5; i++) { const x = -44 + i * 22, y = -28 - (i % 2) * 2; c.fillStyle = rg(c, x - 4, y - 14, 2, 18, [[0, '#ffffff'], [1, '#efe4d4']]); c.beginPath(); c.moveTo(x - 15, y); c.quadraticCurveTo(x - 16, y - 18, x, y - 22); c.quadraticCurveTo(x + 16, y - 18, x + 15, y); c.closePath(); c.fill();
@@ -8208,6 +8212,13 @@ const FOOD_DRAW = {
   },
 };
 // 먹은 만큼 한 입씩 베어 문 자국을 내며 그리기
+const FOOD_SIDE = { // 깨물어도 사라지지 않는 곁들임 (예: 찍먹 소스 종지)
+  tangsuyukDip(c) {
+    c.fillStyle = lg(c, 26, 0, 66, 0, [[0, '#d8d8e0'], [0.5, '#ffffff'], [1, '#c8c8d0']]); c.beginPath(); c.moveTo(26, -26); c.quadraticCurveTo(28, -4, 46, -4); c.quadraticCurveTo(64, -4, 66, -26); c.closePath(); c.fill(); // 소스 종지
+    c.fillStyle = rg(c, 46, -26, 2, 20, [[0, '#ffb060'], [1, '#e8602a']]); c.beginPath(); c.ellipse(46, -26, 19, 5, 0, 0, Math.PI * 2); c.fill();
+    for (const [x, col] of [[38, '#3ab04a'], [48, '#ff7a2a'], [54, '#e8301a']]) { c.fillStyle = col; c.fillRect(x, -28, 6, 3); } gloss(c, 34, -30, 16, 3, 0.7);
+  },
+};
 const FOOD_CONTAINER = { gukbap: 1, cupRamen: 1, bananaMilk: 1, tteokbokki: 1, tonkotsu: 1, gyudon: 1, bibimbap: 1, kimchiJjigae: 1, jjajang: 1, jjamppong: 1 }; // 그릇 · 병: 그릇은 그대로, 내용물만 줄어듦
 function drawFoodBitten(c, id, x, y, sc, left, t) {
   const f = FOOD_DRAW[id]; if (!f) return false;
@@ -8218,13 +8229,14 @@ function drawFoodBitten(c, id, x, y, sc, left, t) {
     for (let k = 0; k < 5; k++) { o.beginPath(); o.arc(cut, H - 20 - (k + 0.5) * 24 * sc, 13 * sc, 0, Math.PI * 2); o.fill(); }
     o.globalCompositeOperation = 'source-over';
   }
+  if (FOOD_SIDE[id]) { o.save(); o.translate(W / 2, H - 20); o.scale(sc, sc); FOOD_SIDE[id](o, t); o.restore(); }
   c.drawImage(oc, x - W / 2, y - H + 20); return true;
 }
 const foodIconCache = {};
 function foodIcon(id) { // 메뉴용 작은 그림: 그린 부분만 잘라 꽉 차게
   if (foodIconCache[id]) return foodIconCache[id];
   const big = document.createElement('canvas'); big.width = big.height = 320; const b = big.getContext('2d');
-  b.translate(160, 260); try { FOOD_DRAW[id](b, 0.5); } catch (e) {}
+  b.translate(160, 260); try { FOOD_DRAW[id](b, 0.5); if (FOOD_SIDE[id]) FOOD_SIDE[id](b, 0.5); } catch (e) {}
   const d = b.getImageData(0, 0, 320, 320).data; let x0 = 320, y0 = 320, x1 = 0, y1 = 0;
   for (let y = 0; y < 320; y++) for (let x = 0; x < 320; x++) if (d[(y * 320 + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c = cv.getContext('2d');
@@ -8269,7 +8281,8 @@ function sushiRender() {
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">${[['sushi', '🍣 김치스시'], ['resto', '🍽 레스토랑'], ['snack', '🍪 간식'], ['cvs', '🏪 편의점'], ['jp', '🍱 일식'], ['kr', '🍚 한식'], ['cn', '🥢 중식'], ['us', '🍔 미식']].map(([t, l]) => `<button data-sx="tab" data-t="${t}" style="flex:1;padding:6px 2px;font-size:11px;font-weight:700;border-radius:8px;border:2px solid ${sushi.tab === t ? '#ffcf5a' : '#5a2a20'};background:${sushi.tab === t ? ({ cvs: '#0a3a5a', resto: '#3a2a5a', snack: '#5a2a4a', jp: '#5a1a2a', kr: '#1a4a3a', cn: '#6a1a0a', us: '#1a2a5a' }[t] || '#5a1a10') : '#2a120c'};color:#f8e8d8">${l}</button>`).join('')}</div>
       <div style="font-weight:700;color:#ffd8a0;margin-bottom:4px">${({ cvs: '편의점 메뉴 <span style="color:#9fd8ff;font-weight:400">(김치스시 옆 편의점에서 사 왔어요)</span>', resto: '레스토랑 메뉴 <span style="color:#c8b0ff;font-weight:400">(오늘은 근사하게 썰어 볼까요)</span>', snack: '간식 <span style="color:#ffb0d8;font-weight:400">(입이 심심할 때 하나씩)</span>', jp: '일식 <span style="color:#ffb0b0;font-weight:400">(이랏샤이마세~)</span>', kr: '한식 <span style="color:#a0f0c8;font-weight:400">(밥심으로 싸우자)</span>', cn: '중식 <span style="color:#ffc890;font-weight:400">(배달 왔습니다~)</span>', us: '미식 <span style="color:#a0c8ff;font-weight:400">(아메리칸 스타일로 크게 한 입)</span>' })[sushi.tab] || '메뉴'} <span style="color:#c8a890;font-weight:400">보유 🪙 ${save.coins.toLocaleString()}</span></div>
       ${SUSHI_MENU.filter(m => (m.cat || (m.cvs ? 'cvs' : 'sushi')) === sushi.tab).map(m => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:5px;border-radius:10px;background:#2a120c;border:1px solid #5a2a20">
-        <img src="${foodIcon(m.id)}" style="width:46px;height:46px;flex:none" alt=""><div style="flex:1"><b>${m.name}</b> <span style="color:#ff8aa8">♥ +${m.aff}</span><br><span style="color:#c8a890">${m.desc}</span></div>
+        <img src="${foodIcon(m.id)}" style="width:46px;height:46px;flex:none" alt=""><div style="flex:1"><b>${m.name}</b> <span style="color:#ff8aa8">♥ +${m.aff}</span><br><span style="color:#c8a890">${m.desc}${sushi.choose === m.id ? '<br><b style="color:#ffd860">부먹? 찍먹? 골라 주세요!</b>' : ''}</span></div>
+        ${sushi.choose === m.id ? `<div style="display:flex;flex-direction:column;gap:4px"><button data-sx="buy" data-m="${m.id}" data-v="pour" style="padding:5px 9px;font-weight:700;border-radius:8px;border:none;background:linear-gradient(90deg,#ff9a5a,#ff5a2a);color:#2a0a00">🥄 부먹</button><button data-sx="buy" data-m="${m.id}" data-v="dip" style="padding:5px 9px;font-weight:700;border-radius:8px;border:none;background:linear-gradient(90deg,#ffe07a,#ffb02a);color:#2a0a00">🥢 찍먹</button><button data-sx="cancelChoose" style="padding:2px;font-size:10px;border-radius:6px;background:#0004;border:1px solid #5a2a20;color:#c8a890">취소</button></div>` : ''}
         <button data-sx="buy" data-m="${m.id}" ${sushi.eating || a >= AFF_MAX ? 'disabled' : ''} style="padding:6px 10px;font-weight:700;border-radius:8px;border:none;background:linear-gradient(90deg,#ffcc33,#ff7a3a);color:#2a0a00;opacity:${sushi.eating || a >= AFF_MAX ? 0.4 : 1}">🪙 ${m.price.toLocaleString()}</button></div>`).join('')}
       ${a >= AFF_MAX ? '<div style="color:#ff8aa8;text-align:center">♥ 호감도가 최대예요!</div>' : ''}
     </div></div>`;
@@ -8284,9 +8297,14 @@ function sushiClick(e) {
     const m = SUSHI_MENU.find(v => v.id === b.dataset.m), k = sushi.sel; if (!m || sushi.eating) return;
     if (affOf(k) >= AFF_MAX) return toast('호감도가 이미 최대예요');
     if (save.coins < m.price) return toast(`코인이 부족해요 (필요 ${m.price.toLocaleString()}, 보유 ${save.coins.toLocaleString()})`);
+    if (m.id === 'tangsuyuk' && !b.dataset.v) { sushi.choose = m.id; return sushiRender(); } // 탕수육: 부먹 · 찍먹 고르기
     save.coins -= m.price; persist(); try { renderStones(); } catch (e2) {}
-    sushiEat(k, m);
+    sushi.choose = null;
+    if (b.dataset.v === 'dip') sushiEat(k, Object.assign({}, m, { id: 'tangsuyukDip', name: '탕수육 (찍먹)', snd: 'crisp' }));
+    else if (b.dataset.v === 'pour') sushiEat(k, Object.assign({}, m, { id: 'tangsuyuk', name: '탕수육 (부먹)', snd: null }));
+    else sushiEat(k, m);
   }
+  if (x === 'cancelChoose') { sushi.choose = null; return sushiRender(); }
 }
 // ASMR 먹방: 볼과 내가 번갈아 한 입씩 · 씹는 소리 · 부스러기 · 하트
 function sushiEat(k, m) {
