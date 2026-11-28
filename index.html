@@ -6983,6 +6983,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '18.1', date: '2026-11-28', items: ['🥬 한식에 김치 추가 (🪙 80,000 · 호감도 +1 · 아삭아삭 ASMR)'] },
   { v: '18.0', date: '2026-11-28', items: ['김치스시: 볼이 여섯 입에 나눠 먹어요 (5입 → 6입)'] },
   { v: '17.9', date: '2026-11-28', items: ['김치스시: 이제 볼 혼자 다섯 입에 나눠 먹어요 (6입 → 5입)'] },
   { v: '17.8', date: '2026-11-28', items: ['호감도가 최대(45)여도 음식을 사서 함께 먹을 수 있어요 (호감도는 더 오르지 않아요)'] },
@@ -7748,6 +7749,7 @@ const SUSHI_MENU = [
   { id: 'tonkatsu', cat: 'jp', name: '돈가스', icon: '🐖', price: 400000, aff: 6, desc: '바사삭 두툼한 등심 · 소스 듬뿍', snd: 'crisp' },
   { id: 'tonkotsu', cat: 'jp', name: '돈코츠 라멘', icon: '🍜', price: 450000, aff: 7, desc: '진한 뽀얀 국물 · 차슈 · 반숙', snd: 'slurp' },
   // 🍚 한식
+  { id: 'kimchi', cat: 'kr', name: '김치', icon: '🥬', price: 80000, aff: 1, desc: '잘 익은 배추김치 · 아삭아삭', snd: 'crisp' },
   { id: 'gimbap', cat: 'kr', name: '김밥', icon: '🍙', price: 150000, aff: 2, desc: '참기름 반짝 · 한 줄 통째로' },
   { id: 'bibimbap', cat: 'kr', name: '돌솥 비빔밥', icon: '🥗', price: 350000, aff: 5, desc: '오색 나물 · 고추장 · 누룽지까지 바삭', snd: 'crisp' },
   { id: 'kimchiJjigae', cat: 'kr', name: '김치찌개', icon: '🥘', price: 400000, aff: 6, desc: '보글보글 · 두부 · 돼지고기', snd: 'soup' },
@@ -8078,6 +8080,18 @@ const FOOD_DRAW = {
     c.fillStyle = '#3ab04a'; for (let i = 0; i < 10; i++) { c.beginPath(); c.arc(-36 + R() * 72, -30 + R() * 16, 2, 0, Math.PI * 2); c.fill(); }
     steam(c, t, -36, 3);
   },
+  kimchi(c) { // 배추김치: 빨간 양념이 밴 잎 · 하얀 줄기 · 고춧가루 · 깨 · 쪽파
+    c.fillStyle = lg(c, -50, 0, 50, 0, [[0, '#d8d8e0'], [0.5, '#ffffff'], [1, '#c8c8d0']]); c.beginPath(); c.ellipse(0, -6, 58, 12, 0, 0, Math.PI * 2); c.fill(); // 종지 접시
+    const R = seeded(201);
+    for (let i = 0; i < 9; i++) { const x = -38 + R() * 76, y = -12 - R() * 26, a = -0.6 + R() * 1.2; c.save(); c.translate(x, y); c.rotate(a);
+      c.fillStyle = lg(c, 0, -10, 0, 10, [[0, '#ff4a1a'], [0.6, '#d82a0a'], [1, '#a8180a']]); c.beginPath(); c.moveTo(-20, 4); c.bezierCurveTo(-18, -12, 0, -14, 20, -6); c.bezierCurveTo(14, 6, -6, 10, -20, 4); c.fill(); // 잎
+      c.fillStyle = lg(c, 0, -3, 0, 3, [[0, '#fff0d8'], [1, '#ffb88a']]); c.beginPath(); c.moveTo(-18, 3); c.quadraticCurveTo(0, -4, 18, -4); c.quadraticCurveTo(0, 3, -18, 3); c.fill(); // 줄기
+      c.strokeStyle = '#ff8a5a'; c.lineWidth = 1; c.beginPath(); c.moveTo(-14, 1); c.lineTo(14, -3); c.stroke();
+      gloss(c, -12, -10, 18, 4, 0.45); c.restore(); }
+    for (let i = 0; i < 30; i++) { c.fillStyle = R() < 0.6 ? '#8a0a00' : '#ff6a2a'; c.fillRect(-40 + R() * 80, -44 + R() * 34, 2, 2); } // 고춧가루
+    c.fillStyle = '#fff6e0'; for (let i = 0; i < 10; i++) { c.beginPath(); c.ellipse(-30 + R() * 60, -40 + R() * 26, 1.8, 1.1, R() * 3, 0, Math.PI * 2); c.fill(); } // 깨
+    c.strokeStyle = '#3ab04a'; c.lineWidth = 2.5; for (let i = 0; i < 3; i++) { const x = -20 + i * 18; c.beginPath(); c.moveTo(x, -40); c.lineTo(x + 10, -28); c.stroke(); } // 쪽파
+  },
   gimbap(c) { // 김밥: 썬 단면 · 단무지 · 시금치 · 당근 · 계란 · 햄 · 참기름 광택
     for (let i = 0; i < 6; i++) { const x = -50 + i * 20, y = -16 - (i % 2) * 4; c.fillStyle = '#16221a'; c.beginPath(); c.arc(x, y, 12, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fbf8f0'; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.fill();
       for (const [dx, dy, col] of [[-3, -3, '#ffd820'], [3, -3, '#ff7a2a'], [-3, 3, '#3ab04a'], [3, 3, '#ffe890'], [0, 0, '#e8708a']]) { c.fillStyle = col; c.fillRect(x + dx - 2, y + dy - 2, 4, 4); }
@@ -8353,7 +8367,7 @@ function sushiEat(k, m) {
     c.globalAlpha = 1; E.crumbs = E.crumbs.filter(p => p.life > 0); E.hearts = E.hearts.filter(h => h.life > 0);
     c.fillStyle = '#ffd8a0'; c.font = '700 14px sans-serif'; c.textAlign = 'left';
     c.fillText(E.done ? (E.gain ? `♥ 호감도 +${E.gain}!` : '♥ 맛있게 먹었어요! (호감도 최대)') : `${m.icon} ${m.name} — ${CHAR[k].name}의 한 입 (${E.bites}/${BITES})`, 14, 24);
-    c.font = '11px sans-serif'; c.fillStyle = '#c8a890'; c.fillText(`🎧 ASMR — ${slurp === 'soup' ? '딸깍 · 후루룩 · 크으~' : slurp === 'sizzle' ? '지글지글 · 쫄깃' : slurp ? '후루룩 · 쪼옥' : crisp ? '바삭 · 오독오독' : '냠냠 · 오물오물'}`, 14, 42);
+    c.font = '11px sans-serif'; c.fillStyle = '#c8a890'; c.fillText(`🎧 ASMR — ${m.id === 'kimchi' ? '아삭아삭 · 오독오독' : slurp === 'soup' ? '딸깍 · 후루룩 · 크으~' : slurp === 'sizzle' ? '지글지글 · 쫄깃' : slurp ? '후루룩 · 쪼옥' : crisp ? '바삭 · 오독오독' : '냠냠 · 오물오물'}`, 14, 42);
     sushi.raf = requestAnimationFrame(loop);
   };
   sushi.raf = requestAnimationFrame(loop);
