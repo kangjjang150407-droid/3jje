@@ -6951,6 +6951,7 @@ document.getElementById('shopPanel').addEventListener('click', e => {
 // ================== 패치 노트 ==================
 // 업데이트할 때마다 맨 위에 항목을 추가 → 처음 접속할 때 자동으로 한 번 표시됨
 const PATCH_NOTES = [
+  { v: '15.4', date: '2026-11-28', items: ['아티팩트 자동 장착 추가: 아티팩트 창의 ✨ 자동 장착 버튼 → 레드 팀(비어 있으면 보유 캐릭터 전체)에게 효과가 잘 맞는 캐릭터 우선으로 골고루 장착 (전용 아티팩트는 전용 캐릭터에게)'] },
   { v: '15.3', date: '2026-11-28', items: ['아티팩트를 각성 캐릭터(⚡ 정선우 - 전성기 · ⚡ 이건민 - 이불)에게 기본 캐릭터와 따로 장착할 수 있어요'] },
   { v: '15.2', date: '2026-11-28', items: ['🌶 레이드 5단계 추가: 매워진 봉이 아빠 (봉이 아빠 레벨 +50 · 공격 레벨 +50 · 방어 레벨 +60 · 기본 위력 +5) · 레이드 4단계 클리어 후 도전', '클리어 아티팩트 — 보통: 닭가슴살 (스킬로 파열 부여 시 파열 횟수 +3, 턴당 3회) · 하드: 닭다리 (스킬로 화상 부여 시 화상 횟수 +3, 턴당 3회)', '익스트림: 50% 확률로 탱고 닭양념장 (대상보다 빠르면 합 위력 +(속도/3), 최대 3) 또는 오염된 실과 바늘 (매 턴 처음 피해를 입힌 스킬의 피해량/3만큼 출혈 위력 부여)'] },
   { v: '15.1', date: '2026-11-27', items: ['턴 표시 추가: 화면 위에 현재 턴 번호와 턴 진행 막대 · 턴이 넘어갈 때 "턴 N" 배너 · 전투 로그에 턴 구분선', '속박 아이콘 변경 (주황 화살표)'] },
@@ -7217,12 +7218,43 @@ updateRaidInfo();
 if (gunminUnlocked && !save.artifacts.crown) { save.artifacts.crown = true; persist(); } // 이미 레이드를 클리어한 사람에게도 지급
 function renderArtifacts() {
   const el = document.getElementById('artPanel'); if (!el) return;
-  el.innerHTML = '<div style="color:#b0a0a8;margin-bottom:4px">아티팩트는 캐릭터에게 장착하는 장비예요. 하나의 아티팩트는 한 캐릭터만 장착할 수 있어요. 각성(⚡)은 기본 캐릭터와 따로 장착해요.</div>' + Object.keys(ARTIFACTS).map(id => {
+  el.innerHTML = '<button id="artAuto" style="width:100%;padding:8px;margin-bottom:6px;font-weight:700;background:linear-gradient(90deg,#7a5cff,#ff5fa2);border:none;color:#fff;border-radius:8px">✨ 자동 장착 (레드 팀 기준)</button><div style="color:#b0a0a8;margin-bottom:4px">아티팩트는 캐릭터에게 장착하는 장비예요. 하나의 아티팩트는 한 캐릭터만 장착할 수 있어요. 각성(⚡)은 기본 캐릭터와 따로 장착해요.</div>' + Object.keys(ARTIFACTS).map(id => {
     const a = ARTIFACTS[id], have = !!save.artifacts[id];
     const opts = ['<option value="">장착 안 함</option>'].concat(GACHA.filter(k => save.owned[k]).flatMap(k => [k].concat(AWAKEN[k] && (save.awk || {})[k] ? [AWAKEN[k].type] : [])).map(k => `<option value="${k}"${save.equip[id] === k ? ' selected' : ''}>${AWAKEN_OF[k] ? '⚡ ' : ''}${CHAR[k].name}</option>`)).join(''); // 각성은 기본과 따로 장착
     return `<div class="art" style="opacity:${have ? 1 : 0.55}"><b style="color:${a.color}">${have ? '💍' : '🔒'} ${a.name}</b> <span style="color:#8a8aa8">(${a.how})</span><br>${a.desc}${have ? `<select data-art="${id}">${opts}</select>` : '<div style="color:#777">미획득</div>'}</div>`;
   }).join('');
 }
+// ---- 아티팩트 자동 장착: 레드 팀(없으면 보유 캐릭터 전체)에게 효과가 잘 맞는 캐릭터 우선 · 골고루 분배 ----
+const ART_TAGS = { song: ['poise', 'crit'], jiho: ['bleed'], juwon: ['burn'], wooju: ['burn', 'charge'], gunmin: ['burn', 'tremor'], doyun: ['poise', 'tremor', 'crit'], sunwoo: ['poise', 'tremor', 'crit'],
+  sunwooA: ['burn', 'tremor', 'poise', 'crit'], kwak: ['burn', 'bleed'], yuhwan: ['tremor', 'poise', 'crit'], noyun: ['sinking', 'bleed'], gunminA: ['bleed'] };
+const ART_PREF = { rageblade: { only: ['juwon'] }, inyeon: { only: ['noyun'] }, potential: { best: ['wooju'], tag: 'charge' }, chickLeg: { tag: 'burn' }, chickBreast: { tag: 'rupture' }, hwan: { tag: 'rupture' },
+  mirror: { tag: 'crit' }, hatred: { tag: 'charge' }, dirtyNeedle: { tag: 'bleed' }, tango: { speed: true }, ashstar: { weak: true } };
+function autoEquip() {
+  const ownedKeys = GACHA.filter(k => save.owned[k]).flatMap(k => [k].concat(AWAKEN[k] && (save.awk || {})[k] ? [AWAKEN[k].type] : []));
+  let cand = [...new Set(roster.filter(r => r.team === 0).map(r => UP_KEY[r.type] || r.type))].filter(k => ownedKeys.includes(k));
+  if (!cand.length) cand = ownedKeys;
+  if (!cand.length) return toast('장착할 캐릭터가 없어요');
+  const arts = Object.keys(ARTIFACTS).filter(id => save.artifacts[id]).sort((a, b) => (ART_PREF[b] ? 1 : 0) - (ART_PREF[a] ? 1 : 0)); // 전용 · 특화 아티팩트 먼저
+  const cnt = {}, eq = {};
+  for (const id of arts) {
+    const P = ART_PREF[id] || {};
+    let best = null, bs = -1e9;
+    for (const k of cand) {
+      if (P.only && !P.only.includes(k)) continue;
+      const C = CHAR[k]; let sc = (P.only || (P.best || []).includes(k)) ? 100 : 0;
+      if (P.tag && (ART_TAGS[k] || []).includes(P.tag)) sc += 20;
+      if (P.speed) sc += C.speed / 10;
+      if (P.weak) sc += Object.values(C.resist).filter(v => v > 1).reduce((a, v) => a + v * 5, 0);
+      sc -= (cnt[k] || 0) * 8 - Math.random() * 0.1; // 골고루 분배
+      if (sc > bs) { bs = sc; best = k; }
+    }
+    if (best) { eq[id] = best; cnt[best] = (cnt[best] || 0) + 1; }
+  }
+  save.equip = eq; persist(); renderArtifacts();
+  toast(`✨ 아티팩트 ${Object.keys(eq).length}개 자동 장착`);
+  log(`✨ 아티팩트 자동 장착: ${Object.entries(eq).map(([id, k]) => `${ARTIFACTS[id].name} → ${CHAR[k].name}`).join(' · ') || '없음'}`);
+}
+document.getElementById('artPanel').addEventListener('click', e => { if (e.target.id === 'artAuto') autoEquip(); });
 document.getElementById('artBtn').onclick = () => { document.getElementById('artPanel').classList.toggle('on'); renderArtifacts(); };
 document.getElementById('artPanel').addEventListener('change', e => {
   const id = e.target.dataset.art; if (!id) return;
